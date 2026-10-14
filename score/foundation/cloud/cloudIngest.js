@@ -226,12 +226,23 @@ function collectPanelStats() {
         };
     } catch (e) { return { samples: bufferSize() }; }
 }
-/* ---------------- 技能拆解汇总（精简版，A+C 目的） ----------------
- * 目的A：发现漏识别技能 → unrecognizedSkills 列表
- * 目的C：对比武将强度 → totalScore 总分
- * 去重：同一武将同一局只上传一次
- * 版本：带构建时间，便于回归分析 */
-let _lastUploadedHero = null;
+/* ---------------- 技能拆解汇总（6字段版，编程专家定案） ----------------
+ * 目的A：发现漏识别技能 → unrecognizedSkills + skillNames 与官方库做差集
+ * 目的C：对比武将强度 → totalScore 与官方综合分做相关性分析
+ * 去重：同一版本+同一武将终身只传一次（评分是静态规则计算，结果恒定）
+ * 字段：player / nameZh / skillCount / totalScore / skillNames / unrecognizedSkills */
+const SKILL_BREAKDOWN_UPLOADED_KEY = 'djsc_skill_breakdown_uploaded_v1';
+
+function loadUploadedBreakdowns() {
+    try {
+        const raw = safeGet(SKILL_BREAKDOWN_UPLOADED_KEY, null);
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+}
+function saveUploadedBreakdowns(map) {
+    try { safeSet(SKILL_BREAKDOWN_UPLOADED_KEY, JSON.stringify(map)); } catch (e) {}
+}
+
 function collectSkillBreakdown() {
     try {
         const me = (typeof game !== 'undefined' && game && game.me) 
@@ -239,11 +250,26 @@ function collectSkillBreakdown() {
             || null;
         if (!me) return null;
         
-        const heroName = me.name1 || me.name || 'unknown';
-        if (heroName === _lastUploadedHero) return null;  // 去重：同一武将只传一次
+        const callId = me.name1 || me.name || 'unknown';
+        const version = VERSION + '@' + BUILD_DATE;
+        const uploadKey = version + '|' + callId;
+        
+        // 去重：同一版本+同一武将终身只传一次
+        const uploaded = loadUploadedBreakdowns();
+        if (uploaded[uploadKey]) return null;
+        
+        // 中文名：从 lib.translate 取
+        let nameZh = callId;
+        try {
+            if (typeof lib !== 'undefined' && lib.translate && lib.translate[callId]) {
+                const t = lib.translate[callId];
+                nameZh = Array.isArray(t) ? t[0] : t;
+            }
+        } catch (eN) {}
         
         const skills = me.skills || [];
         let totalScore = 0;
+        const skillNames = [];
         const unrecognizedSkills = [];
         
         for (let i = 0; i < skills.length; i++) {
@@ -251,19 +277,29 @@ function collectSkillBreakdown() {
             try {
                 const br = skillProfitBreakdown(sid);
                 totalScore += (br.total || 0);
-                if (br.isUnrecognized) unrecognizedSkills.push(sid);
+                // 技能中文名
+                let sName = sid;
+                try {
+                    if (typeof lib !== 'undefined' && lib.translate && lib.translate[sid]) {
+                        const t = lib.translate[sid];
+                        sName = Array.isArray(t) ? t[0] : t;
+                    }
+                } catch (eSN) {}
+                skillNames.push(sName);
+                if (br.isUnrecognized) unrecognizedSkills.push(sName);
             } catch (e) {}
         }
         
-        _lastUploadedHero = heroName;
-        
-        const version = VERSION + "@" + BUILD_DATE;
+        // 标记为已上传
+        uploaded[uploadKey] = Date.now();
+        saveUploadedBreakdowns(uploaded);
         
         return {
-            player: heroName,
-            version: version,
+            player: callId,
+            nameZh: nameZh,
             skillCount: skills.length,
             totalScore: Math.round(totalScore * 100) / 100,
+            skillNames: skillNames,
             unrecognizedSkills: unrecognizedSkills
         };
     } catch (e) { return null; }
