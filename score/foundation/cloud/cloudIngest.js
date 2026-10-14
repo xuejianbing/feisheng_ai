@@ -18,6 +18,8 @@
 import { cfg } from '../config/util.js?v=5e5';
 import { getSamples, bufferSize, exportStats, getSampleDiagnostics } from '../../model/train/trainExport.js?v=5e5';
 import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=5e5';
+import { VERSION, BUILD_DATE } from '../../config/version.js?v=5e5';
+import { skillProfitBreakdown } from '../../decision/skills/skills.js?v=5e5';
 import { learnedChains } from '../../decision/strategy/comboChain.js?v=5e5';
 import { log } from '../diag/logger.js?v=5e5';
 import { safeGet, safeSet } from '../storage/storage.js?v=5e5';
@@ -224,6 +226,49 @@ function collectPanelStats() {
         };
     } catch (e) { return { samples: bufferSize() }; }
 }
+/* ---------------- 技能拆解汇总（精简版，A+C 目的） ----------------
+ * 目的A：发现漏识别技能 → unrecognizedSkills 列表
+ * 目的C：对比武将强度 → totalScore 总分
+ * 去重：同一武将同一局只上传一次
+ * 版本：带构建时间，便于回归分析 */
+let _lastUploadedHero = null;
+function collectSkillBreakdown() {
+    try {
+        const me = (typeof game !== 'undefined' && game && game.me) 
+            || (typeof _status !== 'undefined' && _status.currentPhase) 
+            || null;
+        if (!me) return null;
+        
+        const heroName = me.name1 || me.name || 'unknown';
+        if (heroName === _lastUploadedHero) return null;  // 去重：同一武将只传一次
+        
+        const skills = me.skills || [];
+        let totalScore = 0;
+        const unrecognizedSkills = [];
+        
+        for (let i = 0; i < skills.length; i++) {
+            const sid = skills[i];
+            try {
+                const br = skillProfitBreakdown(sid);
+                totalScore += (br.total || 0);
+                if (br.isUnrecognized) unrecognizedSkills.push(sid);
+            } catch (e) {}
+        }
+        
+        _lastUploadedHero = heroName;
+        
+        const version = VERSION + "@" + BUILD_DATE;
+        
+        return {
+            player: heroName,
+            version: version,
+            skillCount: skills.length,
+            totalScore: Math.round(totalScore * 100) / 100,
+            unrecognizedSkills: unrecognizedSkills
+        };
+    } catch (e) { return null; }
+}
+
 function collectConfig() {
     try { return safeGet('djsc_score_config_v1', null); } catch (e) { return null; }
 }
@@ -328,6 +373,7 @@ function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5) {
     const cfg = collectConfig();
     if (cfg) env.config = cfg;
     if (shadowV5 && shadowV5.length) env.shadowV5 = shadowV5;   /* ★PR4：v5 shadow 决策对比摘要 */
+    try { const sb = collectSkillBreakdown(); if (sb) env.skillBreakdown = sb; } catch (eSb) {}
     return env;
 }
 function postJSON(bodyObj) {
