@@ -1,0 +1,10 @@
+export const PANEL_MODULES = [['openModeTrainingPanel','../../view/dashboard/modeTrainingPanel.js'], ['openScorePanel', '../../view/panel/panel.js'], ['openScoreDetailPanel', '../../view/panel/panel.js'], ['openPlanPanel', '../../view/panel/panel.js'], ['openFeedbackPanel', '../../view/panel/panel.js'], ['openArchivePanel', '../../view/panel/panel.js'], ['openRecommendPanel', '../../view/panel/panel.js'], ['openConfigPanel', '../../view/panel/panel.js'], ['openMemoryPanel', '../../view/panel/panel.js'], ['openSkillPanel', '../../view/panel/panel.js'], ['openOverridePanel', '../../view/panel/panel.js'], ['openSkillBreakdownPanel', '../../view/panel/panel.js'], ['openSkillCustomPanel', '../../view/panel/panel.js'], ['openHealthPanel', '../../view/panel/panel.js'], ['openBrainDashboard', '../../view/dashboard/brainDashboard.js'], ['openCalibratorPanel', '../../model/calibrate/calibratorPanel.js'], ['openComparePanel', '../../view/dashboard/comparePanel.js'], ['openDecisionDashboard', '../../view/dashboard/decisionDashboard.js'], ['openExportPanel', '../../foundation/io/exportAll.js'], ['openGuardPanel', '../../model/net/modelGuard.js'], ['openProfilerPanel', '../../foundation/diag/profiler.js'], ['openReplayPanel', '../../view/dashboard/replayPanel.js'], ['openSelfCheck', '../../verification/selfCheck.js'], ['openSmartPanel', '../../view/panel/smartPanel.js'], ['openChampionPanel', '../../view/dashboard/championPanel.js']];
+// Each export has its own result; an unavailable module cannot suppress other panels.
+export async function mountPanels(target, load=path=>import(/* webpackIgnore: true */ path)) {
+ const results=await Promise.allSettled(PANEL_MODULES.map(async([name,path])=>{
+  const module=await load(path);if(typeof module[name]!=='function')throw Error('导出缺失：'+name);
+  target[name]=module[name];return name;
+ }));
+ const panels=results.map((r,i)=>({name:PANEL_MODULES[i][0],path:PANEL_MODULES[i][1],ok:r.status==='fulfilled',error:r.status==='rejected'?String(r.reason?.message||r.reason):null}));
+ return {schema:'extension-panel-load-v1',ok:panels.every(p=>p.ok),total:panels.length,loaded:panels.filter(p=>p.ok).length,panels};
+}
