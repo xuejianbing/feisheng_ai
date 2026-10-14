@@ -193,7 +193,7 @@ function commitShadowV5(ids) {
         const sent = loadShadowSent().concat(ids);
         if (sent.length > SHADOW_SENT_MAX) sent.splice(0, sent.length - SHADOW_SENT_MAX);
         safeSet(SHADOW_UP_KEY, JSON.stringify({ sent: sent }));
-        /* ★ 4.0.24：写后读回校验——写入被配额/刷新打断时游标会假成功（服务器已有数据但手机不知，
+        /* ★ 4.1.0：写后读回校验——写入被配额/刷新打断时游标会假成功（服务器已有数据但手机不知，
            触发无意义重传循环）。读回失败则不视为提交，下轮自动重传（幂等）。 */
         const back = (function () { try { const o = JSON.parse(safeGet(SHADOW_UP_KEY, null)); return o && Array.isArray(o.sent) ? o.sent : null; } catch (eR) { return null; } })();
         if (!back || back[back.length - 1] !== sent[sent.length - 1]) {
@@ -206,7 +206,7 @@ function collectPanelStats() {
         const s = exportStats();
         return {
             samples: s && s.count != null ? s.count : bufferSize(),
-            /* ★ 4.0.24：训练缓冲线状态随批次上报——服务器直接观测 BUFFER 是否满/驱逐/导出失败，
+            /* ★ 4.1.0：训练缓冲线状态随批次上报——服务器直接观测 BUFFER 是否满/驱逐/导出失败，
                不再依赖本地诊断（15:18 样本线全灭事故即因缓冲状态不可见延迟 5 小时发现） */
             trainLine: s ? { count: s.count, max: s.max, paused: !!s.paused, pausedSamples: s.pausedSamples || 0, lastExport: String(s.lastExport || '').slice(0, 80) } : null,
             /* ★ fix10：__mode/__version 此前是死引用（全库无赋值），上报恒为空。
@@ -368,7 +368,7 @@ function uploadNow(force) {
         const list = batches[idx];
         const env = buildEnvelope(list, idx === batches.length - 1 ? snap.chainsPayload : null,
             idx === batches.length - 1 ? snap.storagePayload : null,
-            (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null);   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
+            (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null);   /* ★ 4.1.0：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
         return postJSON(env).then(() => {
             if (list) sentSamples += list.length;
             idx++;

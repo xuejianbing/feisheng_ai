@@ -172,7 +172,7 @@ export async function startShadow() {
         DIAG.polls++;
 
         try {
-            const S = (typeof _status !== 'undefined' && _status) || {};   /* ★ 4.0.24：typeof 防御——可选链不保护未声明标识符，启动窗口会 ReferenceError */
+            const S = (typeof _status !== 'undefined' && _status) || {};   /* ★ 4.1.0：typeof 防御——可选链不保护未声明标识符，启动窗口会 ReferenceError */
             const cands = S.djsc_lastCandidates || [];
             const best = S.djsc_lastBest;
             if (cands.length) { DIAG.withCands++; DIAG.lastCandLen = cands.length; if (best) DIAG.withBest++; }

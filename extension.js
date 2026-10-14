@@ -38,7 +38,7 @@ window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
 });
 
 // ===== 在线更新检查（直接写在这里，避免导入问题）=====
-const _CURRENT_VER = 'α4.0.24';
+const _CURRENT_VER = 'α4.1.0';
 const _UPDATE_URL = 'https://data.feiqiaoai.uno/update/check';
 const _UPDATE_DOWNLOAD_URL = 'https://data.feiqiaoai.uno/update/download';
 const _UPDATE_CHECK_TS = 'djsc_update_check_ts';

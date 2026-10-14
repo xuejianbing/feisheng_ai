@@ -1,7 +1,7 @@
 /* 版本摘要依据 CHANGELOG.md 的独立版本记录；缺失版本不推测补写。 */
 export const VERSION_CHANGELOG = [
     {
-        "version": "4.0.24",
+        "version": "4.1.0",
         "date": "2026-10-14",
         "title": "样本采集根因修复（特征维度失配）",
         "changes": [
