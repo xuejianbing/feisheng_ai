@@ -64,7 +64,7 @@ const DIM_CHECK = {
     hid1: MODEL_SCHEMA.dims[1], hid2: MODEL_SCHEMA.dims[2], out: MODEL_SCHEMA.dims[3],
     check: function () { return this.input === 134 && this.dim === 134 && this.hid1 === 128 && this.hid2 === 64 && this.out === 6; }
 };
-export { DIM_CHECK, MODEL_SCHEMA };
+export { DIM_CHECK, MODEL_SCHEMA, DATA_EPOCH };   /* ★ 追加导出 DATA_EPOCH：供模型权重更新模块做数据纪元兼容校验（只增不改） */
 const SCALE = 128;
 /* ★ softmax 温度：把 ±40~60 的原始 logits 压回 ±5~7.5，杜绝 softmax 完全饱和。
  * 饱和时 probs=[1,0,...]，标签平滑后正确类梯度方向会反转(prob>target→压正确logit)，模型反向学习；
@@ -1060,6 +1060,9 @@ export function __getW4() { return W4; }
 export function __getB4() { return B4; }
 export function __getPr1() { return W_proj1; }
 export function __getPr2() { return W_proj2; }
+/* ★ 供模型权重更新模块读回存档核对（只读、不改写任何状态）：
+ *   更新流程不能只信任 saveWeights() 的返回值，必须读回原始存档逐项校验。 */
+export function __readArchive() { return _lsGet(STORE_KEY); }
 
 /* ★ 优化器(AdamW)状态快照/还原：供热更"候选训练"隔离使用，
  *   避免候选训练污染主模型的动量/二阶矩，实现可回滚的 A/B。
