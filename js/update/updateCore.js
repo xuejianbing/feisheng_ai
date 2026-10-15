@@ -203,23 +203,57 @@ export const createTransactionLock = () => {
     };
 };
 
-/* ---------------- 应用闸门（P1-2） ----------------
+/* ---------------- 应用闸门（P0 / P1-2） ----------------
  * 更新开始前与真正替换前都必须过这道闸门。
+ *
+ * ★ 对局状态判定优先级（本轮 P0 修复要点）：
+ *   1) 实时信号优先于缓存信号——绝不能因为缓存说"不在对局"就放过实时说"在对局"。
+ *   2) `gameStarted`（宿主 `_status.gameStarted`，每局由 gameStart 事件置位）是最可靠的
+ *      "本局已开始"依据；`over`（宿主 `_status.over`）表示本局已结束。
+ *   3) `hasActiveEvent`（活动事件链 + 玩家已就绪）作为兜底：覆盖 gameStarted 尚未置位
+ *      的开局瞬间，以及观察者/录像等不置 gameStarted 的场景。
+ *   4) 缓存 `inGameKnown/inGame` 仅在前两者都不可判定时使用（事件总线订阅）。
+ *   5) 只有"本局已开始且尚未结束"才阻塞；菜单/营地（本局未开始）必须放行，
+ *      否则玩家在非对局界面将永远无法更新。
+ *
  * 保守策略：无法确认模型状态 / 训练状态时一律不放过（不能默认允许覆盖）。
  * 说明：专项模型（modeModelStore）使用独立存储与独立模型实例，不修改共享主模型，
  *       故不在此阻塞；本地训练器（localTrainer）会原地改写共享主模型，必须阻塞。 */
 export const evaluateApplyGate = opt => {
     const { modelState, modelStateKnown, isTraining, trainerKnown, hasCandidate,
-        inGame, inGameKnown, hasActiveEvent, over } = opt || {};
+        gameStarted, over, hasActiveEvent, inGame, inGameKnown } = opt || {};
     if (modelStateKnown === false) return { ok: false, reason: '无法确认模型状态，已保守跳过' };
     if (modelState != null && modelState !== 'stable') return { ok: false, reason: '模型状态为 ' + modelState + '（训练或 A/B 试用进行中）' };
     if (trainerKnown === false) return { ok: false, reason: '无法确认本地训练状态，已保守跳过' };
     if (isTraining === true) return { ok: false, reason: '本地训练正在进行中' };
     if (hasCandidate === true) return { ok: false, reason: '存在未完成的 A/B 候选模型' };
-    if (over === true) return { ok: true };
+
+    /* ① 宿主实时信号：本局已开始 */
+    if (gameStarted === true) {
+        return over === true ? { ok: true } : { ok: false, reason: '对局进行中' };
+    }
+    /* ② 实时兜底：存在活动事件链且玩家已就绪 */
+    if (hasActiveEvent === true) return { ok: false, reason: '对局进行中' };
+    /* ③ 缓存信号（事件总线/生命周期回调维护） */
     if (inGameKnown === true) return inGame ? { ok: false, reason: '对局进行中' } : { ok: true };
-    if (hasActiveEvent) return { ok: false, reason: '对局进行中' };
+    /* ④ 无任何对局信号：菜单 / 营地 / 未开局 → 放行 */
     return { ok: true };
+};
+
+/* ---------------- 本地训练证据判定（P1-4） ----------------
+ * `trained > 0` 不能单独证明用户本地训练过：官方发布权重本身也可能带非零训练步数
+ * （安装后 META.trained 即官方包 trained）。必须结合可信来源记录：
+ *   - 官方记录里保存的官方权重训练步数 officialTrained：当前 > 官方 才说明本地继续训练过；
+ *   - 状态机的候选晋升计数 promotedCount：> 0 说明本地训练产生过候选并晋升。
+ * 无可靠证据 → 返回 false（调用方据此判为 mismatch，绝不误判为"用户训练成果"）。 */
+export const computeTrainingEvidence = opt => {
+    const { archiveTrained, officialTrained, promotedCount } = opt || {};
+    const at = Number(archiveTrained) || 0;
+    const ot = Number(officialTrained) || 0;
+    const promoted = Number(promotedCount) || 0;
+    if (promoted > 0) return true;
+    if (ot > 0 && at > ot) return true;
+    return false;
 };
 
 /* ---------------- 官方权重记录（P1-4） ----------------
@@ -236,6 +270,8 @@ export const buildOfficialRecord = opt => {
         dataEpoch: contract.dataEpoch,
         sha256: String(digest || bundle.sha256 || '').toLowerCase(),
         size: Number(size) || Number(bundle.size) || 0,
+        /* ★ P1-4：记录官方权重自身的训练步数，作为"是否被本地继续训练"的基线 */
+        trained: Number(bundle.trained) || 0,
         appliedAt: Number(appliedAt) || Date.now(),
         source: 'official-online',
     };
@@ -251,6 +287,37 @@ export const verifyOfficialRecord = (got, want) => {
     if (Number(got.size) !== Number(want.size)) errors.push('记录 size 不符');
     if (Number(got.schemaVersion) !== Number(want.schemaVersion)) errors.push('记录 schemaVersion 不符');
     return errors;
+};
+
+/* ---------------- 版本记录回滚（P1-3） ----------------
+ * 权重恢复成功 ≠ 事务回滚成功：旧版本记录必须写入后读回核验；
+ * 无旧记录时必须确认新记录已被删除。返回 { ok, errors }。 */
+export const restoreOfficialRecord = opt => {
+    const { prevRec, writeRecord, readRecord, removeRecord, verify } = opt || {};
+    if (prevRec) {
+        if (typeof writeRecord !== 'function') return { ok: false, errors: ['缺少旧版本记录写入能力'] };
+        let wrote = false;
+        try { wrote = writeRecord(prevRec) === true; } catch (e) { return { ok: false, errors: ['旧版本记录写入抛出异常：' + ((e && e.message) || e)] }; }
+        if (!wrote) return { ok: false, errors: ['旧版本记录写入失败（存储不可用或配额不足）'] };
+        let back = null;
+        try { back = typeof readRecord === 'function' ? readRecord() : null; } catch (e) { return { ok: false, errors: ['旧版本记录读回抛出异常'] }; }
+        if (!back) return { ok: false, errors: ['旧版本记录写入后无法读回'] };
+        const errs = typeof verify === 'function' ? verify(back, prevRec) : [];
+        if (errs.length) return { ok: false, errors: errs };
+        return { ok: true, errors: [] };
+    }
+    if (typeof removeRecord === 'function') { try { removeRecord(); } catch (e) {} }
+    let still = null;
+    try { still = typeof readRecord === 'function' ? readRecord() : null; } catch (e) { still = null; }
+    if (still) return { ok: false, errors: ['新版本记录删除失败（仍可读回）'] };
+    return { ok: true, errors: [] };
+};
+
+/* 回滚状态合成：完整 / 部分 / 失败（上层 UI 据此区分提示，绝不把部分回滚报成完整成功） */
+export const combineRollbackStatus = (modelRolledBack, recordRolledBack) => {
+    if (modelRolledBack && recordRolledBack) return 'complete';
+    if (modelRolledBack) return 'partial';
+    return 'failed';
 };
 
 /* ---------------- 官方记录形状校验（供 asOfficialRecord 复用） ---------------- */
@@ -360,10 +427,54 @@ export const computeMaxBundleBytes = dims => {
 };
 /* 清单体积上限（清单只含元数据，远小于权重包） */
 export const MAX_MANIFEST_BYTES = 256 * 1024;
+/* 绝对硬上限：即便体积上限推算异常，也绝不允许无限制缓冲远程响应 */
+export const MAX_ABSOLUTE_BYTES = 8 * 1024 * 1024;
+
+/* ---------------- 响应正文读取（P2-2） ----------------
+ * 优先流式读取：逐块累计**实际接收字节数**，超限立即取消读取与请求，
+ * 用 TextDecoder 以 stream 模式解码（正确处理被切断的多字节 UTF-8）。
+ * 不支持 ReadableStream 的旧环境退回 res.text()，并以 UTF-8 字节长度做上限校验
+ * （绝不用 JS 字符串长度直接等同于网络字节数）。 */
+export const readBodyLimited = async (res, maxBytes, ctl) => {
+    const cap = Number(maxBytes);
+    const hardCap = Math.min(Number.isFinite(cap) ? cap : MAX_ABSOLUTE_BYTES, MAX_ABSOLUTE_BYTES);
+    const body = res && res.body;
+    if (body && typeof body.getReader === 'function' && typeof TextDecoder === 'function') {
+        const reader = body.getReader();
+        const dec = new TextDecoder('utf-8');
+        let received = 0, text = '';
+        try {
+            for (;;) {
+                const chunk = await reader.read();
+                if (!chunk || chunk.done) break;
+                const value = chunk.value;
+                if (value && typeof value.byteLength === 'number') received += value.byteLength;
+                if (received > hardCap) {
+                    try { reader.cancel(); } catch (e) {}
+                    if (ctl) { try { ctl.abort(); } catch (e) {} }
+                    throw new Error('响应体积超限（已接收 ' + received + ' > ' + hardCap + '）');
+                }
+                if (value) text += dec.decode(value, { stream: true });
+            }
+            text += dec.decode();
+            return text;
+        } finally {
+            try { if (typeof reader.releaseLock === 'function') reader.releaseLock(); } catch (e) {}
+        }
+    }
+    /* 兼容：无流式读取能力 */
+    if (!res || typeof res.text !== 'function') throw new Error('响应不可读');
+    const text = await res.text();
+    if (typeof text !== 'string') throw new Error('响应正文读取失败');
+    let bytes = text.length;
+    if (typeof TextEncoder === 'function') { try { bytes = new TextEncoder().encode(text).length; } catch (e) { bytes = text.length; } }
+    if (bytes > hardCap) throw new Error('响应体积超限（' + bytes + ' > ' + hardCap + '，旧环境非流式读取）');
+    return text;
+};
 
 /* ---------------- 网络收口（P2-2 / P2-3） ----------------
  * 超时必须覆盖"完整下载过程"（含响应正文读取），而非仅到拿到响应为止；
- * 同时做体积预检（Content-Length 与实际正文长度），防止异常大响应撑爆内存。
+ * 体积限制在流式读取过程中即时生效（不依赖 Content-Length）。
  * fetch / AbortController / sleep 全部注入，便于在 Node 侧用假对象覆盖超时、
  * 正文中断、体积异常等故障路径。 */
 export const fetchTextWithLimits = async opt => {
@@ -379,15 +490,14 @@ export const fetchTextWithLimits = async opt => {
         try {
             const res = await fetchImpl(url, ctl ? { signal: ctl.signal } : undefined);
             if (res && res.ok === false) throw new Error('HTTP ' + res.status);
+            /* Content-Length 预检（仅作提前拒绝，不作为唯一防线） */
             if (res && res.headers && typeof res.headers.get === 'function') {
                 const cl = Number(res.headers.get('content-length'));
-                if (Number.isFinite(cl) && cl > Number(maxBytes)) throw new Error('响应体积超限（Content-Length ' + cl + ' > ' + maxBytes + '）');
+                if (Number.isFinite(cl) && cl > Math.min(Number(maxBytes) || MAX_ABSOLUTE_BYTES, MAX_ABSOLUTE_BYTES)) {
+                    throw new Error('响应体积超限（Content-Length ' + cl + ' > ' + maxBytes + '）');
+                }
             }
-            if (!res || typeof res.text !== 'function') throw new Error('响应不可读');
-            const text = await res.text();   /* ← 正文读取同样处于超时保护内 */
-            if (typeof text !== 'string') throw new Error('响应正文读取失败');
-            if (Number.isFinite(Number(maxBytes)) && text.length > Number(maxBytes)) throw new Error('响应体积超限（' + text.length + ' > ' + maxBytes + '）');
-            return text;
+            return await readBodyLimited(res, maxBytes, ctl);   /* ← 正文读取同样处于超时保护内 */
         } catch (e) {
             lastErr = timedOut ? new Error('请求超时（' + timeoutMs + 'ms，含正文读取）') : e;
         } finally {

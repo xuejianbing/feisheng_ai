@@ -24,11 +24,12 @@ import {
     paramsSize, paramsDigest, sha256Hex, validateBundle,
     compareVersion, isNewerRelease, satisfiesExtensionRange, normalizeReleaseSeq, classifyManifestState,
 } from '../js/update/weightBundle.js';
-import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot } from '../js/update/applyWeights.js';
+import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot, runtimeStateDiff } from '../js/update/applyWeights.js';
 import {
     buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
+    computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
     BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
 } from '../js/update/updateCore.js';
 import { styledDialog } from '../js/update/updateUi.js';
@@ -82,6 +83,10 @@ for (const s of spec) {
 }
 const officialSize = paramsSize(officialParams, DIMS);
 const officialDigest = paramsDigest(officialParams, DIMS);
+/* "用户本地训练成果"模型 A：与内置默认、官方包都不同（供多处复用） */
+const userParams = {};
+for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[7] = (b[7] + 9) & 0xff; userParams[s.key] = encodeBase64(b); }
+const userDigest = paramsDigest(userParams, DIMS);
 const mkBundle = mut => {
     const b = {
         format: BUNDLE_FORMAT, modelId: MODEL_ID, modelVersion: 'w7d5-t01', releaseSeq: 1,
@@ -217,8 +222,13 @@ const CORE_SHAPES = [['W1', 134 * 128], ['B1', 128], ['W2', 128 * 64], ['B2', 64
 
 const mkStorage = bridge => ({
     readArchive() { return bridge.state.corrupt || bridge.state.archive; },
+    /* 长期恢复点（仅安装成功后轮换） */
     writeBackup(rec) { this.backup = rec; return true; },
     readBackup() { return this.backup; },
+    /* 安装事务暂存备份（P2-1） */
+    writeStagingBackup(rec) { this.staging = rec; return true; },
+    readStagingBackup() { return this.staging; },
+    removeStagingBackup() { this.staging = null; return true; },
 });
 
 const rst = (name, cond, extra) => ok(name, cond, extra);
@@ -258,7 +268,7 @@ const rst = (name, cond, extra) => ok(name, cond, extra);
 /* 6c) 备份写入失败（返回 false）→ 更新前即中止，绝不替换模型（P0-1） */
 {
     const bridge = makeFakeWeights({ initialParams: defaultParams });
-    const badStorage = { readArchive: () => null, writeBackup: () => false, readBackup: () => null };
+    const badStorage = { readArchive: () => null, writeBackup: () => false, readBackup: () => null, writeStagingBackup: () => false, readStagingBackup: () => null, removeStagingBackup: () => true };
     const bundle = mkBundle();
     const res = validateBundle(bundle, EXPECT);
     const r = await applyOfficialBundle({ bridge, storageOps: badStorage, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH });
@@ -342,24 +352,40 @@ ok('内置默认权重维度 = 运行时 dims', JSON.stringify(DEFAULT_WEIGHTS.d
 ok('内置默认权重 ready = true（离线开箱可用）', DEFAULT_WEIGHTS.ready === true);
 ok('已知既有不一致：内置 dv=4 < DATA_EPOCH=5（走 _decodeDefault 不受影响，未修改）', Number(DEFAULT_WEIGHTS.dv) < EPOCH, DEFAULT_WEIGHTS.dv);
 
-/* ---------- 10. 备份安全（P0-1） ---------- */
-section('备份安全（P0-1）');
-/* 全功能假存储：可注入写入失败 / 读回失败 / 写入后损坏 */
+/* ---------- 10. 备份安全（P0-1 / P2-1） ---------- */
+section('备份安全（P0-1 / P2-1）');
+/* 全功能假存储：区分"安装事务暂存备份"与"长期恢复点"，可分别注入故障。
+ * writeThrow/writeFalse/readBackupNull/corruptBackup 作用于**暂存备份**（安装前）；
+ * commitFalse/commitThrow/commitReadNull/corruptCommit 作用于**长期恢复点轮换**（安装成功后）。 */
 const mkStorageFull = (bridge, opt) => {
     opt = opt || {};
-    const st = { backup: null, writes: 0, reads: 0 };
+    const st = { backup: null, staging: null, writes: 0, stagingWrites: 0, stagingRemoved: 0, reads: 0 };
+    const clone = rec => JSON.parse(JSON.stringify(rec));
+    const corrupt = rec => { const b = decodeBase64(rec.params.w1); b[0] = (b[0] + 1) & 0xff; rec.params.w1 = encodeBase64(b); return rec; };
     return {
         st,
         readArchive() { return opt.archiveNull ? null : (bridge.state.corrupt || bridge.state.archive); },
+        /* 长期恢复点（仅安装整体成功后轮换） */
         writeBackup(rec) {
             st.writes++;
-            if (opt.writeThrow) throw new Error('QuotaExceededError');
-            if (opt.writeFalse) return false;
-            st.backup = JSON.parse(JSON.stringify(rec));
-            if (opt.corruptBackup) { const b = decodeBase64(st.backup.params.w1); b[0] = (b[0] + 1) & 0xff; st.backup.params.w1 = encodeBase64(b); }
+            if (opt.commitThrow) throw new Error('QuotaExceededError');
+            if (opt.commitFalse) return false;
+            st.backup = clone(rec);
+            if (opt.corruptCommit) corrupt(st.backup);
             return true;
         },
-        readBackup() { st.reads++; if (opt.readBackupNull) return null; return st.backup; },
+        readBackup() { st.reads++; if (opt.commitReadNull) return null; return st.backup; },
+        /* 安装事务暂存备份 */
+        writeStagingBackup(rec) {
+            st.stagingWrites++;
+            if (opt.writeThrow) throw new Error('QuotaExceededError');
+            if (opt.writeFalse) return false;
+            st.staging = clone(rec);
+            if (opt.corruptBackup) corrupt(st.staging);
+            return true;
+        },
+        readStagingBackup() { if (opt.readBackupNull) return null; return st.staging; },
+        removeStagingBackup() { st.stagingRemoved++; st.staging = null; return true; },
     };
 };
 
@@ -406,7 +432,7 @@ const mkStorageFull = (bridge, opt) => {
     { const b = decodeBase64(recTampered.params.w1); b[0] = (b[0] + 1) & 0xff; recTampered.params.w1 = encodeBase64(b); }
     ok('备份读回校验：参数被改 → 报错', verifyBackupRecord(recTampered, rec, DIMS).length > 0);
 }
-/* 10e) 安装成功后：备份内容 = 更新前模型 */
+/* 10e) 安装成功后：长期备份轮换为"更新前模型"，暂存备份被清除 */
 {
     const bridge = makeFakeWeights({ initialParams: defaultParams });
     const storageOps = mkStorageFull(bridge);
@@ -414,16 +440,68 @@ const mkStorageFull = (bridge, opt) => {
     const r = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
     ok('安装成功', r.ok === true, JSON.stringify(r.errors));
     ok('返回 backupWritten=true', r.backupWritten === true);
-    ok('备份内容 = 更新前模型', paramsDigest(storageOps.st.backup.params, DIMS) === paramsDigest(defaultParams, DIMS));
-    ok('备份摘要字段与内容一致', storageOps.st.backup.digest === paramsDigest(defaultParams, DIMS));
-    ok('备份保存了原模型元数据', storageOps.st.backup.meta && storageOps.st.backup.meta.trained === 111);
+    ok('成功后长期备份已轮换', r.backupRotated === true);
+    ok('长期备份内容 = 更新前模型', paramsDigest(storageOps.st.backup.params, DIMS) === paramsDigest(defaultParams, DIMS));
+    ok('长期备份摘要字段与内容一致', storageOps.st.backup.digest === paramsDigest(defaultParams, DIMS));
+    ok('长期备份保存了原模型元数据', storageOps.st.backup.meta && storageOps.st.backup.meta.trained === 111);
+    ok('成功后暂存备份已清除', storageOps.st.staging === null);
+}
+
+/* 10f) P2-1：已有恢复点 A 时，安装失败/取消不得提前销毁 A */
+{
+    /* 先放入用户长期恢复点 A（与当前模型不同） */
+    const bridge = makeFakeWeights({ initialParams: officialParams });
+    const storageOps = mkStorageFull(bridge);
+    storageOps.st.backup = buildBackupRecord({ params: userParams, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+    const beforeA = JSON.stringify(storageOps.st.backup);
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+
+    /* (1) 暂存备份写入失败 → 中止，A 完好 */
+    {
+        const s2 = mkStorageFull(bridge, { writeFalse: true });
+        s2.st.backup = JSON.parse(beforeA);
+        const r = await applyOfficialBundle({ bridge, storageOps: s2, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+        ok('暂存写入失败 → 中止', r.ok === false && r.failedAt === 'backup');
+        ok('暂存写入失败 → 原恢复点 A 完好', JSON.stringify(s2.st.backup) === beforeA);
+    }
+    /* (2) 最终状态复核不通过 → 中止，A 完好、暂存被清除 */
+    {
+        const s3 = mkStorageFull(bridge);
+        s3.st.backup = JSON.parse(beforeA);
+        const r = await applyOfficialBundle({
+            bridge, storageOps: s3, bundle, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, confirmBeforeWrite: async () => false,
+        });
+        ok('最终复核不通过 → 中止', r.ok === false && r.failedAt === 'gate');
+        ok('最终复核不通过 → 原恢复点 A 完好', JSON.stringify(s3.st.backup) === beforeA);
+        ok('最终复核不通过 → 暂存备份被清除', s3.st.staging === null && s3.st.stagingRemoved >= 1);
+        ok('最终复核不通过 → 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* (3) 权重校验失败回滚 → A 完好 */
+    {
+        const b2 = makeFakeWeights({ initialParams: officialParams, corruptFirstSave: true });
+        const s4 = mkStorageFull(b2);
+        s4.st.backup = JSON.parse(beforeA);
+        const r = await applyOfficialBundle({ bridge: b2, storageOps: s4, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+        ok('校验失败 → 判定失败并回滚', r.ok === false && r.rolledBack === true, JSON.stringify(r.errors));
+        ok('校验失败 → 原恢复点 A 完好', JSON.stringify(s4.st.backup) === beforeA);
+        ok('校验失败 → 暂存备份被清除', s4.st.staging === null);
+    }
+    /* (4) 长期备份轮换失败 → 权重已应用但如实报告未轮换，A 与暂存都保留 */
+    {
+        const b3 = makeFakeWeights({ initialParams: officialParams });
+        const s5 = mkStorageFull(b3, { commitFalse: true });
+        s5.st.backup = JSON.parse(beforeA);
+        const r = await applyOfficialBundle({ bridge: b3, storageOps: s5, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+        ok('轮换失败 → 安装仍成功（不谎报）', r.ok === true, JSON.stringify(r.errors));
+        ok('轮换失败 → backupRotated=false 如实反馈', r.backupRotated === false);
+        ok('轮换失败 → 原恢复点 A 未被销毁', JSON.stringify(s5.st.backup) === beforeA);
+        ok('轮换失败 → 暂存备份保留（未丢失可恢复数据）', !!s5.st.staging);
+    }
 }
 
 /* ---------- 11. 恢复事务（P0-2） ---------- */
 section('恢复事务（P0-2）');
-const userParams = {};
-for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[7] = (b[7] + 9) & 0xff; userParams[s.key] = encodeBase64(b); }
-const userDigest = paramsDigest(userParams, DIMS);
 {
     /* 用户模型 A → 官方模型 B → 恢复 A */
     const bridge = makeFakeWeights({ initialParams: userParams });
@@ -512,20 +590,34 @@ section('事务锁（P1-1）');
     lock.release();
 }
 
-/* ---------- 14. 应用闸门（P1-2） ---------- */
-section('应用闸门（P1-2）');
+/* ---------- 14. 应用闸门（P0 / P1-2） ---------- */
+section('应用闸门（P0 / P1-2）');
 const gate = o => evaluateApplyGate(o).ok;
-ok('状态机 stable + 未训练 + 无候选 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasCandidate: false, over: true }) === true);
+const gStable = Object.assign({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasCandidate: false });
+ok('状态机 stable + 未训练 + 无候选 → 放行', gate(Object.assign({}, gStable, { over: true })) === true);
 ok('状态机 training → 拒绝', gate({ modelState: 'training', modelStateKnown: true, isTraining: false, trainerKnown: true }) === false);
 ok('状态机 candidate → 拒绝', gate({ modelState: 'candidate', modelStateKnown: true, isTraining: false, trainerKnown: true }) === false);
 ok('真实训练器 isTraining=true → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: true, trainerKnown: true }) === false);
 ok('存在 A/B 候选 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasCandidate: true }) === false);
 ok('模型状态不可知 → 保守拒绝', gate({ modelState: null, modelStateKnown: false, isTraining: false, trainerKnown: true }) === false);
 ok('训练状态不可知 → 保守拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: null, trainerKnown: false }) === false);
-ok('对局中 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, inGame: true, inGameKnown: true }) === false);
-ok('对局已知结束 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, inGame: false, inGameKnown: true }) === true);
-ok('存在活动事件链 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasActiveEvent: true }) === false);
-ok('_status.over 优先 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, over: true, inGame: true, inGameKnown: true }) === true);
+ok('对局中（缓存）→ 拒绝', gate(Object.assign({}, gStable, { inGame: true, inGameKnown: true })) === false);
+ok('对局已知结束（缓存）→ 放行', gate(Object.assign({}, gStable, { inGame: false, inGameKnown: true })) === true);
+ok('存在活动事件链 → 拒绝', gate(Object.assign({}, gStable, { hasActiveEvent: true })) === false);
+
+/* ★ P0 本轮修复重点：实时信号优先级 */
+ok('宿主 gameStarted 且未结束 → 拒绝（即使缓存说不在对局）',
+    gate(Object.assign({}, gStable, { gameStarted: true, over: false, inGame: false, inGameKnown: true })) === false);
+ok('宿主 gameStarted 且已结束 → 放行', gate(Object.assign({}, gStable, { gameStarted: true, over: true })) === true);
+ok('第二局已开始（缓存残留"不在对局"）→ 仍拒绝',
+    gate(Object.assign({}, gStable, { gameStarted: true, over: false, inGame: false, inGameKnown: true })) === false);
+ok('活动事件链优先于缓存"不在对局" → 拒绝',
+    gate(Object.assign({}, gStable, { hasActiveEvent: true, inGame: false, inGameKnown: true })) === false);
+ok('上局结束标记残留但本局已开始 → 拒绝（over 不得凌驾 gameStarted）',
+    gate(Object.assign({}, gStable, { gameStarted: true, over: false, inGame: true, inGameKnown: true })) === false);
+ok('菜单/营地（未开局、无活动事件、无缓存）→ 放行', gate(Object.assign({}, gStable, {})) === true);
+ok('非对局界面不得被永久阻塞（无任何对局信号）→ 放行',
+    gate(Object.assign({}, gStable, { gameStarted: false, over: false, hasActiveEvent: false, inGameKnown: false })) === true);
 
 /* ---------- 15. 官方记录事务（P1-4） ---------- */
 section('官方记录事务（P1-4）');
@@ -689,6 +781,330 @@ section('弹窗降级安全（P2-4）');
     ok('DOM 不可用 + 显式 defaultValue → 用指定安全值', (await styledDialog(Object.assign({}, destructive, { defaultValue: 'safe' }))) === 'safe');
     ok('DOM 不可用 + 只读提示 → 安全降级为确定', (await styledDialog({ title: '提示', message: '只读' })) === 'ok');
     ok('DOM 不可用 + 危险且无按钮 → 返回 null（取消）', (await styledDialog({ title: 'x', message: 'y', dangerous: true })) === null);
+}
+
+/* ---------- 20. 连续对局状态门禁（P0） ---------- */
+section('连续对局状态门禁（P0）');
+{
+    /* 模拟真实生命周期：菜单 → 开局 → 结算 → 不重启直接第二局 → 结算。
+     * 用同一 evaluateApplyGate 判定"任何进行中的对局都不得放行"。 */
+    const run = (gameStarted, over, hasActiveEvent) => evaluateApplyGate(Object.assign({}, gStable, { gameStarted, over, hasActiveEvent })).ok;
+    ok('① 首次进入主菜单（未开局）→ 放行', run(false, false, false) === true);
+    ok('② 第一局正在进行 → 拒绝', run(true, false, true) === false);
+    ok('③ 第一局正常结算（over=true）→ 放行', run(true, true, false) === true);
+    ok('④ 不重启直接第二局已开始 → 拒绝', run(true, false, true) === false);
+    ok('⑤ 第二局尚未结束 → 拒绝', run(true, false, true) === false);
+    ok('⑥ 第二局结束 → 放行', run(true, true, false) === true);
+    /* 连续重新开始三局：每局进行中都必须拒绝 */
+    for (let i = 1; i <= 3; i++) {
+        ok('连续第 ' + i + ' 局进行中 → 拒绝', run(true, false, i % 2 === 0) === false);
+    }
+    /* 上局结束标记残留（over 仍为 true）但本局已开始 → 必须拒绝 */
+    ok('上局 over 残留 + 本局已开始 → 拒绝', run(true, false, false) === false);
+    /* 扩展卸载后重新启用：缓存清空，菜单态放行 */
+    ok('扩展重新启用（菜单态）→ 放行', run(false, false, false) === true);
+    /* 局内下载 → 局末延迟应用：局内拒绝、局末放行 */
+    ok('局内发起安装 → 拒绝（走延迟）', run(true, false, true) === false);
+    ok('局末延迟应用 → 放行', run(true, true, false) === true);
+    /* 门禁纯函数幂等：重复判定结果一致（防止重复触发产生不同结论） */
+    const a1 = run(true, false, true), a2 = run(true, false, true), a3 = run(true, false, true);
+    ok('重复判定一致（幂等）', a1 === a2 && a2 === a3 && a1 === false);
+}
+
+/* ---------- 21. 手动安装最终摘要复核（P1-1） ---------- */
+section('手动安装最终摘要复核（P1-1）');
+{
+    const contract4 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    /* 用户确认时授权对象 = 模型 A */
+    const auth = buildPendingRecord({ bundle: mkBundle(), baseModelDigest: userDigest, userAuthorized: true, contract: contract4 });
+    const ev4 = (cur, rec) => evaluatePending({ pending: auth, contract: contract4, currentDigest: cur, officialRec: rec || null, gate: { ok: true } }).action;
+    ok('确认期间模型未变（A）→ 可继续安装', ev4(userDigest) === 'apply');
+    ok('确认期间模型 A→B → 必须重新询问（reprompt）', ev4(thirdDigest) === 'reprompt');
+    ok('确认期间模型被重置为内置默认 → 重新询问', ev4(baseDigest) === 'reprompt');
+    ok('确认期间模型已变为官方目标 → 安全跳过（drop）', ev4(officialDigest) === 'drop');
+    ok('状态恢复 stable 但模型已变化 → 仍必须重新询问', ev4(thirdDigest) === 'reprompt');
+    /* 未经重新授权，绝不覆盖 B */
+    ok('未重新授权时判定不为 apply', ev4(thirdDigest) !== 'apply');
+}
+
+/* ---------- 22. 写入失败的部分修改回滚（P1-2） ---------- */
+section('写入失败的部分修改回滚（P1-2）');
+{
+    /* 可注入写入故障的假 bridge：首次 restoreModel 为"写入"，后续为"回滚" */
+    const makeFaultyWeights = (flags) => {
+        flags = flags || {};
+        const live = { ...toLive(officialParams), META: { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true } };
+        live.adamT = 7;
+        for (const [mk, wk] of OPT) live[mk] = new Float32Array(live[wk].length).fill(mk.charAt(0) === 'm' ? 0.25 : 0.5);
+        const st = { archive: null, saveCount: 0, restoreCalls: 0, corrupt: null };
+        const clone = () => { const s = { META: { ...live.META }, adamT: live.adamT }; for (const k of SNAP) s[k] = new live[k].constructor(live[k]); for (const [mk] of OPT) s[mk] = new Float32Array(live[mk]); return s; };
+        const applyFrom = (snap, keys, withOpt) => {
+            for (const k of keys) if (snap[k]) live[k] = new snap[k].constructor(snap[k]);
+            if (withOpt) for (const [mk] of OPT) if (snap[mk] && snap[mk].length === live[mk].length) live[mk] = new Float32Array(snap[mk]);
+            if (withOpt && typeof snap.adamT === 'number') live.adamT = snap.adamT;
+            if (snap.META) { live.META.trained = snap.META.trained || 0; live.META.accuracy = snap.META.accuracy || 0; live.META.ready = !!snap.META.ready; }
+        };
+        return {
+            live, st, state: st,
+            snapshotModel: () => clone(),
+            restoreModel(snap) {
+                if (!snap) return false;
+                for (const [sk, len] of CORE_SHAPES) { const a = snap[sk]; if (!a || a.length !== len) return false; }
+                st.restoreCalls++;
+                const isRollback = st.restoreCalls > 1;
+                if (isRollback) {
+                    if (flags.rollbackThrows) throw new Error('rollback exploded');
+                    applyFrom(snap, SNAP, !flags.skipOptimizerOnRollback);
+                    return true;
+                }
+                if (flags.rejectWrite) return false;                                  /* 完全拒绝，未修改 */
+                if (flags.throwAfter != null) { applyFrom(snap, SNAP.slice(0, flags.throwAfter), false); throw new Error('write failed midway'); }
+                if (flags.falseAfterAll) { applyFrom(snap, SNAP, true); return false; } /* 全部写入后返回 false */
+                applyFrom(snap, SNAP, true);
+                return true;
+            },
+            saveWeights() {
+                st.saveCount++;
+                st.archive = flags.saveCorrupt ? encodeState(live).replace(/"w1":"([A-Za-z0-9+/=]{4})/, '"w1":"AAAA') : encodeState(live);
+                return true;
+            },
+            getMeta() { return { trained: live.META.trained, accuracy: live.META.accuracy, ready: live.META.ready }; },
+            forward() { const o = new Float32Array(DIMS[3]); for (let k = 0; k < o.length; k++) o[k] = live.W1[k] + live.B1[k % 128]; return o; },
+        };
+    };
+    const runFaulty = async (flags, opt) => {
+        const bridge = makeFaultyWeights(flags);
+        const storageOps = mkStorageFull(bridge);
+        const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+        const r = await applyOfficialBundle(Object.assign({
+            bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA,
+        }, opt || {}));
+        return { bridge, storageOps, r };
+    };
+
+    /* (1) restoreModel 完全拒绝 → 确认未发生任何修改，不误报"已回滚" */
+    {
+        const { bridge, r } = await runFaulty({ rejectWrite: true });
+        ok('完全拒绝 → 判定失败', r.ok === false && r.failedAt === 'write');
+        ok('完全拒绝 → 未标记部分修改', r.partialWrite === false, JSON.stringify(r));
+        ok('完全拒绝 → 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* (2) 写入前三个参数后抛异常 → 必须检测并回滚 */
+    {
+        const { bridge, r } = await runFaulty({ throwAfter: 3 });
+        ok('写一半抛异常 → 判定失败', r.ok === false, JSON.stringify(r.errors));
+        ok('写一半抛异常 → 标记已部分修改', r.partialWrite === true);
+        ok('写一半抛异常 → 已完整回滚', r.rolledBack === true && r.rollbackStatus === 'complete', JSON.stringify(r));
+        ok('写一半抛异常 → 参数回到原模型', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('写一半抛异常 → 优化器状态回到原模型', runtimeStateDiff(bridge.snapshotModel(), bridge.snapshotModel(), DIMS).length === 0);
+        ok('写一半抛异常 → 错误信息指出部分修改', (r.errors || []).some(e => /部分修改/.test(e)), JSON.stringify(r.errors));
+    }
+    /* (3) 全部写入后返回 false → 仍须回滚 */
+    {
+        const { bridge, r } = await runFaulty({ falseAfterAll: true });
+        ok('全写入后返回 false → 标记部分修改', r.partialWrite === true);
+        ok('全写入后返回 false → 已完整回滚', r.rolledBack === true && r.rollbackStatus === 'complete');
+        ok('全写入后返回 false → 参数回到原模型', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* (4) 回滚过程再次抛异常 → 不得虚报完整恢复 */
+    {
+        const { r } = await runFaulty({ throwAfter: 3, rollbackThrows: true });
+        ok('回滚再次抛异常 → 不得报告已回滚', r.rolledBack === false, JSON.stringify(r));
+        ok('回滚再次抛异常 → rollbackStatus=failed', r.rollbackStatus === 'failed');
+        ok('回滚再次抛异常 → 错误信息明确告知未确认', (r.errors || []).some(e => /回滚/.test(e)), JSON.stringify(r.errors));
+    }
+    /* (5) 内存恢复成功但持久化失败（存档内容损坏）→ 回滚未完全确认 */
+    {
+        const { r } = await runFaulty({ throwAfter: 3, saveCorrupt: true });
+        ok('内存恢复但持久化失败 → 不得报告完整回滚', r.rolledBack === false, JSON.stringify(r));
+        ok('内存恢复但持久化失败 → 指出存档问题', (r.errors || []).some(e => /存档/.test(e)), JSON.stringify(r.errors));
+    }
+    /* (6) 优化器状态恢复不完整 → 必须被检出 */
+    {
+        const { r } = await runFaulty({ falseAfterAll: true, skipOptimizerOnRollback: true });
+        ok('优化器恢复不完整 → 检出并报告', r.rolledBack === false && (r.errors || []).some(e => /优化器/.test(e)), JSON.stringify(r.errors));
+    }
+    /* (7) runtimeStateDiff 纯函数：参数/优化器/时间步/元数据任一变化都能检出 */
+    {
+        const bridge = makeFaultyWeights({});
+        const snap = bridge.snapshotModel();
+        ok('runtimeStateDiff 一致 → 无差异', runtimeStateDiff(bridge.snapshotModel(), snap, DIMS).length === 0);
+        bridge.live.mW1[0] += 1;
+        ok('优化器被改 → 检出', runtimeStateDiff(bridge.snapshotModel(), snap, DIMS).some(e => /优化器/.test(e)));
+        bridge.live.adamT += 1;
+        ok('时间步被改 → 检出', runtimeStateDiff(bridge.snapshotModel(), snap, DIMS).some(e => /时间步/.test(e)));
+        bridge.live.W1[0] += 1;
+        ok('参数被改 → 检出', runtimeStateDiff(bridge.snapshotModel(), snap, DIMS).some(e => /参数/.test(e)));
+        bridge.live.META.trained += 5;
+        ok('元数据被改 → 检出', runtimeStateDiff(bridge.snapshotModel(), snap, DIMS).some(e => /元数据/.test(e)));
+    }
+}
+
+/* ---------- 23. 版本记录回滚（P1-3） ---------- */
+section('版本记录回滚（P1-3）');
+{
+    const recA = buildOfficialRecord({ modelId: MODEL_ID, bundle: mkBundle(), digest: officialDigest, size: officialSize, contract: { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH } });
+    const recB = Object.assign({}, recA, { modelVersion: 'w7d5-t02', releaseSeq: 2 });
+    const mkStore = opt => {
+        opt = opt || {};
+        const s = { cur: opt.initial || null, writes: 0 };
+        return {
+            s,
+            writeRecord: rec => { s.writes++; if (opt.writeFalse) return false; if (opt.writeThrow) throw new Error('quota'); s.cur = opt.writeCorrupt ? Object.assign({}, rec, { sha256: '0'.repeat(64) }) : rec; return true; },
+            readRecord: () => (opt.readNull ? null : s.cur),
+            removeRecord: () => { s.removed = true; if (!opt.removeFalse) s.cur = null; },
+            verify: verifyOfficialRecord,
+        };
+    };
+    /* 有旧记录 → 恢复并读回核验 */
+    {
+        const st = mkStore({ initial: recB });
+        ok('旧记录写入并读回一致 → ok', restoreOfficialRecord(Object.assign({ prevRec: recA }, st)).ok === true);
+        ok('恢复后当前记录 = 旧记录 A', st.s.cur && st.s.cur.modelVersion === recA.modelVersion);
+    }
+    ok('旧记录写入返回 false → 失败', restoreOfficialRecord(Object.assign({ prevRec: recA }, mkStore({ writeFalse: true }))).ok === false);
+    ok('旧记录写入抛异常 → 失败', restoreOfficialRecord(Object.assign({ prevRec: recA }, mkStore({ writeThrow: true }))).ok === false);
+    ok('旧记录写入后读回不一致 → 失败', restoreOfficialRecord(Object.assign({ prevRec: recA }, mkStore({ writeCorrupt: true }))).ok === false);
+    ok('旧记录写入后无法读回 → 失败', restoreOfficialRecord(Object.assign({ prevRec: recA }, mkStore({ readNull: true }))).ok === false);
+    /* 无旧记录 → 必须确认新记录已删除 */
+    ok('无旧记录且删除成功 → ok', restoreOfficialRecord(Object.assign({ prevRec: null }, mkStore({ initial: recB }))).ok === true);
+    ok('无旧记录但新记录删不掉 → 失败', restoreOfficialRecord(Object.assign({ prevRec: null }, mkStore({ initial: recB, removeFalse: true }))).ok === false);
+    /* 状态合成：区分完整 / 部分 / 失败 */
+    ok('模型+记录都回滚 → complete', combineRollbackStatus(true, true) === 'complete');
+    ok('仅模型回滚 → partial（不得报成完整成功）', combineRollbackStatus(true, false) === 'partial');
+    ok('模型未回滚 → failed', combineRollbackStatus(false, true) === 'failed' && combineRollbackStatus(false, false) === 'failed');
+}
+
+/* ---------- 24. 训练证据判定（P1-4） ---------- */
+section('训练证据判定（P1-4）');
+{
+    ok('trained>0 但等于官方训练步数 → 无训练证据', computeTrainingEvidence({ archiveTrained: 500, officialTrained: 500, promotedCount: 0 }) === false);
+    ok('trained>0 且低于官方 → 无训练证据', computeTrainingEvidence({ archiveTrained: 100, officialTrained: 500, promotedCount: 0 }) === false);
+    ok('trained 高于官方 → 有训练证据', computeTrainingEvidence({ archiveTrained: 600, officialTrained: 500, promotedCount: 0 }) === true);
+    ok('官方记录无 trained 字段（旧记录）→ 保守：无训练证据', computeTrainingEvidence({ archiveTrained: 500, officialTrained: undefined, promotedCount: 0 }) === false);
+    ok('候选晋升计数 > 0 → 有训练证据', computeTrainingEvidence({ archiveTrained: 0, officialTrained: 0, promotedCount: 1 }) === true);
+    ok('无任何来源 → 无训练证据', computeTrainingEvidence({}) === false);
+
+    /* 结合完整性分类：官方权重被篡改（trained 未超官方）→ mismatch，绝不判为"用户训练" */
+    const contract5 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const rec5 = { modelId: MODEL_ID, modelVersion: 'w7d5-t01', releaseSeq: 1, sha256: officialDigest, trained: 500 };
+    const encodeArchive = (params, trained) => { const o = { v: SCHEMA, dv: EPOCH, trained }; for (const s of spec) o[s.key] = params[s.key]; return JSON.stringify(o); };
+    const cls5 = o => classifyIntegrityArchive(Object.assign({ contract: contract5, officialRec: rec5 }, o));
+    {
+        const ev = computeTrainingEvidence({ archiveTrained: 500, officialTrained: rec5.trained, promotedCount: 0 });
+        ok('官方权重 trained>0 被篡改 → mismatch（不是 superseded）', cls5({ raw: encodeArchive(userParams, 500), hasTrainingEvidence: ev }).state === 'mismatch');
+    }
+    {
+        const ev = computeTrainingEvidence({ archiveTrained: 900, officialTrained: rec5.trained, promotedCount: 0 });
+        ok('官方权重被本地继续训练替换 → superseded', cls5({ raw: encodeArchive(userParams, 900), hasTrainingEvidence: ev }).state === 'superseded');
+    }
+    {
+        const ev = computeTrainingEvidence({ archiveTrained: 700, officialTrained: undefined, promotedCount: 0 });
+        ok('有效但来源未知（旧记录无基线）→ mismatch', cls5({ raw: encodeArchive(userParams, 700), hasTrainingEvidence: ev }).state === 'mismatch');
+    }
+    ok('参数缺失/长度损坏 → broken', cls5({ raw: JSON.stringify({ v: SCHEMA, dv: EPOCH, w1: 'AA==' }), hasTrainingEvidence: true }).state === 'broken');
+    ok('模型与内置默认一致 → broken（官方权重丢失）', cls5({ raw: encodeArchive(defaultParams, 0), defaultDigest: paramsDigest(defaultParams, DIMS) }).state === 'broken');
+    ok('无官方记录的历史用户模型 → none（不触碰）', classifyIntegrityArchive({ officialRec: null }).state === 'none');
+    /* mismatch 绝不触发自动替换：classifyManifestState 只把 broken 当作可修复 */
+    ok('mismatch 不进入"可修复"状态', classifyManifestState({ manifest: manifestOf(), localSeq: 1, extensionVersion: '4.1', integrityState: 'mismatch' }).state !== 'broken');
+}
+
+/* ---------- 25. 流式下载体积限制（P2-2） ---------- */
+section('流式下载体积限制（P2-2）');
+{
+    const enc = s => new TextEncoder().encode(s);
+    /* 构造带 ReadableStream 的假响应：按块产出，支持中途中断 */
+    const streamRes = (chunks, opt) => {
+        opt = opt || {};
+        let i = 0, cancelled = false;
+        return {
+            ok: true, status: 200,
+            headers: { get: k => (opt.headers && opt.headers[k] !== undefined ? opt.headers[k] : null) },
+            body: {
+                getReader() {
+                    return {
+                        read() {
+                            if (cancelled) return Promise.resolve({ done: true });
+                            if (opt.failAt === i) return Promise.reject(new Error('network reset'));
+                            if (i >= chunks.length) return Promise.resolve({ done: true });
+                            return Promise.resolve({ done: false, value: chunks[i++] });
+                        },
+                        cancel() { cancelled = true; return Promise.resolve(); },
+                        releaseLock() {},
+                    };
+                },
+            },
+            text: () => { throw new Error('should not use text() when stream available'); },
+        };
+    };
+    const mkAbort = () => class { constructor() { this.signal = { aborted: false, _onAbort: null }; } abort() { this.signal.aborted = true; if (this.signal._onAbort) this.signal._onAbort(); } };
+    const base = { url: 'u', AbortControllerImpl: mkAbort(), timeoutMs: 200, retries: 0, sleep: () => Promise.resolve(), backoffMs: 0 };
+
+    /* 正常流式响应 */
+    {
+        const res = streamRes([enc('{"a":'), enc('1}')]);
+        const t = await readBodyLimited(res, 1024, null);
+        ok('流式读取：正常拼接正文', t === '{"a":1}' && JSON.parse(t).a === 1);
+    }
+    /* 没有 Content-Length 也不影响（流式即时计数） */
+    {
+        const res = streamRes([enc('x'.repeat(100))], { headers: {} });
+        const t = await readBodyLimited(res, 1024, null);
+        ok('无 Content-Length：流式仍可正常读取', t.length === 100);
+    }
+    /* 实际数据超过上限 → 立即拒绝 */
+    {
+        const res = streamRes([enc('a'.repeat(600)), enc('b'.repeat(600))]);
+        let err = null;
+        try { await readBodyLimited(res, 1000, null); } catch (e) { err = e; }
+        ok('流式超限 → 拒绝', !!err && /体积超限/.test(err.message), err && err.message);
+    }
+    /* 通过 fetchTextWithLimits 走完整链路：超限即取消请求 */
+    {
+        let aborted = false;
+        const ctl = class { constructor() { this.signal = { _onAbort: () => { aborted = true; } }; } abort() { this.signal._onAbort(); } };
+        const fetchImpl = () => Promise.resolve(streamRes([enc('a'.repeat(4000))]));
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl, AbortControllerImpl: ctl, maxBytes: 1000 })); } catch (e) { err = e; }
+        ok('fetch 链路：流式超限 → 拒绝并取消请求', !!err && /体积超限/.test(err.message) && aborted === true, err && err.message);
+    }
+    /* 下载途中网络中断 */
+    {
+        const res = streamRes([enc('abc'), enc('def')], { failAt: 1 });
+        let err = null;
+        try { await readBodyLimited(res, 1024, null); } catch (e) { err = e; }
+        ok('下载途中中断 → 抛错（不返回半截正文）', !!err && /network reset/.test(err.message));
+    }
+    /* 下载过程中超时（正文读取阶段） */
+    {
+        const fetchImpl = (u, opt) => Promise.resolve({
+            ok: true, status: 200, headers: { get: () => null },
+            body: { getReader() { return { read: () => new Promise((_, rej) => { opt.signal._onAbort = () => rej(new Error('aborted')); }), cancel() {}, releaseLock() {} }; } },
+        });
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl, timeoutMs: 30 })); } catch (e) { err = e; }
+        ok('流式正文悬挂 → 超时中断', !!err && /超时/.test(err.message), err && err.message);
+    }
+    /* 多字节 UTF-8 被切断在块边界 */
+    {
+        const full = enc('中文测试✓');
+        const chunks = [full.slice(0, 4), full.slice(4, 7), full.slice(7)];
+        const res = streamRes(chunks);
+        const t = await readBodyLimited(res, 1024, null);
+        ok('多字节 UTF-8 跨块正确解码', t === '中文测试✓', t);
+    }
+    /* 不支持 ReadableStream 的旧环境：退回 text() 并按 UTF-8 字节数校验 */
+    {
+        const legacy = { ok: true, status: 200, headers: { get: () => null }, text: () => Promise.resolve('中文'.repeat(10)) };
+        const t = await readBodyLimited(legacy, 1024, null);
+        ok('旧环境退回 text() 可用', t === '中文'.repeat(10));
+        const big = { ok: true, status: 200, headers: { get: () => null }, text: () => Promise.resolve('中'.repeat(1000)) };
+        let err = null;
+        try { await readBodyLimited(big, 1000, null); } catch (e) { err = e; }
+        ok('旧环境按 UTF-8 字节数拒绝（非字符数）', !!err && /体积超限/.test(err.message), err && err.message);
+    }
+    ok('绝对硬上限存在（不允许无限制缓冲）', MAX_ABSOLUTE_BYTES > 0 && MAX_ABSOLUTE_BYTES <= 16 * 1024 * 1024);
+    ok('体积上限远大于合法权重包（不误拒）', computeMaxBundleBytes(DIMS) > officialSize * 4);
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');
