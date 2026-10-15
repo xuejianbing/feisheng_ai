@@ -19,6 +19,7 @@
  *  - 任何失败都 restoreModel(备份) 并再次落盘，绝不留下半成品或随机参数。
  */
 import { encodeBase64, decodeBase64, paramSpec, paramsDigest } from './weightBundle.js?v=41a';
+import { buildBackupRecord, verifyBackupRecord, BACKUP_KIND_PARAMS } from './updateCore.js?v=41a';
 
 /* 在线快照键 → 权重包参数键（对应 weights.js __snapshotModel 的契约） */
 export const SNAP_TO_PARAM = {
@@ -145,70 +146,120 @@ const forwardCheck = (bridge, dims, probe) => {
     return errors;
 };
 
-/* ---------- 主流程 ---------- */
+/* ---------- 备份落盘 + 读回校验（P0-1） ----------
+ * 绝不相信 writeBackup() 的返回值，也绝不在失败后继续：
+ * 写入返回 false / 抛异常 / 读回失败 / 内容损坏 / 摘要不一致 → 一律判定失败。 */
+const writeBackupVerified = (storageOps, record, dims) => {
+    if (!storageOps || typeof storageOps.writeBackup !== 'function') {
+        return { ok: false, errors: ['缺少备份写入能力，无法在更新前保存原有模型'] };
+    }
+    let wrote = false;
+    try { wrote = storageOps.writeBackup(record) !== false; } catch (e) { return { ok: false, errors: ['备份写入抛出异常：' + ((e && e.message) || e)] }; }
+    if (!wrote) return { ok: false, errors: ['备份写入失败（存储不可用或配额不足）'] };
+    if (typeof storageOps.readBackup !== 'function') return { ok: false, errors: ['缺少备份读回能力，无法确认备份已持久化'] };
+    let back = null;
+    try { back = storageOps.readBackup(); } catch (e) { return { ok: false, errors: ['备份读回抛出异常：' + ((e && e.message) || e)] }; }
+    if (!back) return { ok: false, errors: ['备份读回失败（写入后无法读回）'] };
+    const errs = verifyBackupRecord(back, record, dims);
+    if (errs.length) return { ok: false, errors: errs };
+    return { ok: true };
+};
+
+/* ---------- 主流程 ----------
+ * mode = 'install'（默认）：更新前必须成功备份并读回校验，失败则一律中止；
+ * mode = 'restore'        ：恢复历史备份，**绝不写入/覆盖 BACKUP_KEY**，避免"恢复时反而覆盖原备份"。 */
 export const applyOfficialBundle = async ctx => {
-    const { bridge, storageOps, bundle, decoded, dims, probe, runtimeEpoch, onStep } = ctx || {};
+    const { bridge, storageOps, bundle, decoded, dims, probe, runtimeEpoch, schemaVersion, onStep,
+        mode = 'install', preserveUserModel = false, confirmBeforeWrite = null } = ctx || {};
+    const isRestore = mode === 'restore';
     const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
     const errors = [];
 
-    if (!bridge || !decoded || !bundle) return { ok: false, rolledBack: false, errors: ['缺少必要参数'], digest: null, size: 0 };
+    /* 备份是否已成功写入（供返回值如实反馈，绝不谎报） */
+    let backupWritten = false;
+    const fail = (list, failedAt) => ({
+        ok: false, rolledBack: false, errors: Array.isArray(list) ? list : [list],
+        digest: null, size: 0, mode: isRestore ? 'restore' : 'install', backupWritten, failedAt: failedAt || 'precheck',
+    });
 
-    /* 1) 备份原有模型（内存快照 + 持久化纯权重备份） */
-    let backup = null;
-    try { backup = bridge.snapshotModel(); } catch (e) { backup = null; }
-    if (!backup) return { ok: false, rolledBack: false, errors: ['无法获取当前模型快照，已中止（未做任何改动）'], digest: null, size: 0 };
-    const backupParams = snapshotToParams(backup);
-    const backupMeta = (bridge.getMeta && bridge.getMeta()) || null;
-    if (backupParams && storageOps && storageOps.writeBackup) {
-        try { storageOps.writeBackup({ savedAt: Date.now(), params: backupParams, meta: backupMeta }); } catch (e) { step('备份落盘失败：' + ((e && e.message) || e)); }
+    if (!bridge || !decoded || !bundle) return fail('缺少必要参数');
+
+    /* 1) 内存快照（仅用于本次事务内的回滚，不作为"永久备份"） */
+    let snapshot = null;
+    try { snapshot = bridge.snapshotModel(); } catch (e) { snapshot = null; }
+    if (!snapshot) return fail('无法获取当前模型快照，已中止（未做任何改动）');
+    const snapshotParams = snapshotToParams(snapshot);
+    const snapshotMeta = (bridge.getMeta && bridge.getMeta()) || null;
+
+    /* 2) 安装模式：更新前必须成功备份并读回校验；恢复模式：绝不触碰原备份 */
+    if (!isRestore) {
+        if (!snapshotParams) {
+            return fail('当前模型为隔离态（float32-v1），无法导出参数用于在线备份，已中止（未做任何改动）');
+        }
+        const record = buildBackupRecord({
+            params: snapshotParams, meta: snapshotMeta, dims,
+            schemaVersion, dataEpoch: runtimeEpoch, savedAt: Date.now(),
+        });
+        const wb = writeBackupVerified(storageOps, record, dims);
+        if (!wb.ok) {
+            const prefix = preserveUserModel
+                ? '检测到本地训练成果，但无法安全备份，已中止（未做任何改动，你的模型保持生效）：'
+                : '更新前无法安全备份原有模型，已中止（未做任何改动）：';
+            return fail(prefix + wb.errors.join('；'), 'backup');
+        }
+        backupWritten = true;
+        step('已备份原有模型参数并读回校验通过（不含 AdamW 动量与时间步）');
+    } else {
+        step('恢复模式：不写入、不覆盖原有备份');
     }
-    step('已备份原有模型');
 
     /* 回滚：errors = 未能确认回滚；notes = 已回滚但需如实告知的限制（不算失败） */
     const rollback = () => {
-        const errors = [], notes = [];
+        const rErrors = [], notes = [];
         try {
-            if (bridge.restoreModel(backup) === false) errors.push('restoreModel 拒绝还原备份');
-        } catch (e) { errors.push('还原备份抛出异常：' + ((e && e.message) || e)); }
+            if (bridge.restoreModel(snapshot) === false) rErrors.push('restoreModel 拒绝还原快照');
+        } catch (e) { rErrors.push('还原快照抛出异常：' + ((e && e.message) || e)); }
         try { bridge.saveWeights(); } catch (e) {}
-        if (backupParams && storageOps && storageOps.readArchive) {
+        if (snapshotParams && storageOps && storageOps.readArchive) {
             const raw = storageOps.readArchive();
             if (!raw) {
                 notes.push('设备无可用持久化存储：回滚仅在内存中生效，重启后会以运行时默认模型加载');
             } else {
-                const ar = verifyArchive(raw, backupParams, dims, runtimeEpoch);
-                if (ar.length) errors.push('回滚后存档校验未通过：' + ar.join('；'));
+                const ar = verifyArchive(raw, snapshotParams, dims, runtimeEpoch);
+                if (ar.length) rErrors.push('回滚后存档校验未通过：' + ar.join('；'));
             }
         }
         /* 还原后再次核对在线内存，确保不是随机参数 */
         try {
             const live = bridge.snapshotModel();
             const lp = live && snapshotToParams(live);
-            if (!lp || !paramsEqual(lp, backupParams, dims)) errors.push('回滚后在线权重与备份不一致');
-        } catch (e) { errors.push('回滚后在线权重无法核对'); }
-        step(errors.length ? ('回滚未完全确认：' + errors.join('；')) : '已回滚到原有模型');
-        return { errors, notes };
+            if (!lp || !paramsEqual(lp, snapshotParams, dims)) rErrors.push('回滚后在线权重与快照不一致');
+        } catch (e) { rErrors.push('回滚后在线权重无法核对'); }
+        step(rErrors.length ? ('回滚未完全确认：' + rErrors.join('；')) : '已回滚到原有模型');
+        return { errors: rErrors, notes };
     };
 
-    /* 2) 写入待生效模型（官方权重 + 优化器状态清零） */
+    /* 3) 组装待写入快照（官方权重 / 恢复内容 + 优化器状态清零） */
     let applied = null;
-    try { applied = buildAppliedSnapshot(decoded, dims, bundle, backup.META || {}); } catch (e) { applied = null; }
-    if (!applied) {
-        errors.push('组装待生效模型失败');
-        return { ok: false, rolledBack: false, errors, digest: null, size: 0 };
+    try { applied = buildAppliedSnapshot(decoded, dims, bundle, snapshot.META || {}); } catch (e) { applied = null; }
+    if (!applied) return fail('组装待生效模型失败');
+
+    /* 3b) 真正替换前的最终状态复核（对局/训练状态可能已变化）——未写入前中止无需回滚 */
+    if (typeof confirmBeforeWrite === 'function') {
+        let ok = false;
+        try { ok = await confirmBeforeWrite(); } catch (e) { ok = false; }
+        if (!ok) return fail('最终状态复核未通过（对局或训练进行中），已中止（未做任何改动）', 'gate');
     }
+
     let wrote = false;
     try { wrote = bridge.restoreModel(applied) !== false; } catch (e) { wrote = false; }
-    if (!wrote) {
-        errors.push('写入新权重被模型拒绝（结构不兼容）');
-        return { ok: false, rolledBack: false, errors, digest: null, size: 0 };
-    }
+    if (!wrote) return fail('写入新权重被模型拒绝（结构不兼容）', 'write');
     step('新权重已写入在线模型');
 
-    /* 3) 落盘（返回值不可信，仅作提示） */
+    /* 4) 落盘（返回值不可信，仅作提示） */
     try { bridge.saveWeights(); } catch (e) {}
 
-    /* 4) 读回校验：确认持久化结果，而不是相信 saveWeights() 的返回 */
+    /* 5) 读回校验：确认持久化结果，而不是相信 saveWeights() 的返回 */
     if (!storageOps || typeof storageOps.readArchive !== 'function') {
         errors.push('缺少存档读回能力，无法确认持久化结果');
     } else {
@@ -217,14 +268,14 @@ export const applyOfficialBundle = async ctx => {
     }
     step(errors.length ? '读回校验未通过' : '读回校验通过（存档与权重包一致）');
 
-    /* 5) 在线内存核对 */
+    /* 6) 在线内存核对 */
     try {
         const live = bridge.snapshotModel();
         const lp = live && snapshotToParams(live);
         if (!lp || !paramsEqual(lp, bundle.params, dims)) errors.push('在线权重与前向所用权重不一致');
     } catch (e) { errors.push('在线权重无法核对'); }
 
-    /* 6) 前向自检：NaN/Infinity 与（可选）探针标签 */
+    /* 7) 前向自检：NaN/Infinity 与（可选）探针标签 */
     if (!errors.length) {
         const fe = forwardCheck(bridge, dims, probe);
         for (let i = 0; i < fe.length; i++) errors.push(fe[i]);
@@ -233,9 +284,15 @@ export const applyOfficialBundle = async ctx => {
 
     if (errors.length) {
         const rb = rollback();
-        return { ok: false, rolledBack: rb.errors.length === 0, errors: errors.concat(rb.errors, rb.notes), digest: null, size: 0 };
+        return {
+            ok: false, rolledBack: rb.errors.length === 0, errors: errors.concat(rb.errors, rb.notes),
+            digest: null, size: 0, mode: isRestore ? 'restore' : 'install', backupWritten, failedAt: 'verify',
+        };
     }
 
-    step('官方权重已安全应用');
-    return { ok: true, rolledBack: false, errors: [], digest: paramsDigest(bundle.params, dims), size: Number(bundle.size) || 0 };
+    step(isRestore ? '已安全恢复历史备份' : '官方权重已安全应用');
+    return {
+        ok: true, rolledBack: false, errors: [], digest: paramsDigest(bundle.params, dims),
+        size: Number(bundle.size) || 0, mode: isRestore ? 'restore' : 'install', backupWritten, failedAt: null,
+    };
 };
