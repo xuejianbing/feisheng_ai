@@ -1,0 +1,158 @@
+# 无名AI · 模型权重在线更新协议（服务端 / 工作台对接契约）
+
+> 本文件面向 `data.feiqiaoai.uno` 的维护者与外部工作台。
+> 客户端实现见 `js/update/`，权重包格式与校验口径的唯一权威定义是 `js/update/weightBundle.js`。
+> 导出与校验工具：`tools/export-weights.mjs`。
+
+## 一、背景与分工
+
+| 项目 | 内容 |
+|---|---|
+| 更新目标 | **只更新 AI 模型权重参数数据**，不在游戏内下载/解压/覆盖扩展文件 |
+| 整包发布 | 仍由工作台原来的流程生成 ZIP，由开发者在交流群分发；本协议不改变它 |
+| 新旧判据 | **模型权重版本 `releaseSeq`**（单调递增整数），与扩展版本无关 |
+| 扩展版本用途 | 仅用于「兼容性」判断（`requiresExtension` 区间） |
+| 服务端要求 | **只需静态托管两个文件，无需任何服务端逻辑** |
+
+> ⚠ 不得改动或删除现有的 `/update/check` 与 `/update/download`：
+> 旧 α 系列客户端仍在轮询 `/update/check`，贸然改动会破坏旧用户更新链路。
+
+## 二、服务端需要提供的文件
+
+| 用途 | 地址 | 说明 |
+|---|---|---|
+| 清单 | `/update/model/manifest.json` | 单一入口，客户端只请求它 |
+| 权重包 | `/update/model/<不可变文件名>` | 内容寻址文件名，旧文件请保留不删 |
+
+`/update/model/manifest.json` 必须返回 JSON（Content-Type: `application/json`）。
+**若该地址暂时不存在或返回其它内容，客户端会判定为「协议未启用」并安全降级**——扩展与现有模型照常使用，不会报错、不会反复提示。
+
+## 三、清单（manifest.json）结构
+
+```json
+{
+  "protocol": "djsc-model-update-v1",
+  "modelId": "main-actor-critic",
+  "latest": {
+    "modelVersion": "w7d5-20261015-01",
+    "releaseSeq": 1,
+    "schemaVersion": 7,
+    "featureDim": 134,
+    "dims": [134, 128, 64, 6],
+    "dataEpoch": 5,
+    "size": 51534,
+    "sha256": "72b5e1d777417841d76b2d84830a458ecf504181d0d640ddc7085f03b0c23b4d",
+    "url": "/update/model/main-actor-critic-w7d5-20261015-01-72b5e1d7.json",
+    "publishedAt": "2026-10-15T03:21:49.681Z",
+    "notes": "更新说明（可多行）",
+    "requiresExtension": { "min": "4.1", "max": null }
+  }
+}
+```
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `protocol` | ✅ | 必须是 `djsc-model-update-v1`，否则客户端忽略（安全降级） |
+| `modelId` | ✅ | 必须是 `main-actor-critic`（第一期只发布主决策模型） |
+| `latest.modelVersion` | ✅ | 人类可读版本号，仅作展示与本地授权判断标识 |
+| `latest.releaseSeq` | ✅ | **>=1 的整数，必须严格单调递增**；客户端靠它判新旧 |
+| `latest.schemaVersion` | ✅ | 必须等于客户端 `MODEL_SCHEMA.version`（当前 **7**） |
+| `latest.featureDim` / `dims` | ✅ | 必须等于客户端契约（当前 **134** / `[134,128,64,6]`） |
+| `latest.dataEpoch` | ✅ | **必须 >= 客户端 `DATA_EPOCH`（当前 5）**，否则应用后会被 `loadWeights` 拒载 |
+| `latest.size` / `sha256` | ✅ | 由导出脚本计算；客户端下载后会逐字节校验 |
+| `latest.url` | ✅ | 权重包地址（可相对，也可绝对 URL） |
+| `latest.requiresExtension` | 建议 | `{min, max}` 扩展版本区间；不满足时客户端提示「领取完整安装包」，不做在线替换 |
+| `latest.notes` / `publishedAt` | 可选 | 展示用 |
+
+## 四、权重包（bundle）结构
+
+**只允许纯数据 JSON**，不得包含任何 JavaScript 或远程脚本。字段与导出脚本产物一致：
+
+```json
+{
+  "format": "djsc-weight-bundle-v1",
+  "modelId": "main-actor-critic",
+  "modelVersion": "w7d5-20261015-01",
+  "releaseSeq": 1,
+  "schemaVersion": 7,
+  "featureDim": 134,
+  "dims": [134, 128, 64, 6],
+  "dataEpoch": 5,
+  "dtype": { "weights": "int8", "biases": "int16" },
+  "architecture": { "activation": "gelu", "norm": "layernorm", "residual": true, "critic": true },
+  "params": {
+    "w1": "<base64 Int8, 134*128>", "b1": "<base64 Int16, 128>",
+    "w2": "<base64 Int8, 128*64>",  "b2": "<base64 Int16, 64>",
+    "w3": "<base64 Int8, 64*6>",    "b3": "<base64 Int16, 6>",
+    "w4": "<base64 Int8, 64>",      "b4": "<base64 Int16, 1>",
+    "pr1": "<base64 Int8, 134*128>","pr2": "<base64 Int8, 128*64>"
+  },
+  "trained": 181832,
+  "accuracy": 0.637,
+  "size": 51534,
+  "sha256": "<64 位小写十六进制>",
+  "publishedAt": "2026-10-15T03:21:49.681Z",
+  "notes": "更新说明",
+  "requiresExtension": { "min": "4.1", "max": null },
+  "probe": { "input": [ /* 134 个有限数 */ ], "expectTop": 3 }
+}
+```
+
+关键约束：
+
+1. **`params` 必须齐备全部 10 项**（含 Critic 头 `w4/b4` 与残差投影 `pr1/pr2`）。缺任何一项客户端一律拒绝，防止「只更新部分网络」造成权重错位。
+2. **编码与体积**：权重 Int8、偏置 Int16；`size` = 10 项解码后字节数之和（当前 51534）；`sha256` = 按固定顺序 `w1,b1,w2,b2,w3,b3,w4,b4,pr1,pr2` 串联全部原始字节后的 SHA-256。该口径与语言无关，前后端结果必须一致。
+3. **优化器状态（AdamW 动量）不随包传递**：官方权重是「成品」，客户端应用时会清零动量与时间步并重新开始训练。理由：沿用与新权重不匹配的动量会污染后续本地训练。
+4. **`probe` 可选**：若提供，客户端应用后会前向一次并核对 `expectTop`；不提供时客户端仍做结构与有限性（无 NaN/Inf）校验。
+5. **文件名不可变**：导出脚本产出 `<modelId>-<modelVersion>-<sha256前8位>.json`，避免下载期间文件被覆盖导致元数据与内容不一致。同版本但文件损坏时，客户端可重新下载同一 URL 修复。
+
+## 五、发布规则（务必遵守）
+
+1. `releaseSeq` 严格单调递增；**不要复用**已发布过的 `(releaseSeq, modelVersion, sha256)` 组合。
+2. 服务器只需返回 `latest`；如需灰度，可让不同请求返回不同 `latest`，客户端无需改动。
+3. **网络结构（`schemaVersion` / `dims`）一旦变更，必须走完整安装包升级扩展**：
+   客户端会因结构不匹配拒绝在线替换，并提示用户领取新安装包。
+4. 发布新权重**不需要**重新分发完整安装包；只有结构变更或需要兼容新扩展版本时才需要。
+
+## 六、工作台接入步骤（保持原有输入/输出/上传行为不变）
+
+在扩展根目录执行（新增步骤，不影响原打包流程）：
+
+```bash
+# 1) 生成权重包 + 清单（输入就是工作台训练结果的存档 JSON）
+node tools/export-weights.mjs \
+  --input  <训练产物.json> \
+  --model-version w7d5-20261015-01 \
+  --seq 1 \
+  --out dist \
+  --ext-min 4.1 \
+  --notes "更新说明" \
+  --manifest-out dist/manifest.json
+
+# 2) 离线复核（可选，失败退出码 1）
+node tools/export-weights.mjs --verify dist/main-actor-critic-w7d5-20261015-01-xxxxxxxx.json
+```
+
+- 训练产物 JSON 与 `weights.js` 的 `saveWeights()` 存档**同构**：
+  `{ v, dv, w1, b1, w2, b2, w3, b3, w4, b4, pr1, pr2, trained, accuracy }`。
+  也可用 `--from-default` 直接以扩展内置默认权重作为发布内容（首期可用它打通链路）。
+- 上传：把 `dist/<权重包>.json` 放到 `/update/model/`，把 `manifest.json` 放到 `/update/model/manifest.json`。
+- `--epoch` 默认 5（当前运行时 `DATA_EPOCH`）；若训练数据的纪元更低，脚本会告警——发布出去也不会生效。
+
+## 七、客户端行为（供服务端了解影响）
+
+| 情境 | 客户端状态 | 行为 |
+|---|---|---|
+| 地址不存在 / `protocol` 不符 | `unsupported` | 静默降级，不影响扩展使用 |
+| 网络失败 / 超时 | `unreachable` | 有限次重试；失败如实提示，不伪装成已更新 |
+| 有更新且扩展版本兼容 | `available` | 用户确认后下载 → 校验 → 安全应用 |
+| 新权重要求更高扩展版本 | `needsExtensionUpdate` | 提示领取完整安装包，不强行在线替换 |
+| 元数据/内容异常（sha256、维度、纪元等） | `invalid` | 拒绝应用，保留原模型 |
+| 已是最新 | `latest` | 手动检查时提示；自动检查静默 |
+
+## 八、待确认 / 未验证事项
+
+- 本协议中的清单地址 `/update/model/manifest.json` 是**新增约定**；当前该地址返回的是服务自身的状态信息：
+  `{"status":"ok","service":"wuming-ingest",...}`，客户端据此判定 `unsupported` 并安全降级（已实测）。
+- 未在真实服务器上验证「权重包上传 + 客户端下载应用」的完整链路（需要服务端先按本协议托管文件）。
+- 探针 `expectTop` 需由工作台用与扩展一致的前向实现计算；本期客户端将其视为可选校验项。
