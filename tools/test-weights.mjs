@@ -31,8 +31,9 @@ import {
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
     generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
-    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION, reauthorizeRecord, rollbackStatusText,
+    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION, reauthorizeRecord, rollbackStatusText, createStrictKeyReader,
 } from '../js/update/updateCore.js';
+import { safeGet } from '../score/foundation/storage/storage.js';
 import { styledDialog } from '../js/update/updateUi.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
 
@@ -414,6 +415,7 @@ const mkStorageFull = (bridge, opt) => {
             if (opt.removeTxFalse) return false;
             if (opt.removeTxThrow) throw new Error('storage remove failed');
             if (opt.removeTxFailOnce && st.txRemoved === 1) return false;
+            if (opt.removeTxKeepTx) return true;   /* 撒谎的存储：报告删除成功但键仍在 */
             st.tx = null;
             return true;
         },
@@ -2272,6 +2274,94 @@ section('崩溃恢复互斥（P1）');
     await p5;
     ok('36e 恢复持锁期间手动安装入口取锁失败（与下载/恢复/待生效共用锁）', manualAcquire === false && lock.acquire() === true);
     lock.release();
+}
+
+/* ---------- 37. 宿主存储适配层：事务日志严格读取（P1 补丁） ---------- */
+section('宿主存储适配层：严格读取（P1）');
+{
+    /* createStrictKeyReader 即 modelUpdate.js 注入的严格读取实现（生产 = 直读 localStorage，访问异常不吞）。
+     * 这里用**真实模拟 localStorage 对象**直接验证适配层分类，而不是只在 mock 上抛一个异常。 */
+    const store = new Map();
+    const ls = {
+        getItem(k) { return store.has(k) ? store.get(k) : null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); },
+    };
+    const readStrict = createStrictKeyReader(() => ls);
+
+    /* 37a) 三类状态必须可区分：确实不存在 / 读取失败 / 内容损坏 */
+    ok('37a 键不存在 → null（确实没有未完成事务）', readStrict('k') === null);
+    store.set('k', '');
+    ok('37a 空串 → null（视为无值，与既有语义一致）', readStrict('k') === null);
+    store.set('k', '{"txId":"t1","phase":"prepared"}');
+    ok('37a 合法 JSON → 解析为对象', readStrict('k').txId === 't1');
+    store.set('k', '{"txId":"t1",corrupt');
+    let e1 = null; try { readStrict('k'); } catch (e) { e1 = e; }
+    ok('37a 内容损坏 → 抛异常（绝不冒充"不存在"）', !!e1);
+    const throwingStore = { getItem() { throw new Error('SecurityError: storage access denied'); } };
+    const readThrow = createStrictKeyReader(() => throwingStore);
+    let e2 = null; try { readThrow('k'); } catch (e) { e2 = e; }
+    ok('37a 存储访问失败 → 抛异常', !!e2 && /SecurityError/.test(e2.message));
+    ok('37a 无存储环境 → null（写入同样会失败，不会存在日志）', createStrictKeyReader(() => null)('k') === null);
+
+    /* 37b) 对照（真实 storage.js）：旧读法 safeGet 把同一故障吞成 null——无法区分"不存在/读失败" */
+    globalThis.localStorage = throwingStore;
+    ok('37b 对照：safeGet 对访问异常返回 null（异常被吞，旧读法丢信息）', safeGet('k') === null);
+    delete globalThis.localStorage;
+
+    /* 37c) 崩溃恢复：日志读取失败 → 不得当成"没有未完成事务"，进入安全阻塞且不动任何数据 */
+    {
+        const contract37 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge, { readTxThrow: true });
+        storageOps.st.staging = buildBackupRecord({ params: userParams, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: 'tx-37c' });
+        storageOps.st.backup = buildBackupRecord({ params: thirdParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeBackup = JSON.stringify(storageOps.st.backup);
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
+        ok('37c 读取失败 → manual（不再误判为 none）', plan.action === 'manual' && plan.manual === true, JSON.stringify(plan));
+        ok('37c 原始现场未被改写（0 次日志写入）', ((storageOps.st.txWrites || 0) === 0));
+        ok('37c 暂存与长期备份全部保留', storageOps.st.staging !== null && JSON.stringify(storageOps.st.backup) === beforeBackup);
+        ok('37c 模型未被触碰', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
+    /* 37d) 撒谎的存储：removeTx 报告成功但键仍在 → 不得视为清理成功（保留数据供后续处理） */
+    {
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge, { removeTxKeepTx: true });
+        const bundle = mkBundle();
+        const res = validateBundle(bundle, EXPECT);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-37d',
+        });
+        ok('37d 删除报告成功但键仍在 → cleanupPending（不谎报清理完成）', r.ok === true && r.cleanupPending === true, JSON.stringify(r));
+        ok('37d 暂存保留 + 日志仍在（供后续处理）', storageOps.st.staging !== null && storageOps.st.tx !== null);
+    }
+    /* 37e) 端到端：事务日志整链路接到"真实模拟存储 + 生产严格读取"上——
+     *   损坏日志 → manual 阻断且原文保留；存储恢复后同一数据按正常路径处置 */
+    {
+        const contract37 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+        const TXK = 'djsc_model_update_tx_v1';
+        const s2 = new Map();
+        const ls2 = {
+            getItem: k => (s2.has(k) ? s2.get(k) : null),
+            setItem: (k, v) => { s2.set(k, String(v)); },
+            removeItem: k => { s2.delete(k); },
+        };
+        const readStrict2 = createStrictKeyReader(() => ls2);
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.readTx = () => readStrict2(TXK);
+        storageOps.writeTx = j => { ls2.setItem(TXK, JSON.stringify(j)); return true; };
+        storageOps.removeTx = () => { ls2.removeItem(TXK); return true; };
+        s2.set(TXK, '{"txId":"tx-37e",corrupt');   /* 损坏的事务日志 */
+        const plan1 = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
+        ok('37e 损坏日志（真实适配层）→ manual 阻断', plan1.action === 'manual' && plan1.manual === true, JSON.stringify(plan1));
+        ok('37e 损坏原文未被覆盖（现场完整可查）', s2.get(TXK) === '{"txId":"tx-37e",corrupt');
+        s2.set(TXK, JSON.stringify(buildTxJournal({ txId: 'tx-37e', phase: 'prepared', baseDigest: userDigest, targetDigest: officialDigest, prevRecord: null })));
+        const plan2 = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
+        ok('37e 存储恢复后按正常路径处置（cleanup，不误判阻塞）', plan2.action === 'cleanup' && plan2.ok === true, JSON.stringify(plan2));
+        ok('37e 处置后日志键已清理', !s2.has(TXK));
+    }
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');

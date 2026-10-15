@@ -262,6 +262,20 @@ export const createRecoveryGuard = lock => {
     };
 };
 
+/* ---------------- 严格键读取工厂（宿主存储适配层） ----------------
+ * 与 safeGet/readJSON 的"静默吞错"形成明确区分（事务日志与官方记录的读取语义统一）：
+ *   键确实不存在（含空串）        → 返回 null
+ *   存储访问失败 / 内容损坏       → **抛异常**（调用方保守处理，绝不冒充"不存在"）
+ * getStore 为注入的存储访问器（生产 = 直读 localStorage，访问异常不吞），
+ * 因此可在 Node 侧用真实模拟存储直接验证生产实现。 */
+export const createStrictKeyReader = getStore => key => {
+    const ls = getStore();          /* 存储访问异常向上抛 */
+    if (!ls) return null;           /* 无存储环境：等同不存在（写入同样会失败，不会产生该键） */
+    const raw = ls.getItem(key);    /* 读取异常向上抛 */
+    if (raw === null || raw === undefined || raw === '') return null;
+    return JSON.parse(raw);         /* 解析异常向上抛：内容损坏 */
+};
+
 /* ---------------- 应用闸门（P0 / P1-2） ----------------
  * 更新开始前与真正替换前都必须过这道闸门。
  *
