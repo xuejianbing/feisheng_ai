@@ -24,12 +24,13 @@ import {
     paramsSize, paramsDigest, sha256Hex, validateBundle,
     compareVersion, isNewerRelease, satisfiesExtensionRange, normalizeReleaseSeq, classifyManifestState,
 } from '../js/update/weightBundle.js';
-import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot, runtimeStateDiff } from '../js/update/applyWeights.js';
+import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot, runtimeStateDiff, recoverInterruptedTransaction } from '../js/update/applyWeights.js';
 import {
     buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
+    generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
     BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
 } from '../js/update/updateCore.js';
 import { styledDialog } from '../js/update/updateUi.js';
@@ -229,6 +230,10 @@ const mkStorage = bridge => ({
     writeStagingBackup(rec) { this.staging = rec; return true; },
     readStagingBackup() { return this.staging; },
     removeStagingBackup() { this.staging = null; return true; },
+    /* 安装事务日志（P0-1） */
+    writeTx(j) { this.tx = j; return true; },
+    readTx() { return this.tx; },
+    removeTx() { this.tx = null; return true; },
 });
 
 const rst = (name, cond, extra) => ok(name, cond, extra);
@@ -359,7 +364,7 @@ section('备份安全（P0-1 / P2-1）');
  * commitFalse/commitThrow/commitReadNull/corruptCommit 作用于**长期恢复点轮换**（安装成功后）。 */
 const mkStorageFull = (bridge, opt) => {
     opt = opt || {};
-    const st = { backup: null, staging: null, writes: 0, stagingWrites: 0, stagingRemoved: 0, reads: 0 };
+    const st = { backup: null, staging: null, tx: null, writes: 0, stagingWrites: 0, stagingRemoved: 0, reads: 0 };
     const clone = rec => JSON.parse(JSON.stringify(rec));
     const corrupt = rec => { const b = decodeBase64(rec.params.w1); b[0] = (b[0] + 1) & 0xff; rec.params.w1 = encodeBase64(b); return rec; };
     return {
@@ -386,6 +391,16 @@ const mkStorageFull = (bridge, opt) => {
         },
         readStagingBackup() { if (opt.readBackupNull) return null; return st.staging; },
         removeStagingBackup() { st.stagingRemoved++; st.staging = null; return true; },
+        /* 安装事务日志（P0-1） */
+        writeTx(j) {
+            st.txWrites = (st.txWrites || 0) + 1;
+            if (opt.txWriteFalse) return false;
+            if (opt.txWriteThrow) throw new Error('QuotaExceededError');
+            st.tx = clone(j);
+            return true;
+        },
+        readTx() { return st.tx; },
+        removeTx() { st.txRemoved = (st.txRemoved || 0) + 1; st.tx = null; return true; },
     };
 };
 
@@ -487,16 +502,17 @@ const mkStorageFull = (bridge, opt) => {
         ok('校验失败 → 原恢复点 A 完好', JSON.stringify(s4.st.backup) === beforeA);
         ok('校验失败 → 暂存备份被清除', s4.st.staging === null);
     }
-    /* (4) 长期备份轮换失败 → 权重已应用但如实报告未轮换，A 与暂存都保留 */
+    /* (4) 长期备份轮换失败 → 属必要提交步骤失败：恢复本次更新前的模型，原恢复点 A 不变 */
     {
         const b3 = makeFakeWeights({ initialParams: officialParams });
         const s5 = mkStorageFull(b3, { commitFalse: true });
         s5.st.backup = JSON.parse(beforeA);
         const r = await applyOfficialBundle({ bridge: b3, storageOps: s5, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
-        ok('轮换失败 → 安装仍成功（不谎报）', r.ok === true, JSON.stringify(r.errors));
-        ok('轮换失败 → backupRotated=false 如实反馈', r.backupRotated === false);
+        ok('轮换失败 → 判定失败（不再报完整成功）', r.ok === false && r.failedAt === 'backup-rotate', JSON.stringify(r.errors));
+        ok('轮换失败 → 已回滚到本次更新前的模型', r.rolledBack === true && paramsDigest(snapshotToParams(b3.snapshotModel()), DIMS) === officialDigest);
         ok('轮换失败 → 原恢复点 A 未被销毁', JSON.stringify(s5.st.backup) === beforeA);
-        ok('轮换失败 → 暂存备份保留（未丢失可恢复数据）', !!s5.st.staging);
+        ok('轮换失败 → 回滚完整后清理暂存备份', s5.st.staging === null);
+        ok('轮换失败 → 事务日志已清理', s5.st.tx === null || s5.st.tx === undefined);
     }
 }
 
@@ -1105,6 +1121,354 @@ section('流式下载体积限制（P2-2）');
     }
     ok('绝对硬上限存在（不允许无限制缓冲）', MAX_ABSOLUTE_BYTES > 0 && MAX_ABSOLUTE_BYTES <= 16 * 1024 * 1024);
     ok('体积上限远大于合法权重包（不误拒）', computeMaxBundleBytes(DIMS) > officialSize * 4);
+}
+
+/* ---------- 26. 安装事务一致性（P0-1） ---------- */
+section('安装事务一致性（P0-1）');
+{
+    /* 场景：长期恢复点 = X（历史备份），当前模型 = A，目标 = B。
+     * 关键断言：任何回滚都必须回到 A，绝不能回到 X。 */
+    const Xparams = {};
+    for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[3] = (b[3] + 17) & 0xff; Xparams[s.key] = encodeBase64(b); }
+    const Xdigest = paramsDigest(Xparams, DIMS);
+    const contract6 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams, B = mkBundle();
+
+    /* 26a) 旧备份 X + 当前 A + 目标 B：轮换失败 + 记录失败 → 必须回到 A（不是 X） */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge, { commitFalse: true });
+        storageOps.st.backup = buildBackupRecord({ params: Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeX = JSON.stringify(storageOps.st.backup);
+        const res = validateBundle(B, EXPECT);
+        let recordTried = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-a',
+            commitRecord: async () => { recordTried++; return { ok: true, errors: [] }; },
+            revertRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('26a 轮换失败 → 判定失败', r.ok === false && r.failedAt === 'backup-rotate', JSON.stringify(r.errors));
+        ok('26a 回滚到 A（本次事务基线），而不是历史 X', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('26a 长期恢复点 X 未被覆盖/销毁', JSON.stringify(storageOps.st.backup) === beforeX);
+        ok('26a 事务日志已清理', storageOps.st.tx === null);
+        ok('26a 暂存备份已清理（回滚完整）', storageOps.st.staging === null);
+    }
+    /* 26b) 长期备份轮换成功、官方记录失败 → 回滚 A，长期备份保持 X */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeX = JSON.stringify(storageOps.st.backup);
+        const res = validateBundle(B, EXPECT);
+        let reverted = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-b',
+            commitRecord: async () => ({ ok: false, errors: ['记录写入失败'] }),
+            revertRecord: async () => { reverted++; return { ok: true, errors: [] }; },
+        });
+        ok('26b 记录失败 → 判定失败', r.ok === false && r.failedAt === 'record', JSON.stringify(r.errors));
+        ok('26b 已回滚到 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('26b 已调用记录回滚', reverted === 1);
+        ok('26b 长期备份未被轮换（仍是 X）', JSON.stringify(storageOps.st.backup) === beforeX);
+        ok('26b 事务日志已清理', storageOps.st.tx === null);
+    }
+    /* 26c) 官方记录成功、长期备份失败 → 回滚 A 且记录回滚被调用 */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge, { commitFalse: true });
+        storageOps.st.backup = buildBackupRecord({ params: Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeX = JSON.stringify(storageOps.st.backup);
+        const res = validateBundle(B, EXPECT);
+        let committed = 0, reverted = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-c',
+            commitRecord: async () => { committed++; return { ok: true, errors: [] }; },
+            revertRecord: async () => { reverted++; return { ok: true, errors: [] }; },
+        });
+        ok('26c 记录已提交但轮换失败 → 判定失败', r.ok === false && r.failedAt === 'backup-rotate');
+        ok('26c 记录提交与记录回滚都被调用', committed === 1 && reverted === 1);
+        ok('26c 已回滚到 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('26c 长期备份仍是 X', JSON.stringify(storageOps.st.backup) === beforeX);
+    }
+    /* 26d) 全链路成功：长期备份轮换为 A、事务日志清理、暂存清理 */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const res = validateBundle(B, EXPECT);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-d',
+            commitRecord: async () => ({ ok: true, errors: [] }),
+            revertRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('26d 成功', r.ok === true, JSON.stringify(r.errors));
+        ok('26d 长期备份轮换为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('26d 暂存备份与事务日志已清理', storageOps.st.staging === null && storageOps.st.tx === null);
+        ok('26d 事务标识写入暂存记录', r.txId === 'tx-d');
+    }
+    /* 26e) 事务标识不匹配 / 摘要错误 → 恢复必须拒绝使用暂存备份 */
+    {
+        const j = buildTxJournal({ txId: 'tx-e', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const stRec = buildBackupRecord({ params: A, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: 'tx-OTHER' });
+        ok('26e 事务标识不匹配 → 拒绝', verifyStagingForTx(stRec, j, DIMS).some(e => /事务标识/.test(e)));
+        const stRec2 = buildBackupRecord({ params: A, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: 'tx-e' });
+        stRec2.digest = '0'.repeat(64);
+        ok('26e 摘要字段错误 → 拒绝', verifyStagingForTx(stRec2, j, DIMS).length > 0);
+        const j2 = Object.assign({}, j, { baseDigest: thirdDigest });
+        ok('26e 内容与事务基线摘要不符 → 拒绝', verifyStagingForTx(buildBackupRecord({ params: A, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: 'tx-e' }), j2, DIMS).some(e => /基线摘要/.test(e)));
+        ok('26e 缺失暂存备份 → 拒绝', verifyStagingForTx(null, j, DIMS).length > 0);
+    }
+    /* 26f) 旧长期备份损坏：不影响本次事务（回滚只用本次事务基线） */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge, { commitFalse: true });
+        storageOps.st.backup = { version: 2, kind: 'model-params-backup', params: { w1: 'AA==' }, digest: 'x' };   /* 损坏的 X */
+        const res = validateBundle(B, EXPECT);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-f',
+            commitRecord: async () => ({ ok: true, errors: [] }),
+            revertRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('26f 旧备份损坏不影响本次回滚结果', r.ok === false && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('26f 损坏的旧备份未被用于回滚（未被覆盖成 A）', paramsDigest(storageOps.st.backup.params, DIMS) !== userDigest);
+    }
+    /* 26g) 事务日志写入失败 → 不谎报，但事务仍安全完成 */
+    {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge, { txWriteFalse: true });
+        const res = validateBundle(B, EXPECT);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-g',
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('26g 日志写入失败 → 如实反馈 journalWritten=false', r.ok === true && r.journalWritten === false);
+        ok('26g 权重仍已安全应用', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+}
+
+/* ---------- 27. 崩溃 / 重启恢复（P0-1） ---------- */
+section('崩溃 / 重启恢复（P0-1）');
+{
+    const contract7 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams;
+    const mkRecovery = (journal, stagingParams, opt) => {
+        opt = opt || {};
+        const bridge = makeFakeWeights({ initialParams: opt.modelIsNew ? officialParams : A, corruptFirstSave: !!opt.corruptFirstSave });
+        const storageOps = mkStorageFull(bridge, opt);
+        storageOps.st.backup = buildBackupRecord({ params: thirdParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        storageOps.st.staging = stagingParams
+            ? buildBackupRecord({ params: stagingParams, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: journal.txId })
+            : null;
+        storageOps.st.tx = journal;
+        return { bridge, storageOps };
+    };
+    const runRecovery = (bridge, storageOps) => recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract7 });
+
+    /* 27a) 无日志 → 不动任何数据 */
+    {
+        const { bridge, storageOps } = mkRecovery(null, null);
+        storageOps.st.tx = null;
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27a 无未完成事务 → none', plan.action === 'none');
+        ok('27a 长期备份未被触碰', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
+    }
+    /* 27b) prepared（权重未改动）→ 仅清理事务数据 */
+    {
+        const j = buildTxJournal({ txId: 'tx-p', phase: 'prepared', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A);
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27b prepared → cleanup', plan.action === 'cleanup' && plan.ok === true);
+        ok('27b 清理后无暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+        ok('27b 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('27b 长期备份未变', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
+    }
+    /* 27c) weights-written（重启时权重已是新值）→ 用本事务暂存备份回滚到 A */
+    {
+        const j = buildTxJournal({ txId: 'tx-w', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27c weights-written → restore', plan.action === 'restore' && plan.ok === true, JSON.stringify(plan));
+        ok('27c 已恢复到 A（不是历史 X）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('27c 长期备份 X 未被覆盖', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
+        ok('27c 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 27d) record-committed（记录已提交，仅缺轮换）→ 补做轮换 */
+    {
+        const j = buildTxJournal({ txId: 'tx-r', phase: 'record-committed', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27d record-committed → finish-rotation', plan.action === 'finish-rotation' && plan.ok === true, JSON.stringify(plan));
+        ok('27d 长期备份被补做轮换为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('27d 模型保持新权重（不回滚）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('27d 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 27e) backup-rotated → 仅清理 */
+    {
+        const j = buildTxJournal({ txId: 'tx-br', phase: 'backup-rotated', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27e backup-rotated → cleanup', plan.action === 'cleanup' && plan.ok === true);
+        ok('27e 模型保持新权重', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 27f) 暂存备份与日志不匹配 → 拒绝自动恢复（manual），保留全部数据 */
+    {
+        const j = buildTxJournal({ txId: 'tx-m', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, thirdParams, { modelIsNew: true });   /* 暂存内容是别的模型 */
+        const before = JSON.stringify(storageOps.st.backup);
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27f 暂存与日志不匹配 → manual', plan.action === 'manual', JSON.stringify(plan));
+        ok('27f 保留暂存与日志（不清除唯一恢复数据）', storageOps.st.staging !== null && storageOps.st.tx !== null);
+        ok('27f 长期备份未被触碰', JSON.stringify(storageOps.st.backup) === before);
+    }
+    /* 27g) 上次回滚未完成（needsManual）→ 阻止继续安装 */
+    {
+        const j = buildTxJournal({ txId: 'tx-n', phase: 'weights-written', needsManual: true, reason: '上次回滚未完成', startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27g needsManual → manual', plan.action === 'manual');
+        ok('27g 数据保留', storageOps.st.staging !== null && storageOps.st.tx !== null);
+    }
+    /* 27h) 恢复过程中持久化异常（落盘内容损坏）→ 恢复未完成，标记 needsManual 并保留数据 */
+    {
+        const j = buildTxJournal({ txId: 'tx-h', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true, corruptFirstSave: true });
+        const plan = await runRecovery(bridge, storageOps);
+        ok('27h 持久化异常 → 恢复未完成', plan.action === 'restore' && plan.ok === false, JSON.stringify(plan));
+        ok('27h 标记 needsManual 并保留日志', storageOps.st.tx && storageOps.st.tx.needsManual === true);
+        ok('27h 暂存备份保留', storageOps.st.staging !== null);
+    }
+    /* 27i) 事务阶段分类纯函数 */
+    ok('27i 未知阶段 → manual', classifyInterruptedTx({ txId: 'x', phase: 'weird' }).action === 'manual');
+    ok('27i 无 txId → none', classifyInterruptedTx({ phase: 'prepared' }).action === 'none');
+}
+
+/* ---------- 28. 重新授权期间的事务基线（P0-2） ---------- */
+section('重新授权期间的事务基线（P0-2）');
+{
+    /* 可外部改变模型的假 bridge（模拟训练晋升改写共享主模型） */
+    const makeMutableWeights = initialParams => {
+        const live = { ...toLive(initialParams), META: { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true } };
+        live.adamT = 7;
+        for (const [mk, wk] of OPT) live[mk] = new Float32Array(live[wk].length).fill(mk.charAt(0) === 'm' ? 0.25 : 0.5);
+        const st = { archive: null, corrupt: null, saveCount: 0 };
+        return {
+            live, state: st,
+            setParams(params) {
+                const t = toLive(params);
+                for (const k of SNAP) live[k] = new t[k].constructor(t[k]);
+                for (const [mk, wk] of OPT) live[mk] = new Float32Array(live[wk].length).fill(mk.charAt(0) === 'm' ? 0.25 : 0.5);
+                live.adamT = 7;
+                live.META = { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true };
+            },
+            snapshotModel() { const s = { META: { ...live.META }, adamT: live.adamT }; for (const k of SNAP) s[k] = new live[k].constructor(live[k]); for (const [mk] of OPT) s[mk] = new Float32Array(live[mk]); return s; },
+            restoreModel(snap) {
+                if (!snap) return false;
+                for (const [sk, len] of CORE_SHAPES) { const a = snap[sk]; if (!a || a.length !== len) return false; }
+                for (const k of SNAP) if (snap[k]) live[k] = new snap[k].constructor(snap[k]);
+                for (const [mk, wk] of OPT) if (snap[mk] && snap[mk].length === live[wk].length) live[mk] = new Float32Array(snap[mk]);
+                if (typeof snap.adamT === 'number') live.adamT = snap.adamT;
+                if (snap.META) { live.META.trained = snap.META.trained || 0; live.META.accuracy = snap.META.accuracy || 0; live.META.ready = !!snap.META.ready; }
+                return true;
+            },
+            saveWeights() { st.saveCount++; st.archive = encodeState(live); return true; },
+            getMeta() { return { trained: live.META.trained, accuracy: live.META.accuracy, ready: live.META.ready }; },
+            forward() { const o = new Float32Array(DIMS[3]); for (let k = 0; k < o.length; k++) o[k] = live.W1[k] + live.B1[k % 128]; return o; },
+        };
+    };
+    const A = userParams, B = thirdParams, C = mkBundle();
+    const res = validateBundle(C, EXPECT);
+
+    /* 28a) A → 用户确认（模型未变）→ 安装 C */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-28a',
+            confirmBeforeWrite: async () => ({ ok: true }),
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('28a 安装成功', r.ok === true, JSON.stringify(r.errors));
+        ok('28a 长期备份 = A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('28a 当前模型 = C', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 28b) A → 等待确认时训练为 B → 用户拒绝安装 */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: defaultParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeX = JSON.stringify(storageOps.st.backup);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-28b',
+            confirmBeforeWrite: async () => { bridge.setParams(B); return { ok: false, reason: '用户拒绝' }; },
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('28b 用户拒绝 → 中止', r.ok === false && r.failedAt === 'gate');
+        ok('28b 模型保持 B（未被安装覆盖）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === thirdDigest);
+        ok('28b 长期备份未变', JSON.stringify(storageOps.st.backup) === beforeX);
+        ok('28b 暂存与日志已清理', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 28c) A → 确认时训练为 B → 重新授权 → 必须备份 B（不是 A）→ 安装 C */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        let first = true;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-28c',
+            confirmBeforeWrite: async () => {
+                if (first) { first = false; bridge.setParams(B); return { ok: true, rebaseline: true }; }
+                return { ok: true };
+            },
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('28c 安装成功', r.ok === true, JSON.stringify(r.errors));
+        ok('28c 当前模型 = C', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('28c 长期备份 = B（实际被覆盖的模型），不是 A', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
+        ok('28c 长期备份不是过期基线 A', paramsDigest(storageOps.st.backup.params, DIMS) !== userDigest);
+    }
+    /* 28d) 重新授权后模型再次变化 → 需再次重新确认（可重建基线） */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        let n = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-28d',
+            confirmBeforeWrite: async () => { n++; bridge.setParams(n === 1 ? B : A); return { ok: true, rebaseline: true }; },
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('28d 反复变化超过上限 → 中止', r.ok === false && r.failedAt === 'gate', JSON.stringify(r.errors));
+        ok('28d 提示模型反复变化', (r.errors || []).some(e => /反复变化/.test(e)), JSON.stringify(r.errors));
+        ok('28d 中止后暂存与日志已清理', storageOps.st.staging === null && storageOps.st.tx === null);
+        ok('28d 中止后模型未被官方权重覆盖', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) !== officialDigest);
+    }
+    /* 28e) 用户确认后游戏开始对局 → 最终复核拒绝 */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-28e',
+            confirmBeforeWrite: async () => ({ ok: false, reason: '对局进行中' }),
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('28e 对局中 → 中止且模型未变', r.ok === false && r.failedAt === 'gate' && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
+    /* 28f) 重新授权期间训练器仍在运行：写入前复核仍按同一套授权规则判定 */
+    {
+        const auth = buildPendingRecord({ bundle: C, baseModelDigest: thirdDigest, userAuthorized: true, contract: { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH } });
+        const ev = cur => evaluatePending({ pending: auth, contract: { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH }, currentDigest: cur, officialRec: null, gate: { ok: true } }).action;
+        ok('28f 训练仍在运行导致模型再变 → 复核为 reprompt（不写入）', ev(userDigest) === 'reprompt');
+        ok('28f 模型未变 → 允许写入', ev(thirdDigest) === 'apply');
+    }
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');

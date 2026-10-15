@@ -34,12 +34,13 @@ import {
     normalizeReleaseSeq, classifyManifestState,
     decodeBase64, paramSpec, paramsDigest, validateBundle,
 } from './weightBundle.js?v=41a';
-import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyWeights.js?v=41a';
+import { applyOfficialBundle, snapshotToParams, detectUserModel, recoverInterruptedTransaction as recoverTx } from './applyWeights.js?v=41a';
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
-    computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus,
+    computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
+    generateTxId, classifyInterruptedTx,
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
@@ -48,6 +49,7 @@ const OFFICIAL_KEY = 'djsc_official_weights_v1';
 const PENDING_KEY = 'djsc_model_update_pending_v1';
 const BACKUP_KEY = 'djsc_weights_backup_v1';           /* 长期恢复点（仅安装成功后轮换） */
 const STAGING_KEY = 'djsc_weights_backup_staging_v1';  /* 安装事务暂存备份（P2-1） */
+const TX_KEY = 'djsc_model_update_tx_v1';              /* 安装事务日志（P0-1，崩溃恢复） */
 
 const CHECK_INTERVAL_MS = 6 * 3600 * 1000;
 const FETCH_TIMEOUT_MS = 12000;
@@ -501,70 +503,48 @@ const _restoreOfficialRecord = prevRec => restoreOfficialRecord({
     verify: verifyOfficialRecord,
 });
 
-/* 备份记录 → 解码参数（供恢复与回滚复用） */
-const decodeBackupParams = (rec, dims) => {
-    if (!rec || !rec.params) return null;
-    const spec = paramSpec(dims);
-    const decoded = {};
-    for (let i = 0; i < spec.length; i++) {
-        const s = spec[i];
-        const bytes = decodeBase64(rec.params[s.key]);
-        const need = s.kind === 'int16' ? s.len * 2 : s.len;
-        if (!bytes || bytes.byteLength !== need) return null;
-        decoded[s.key] = s.kind === 'int16' ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })() : Int8Array.from(bytes);
-    }
-    return decoded;
-};
-
-/* ★ P1-4 / P1-3：权重已应用但版本记录未持久化 → 恢复旧权重与旧记录，保持一致状态。
- * 复用备份（更新前模型）走独立恢复事务，绝不覆盖备份本身。
- * 返回 { ok, modelRolledBack, recordRolledBack, status, errors }：
- *   status = 'complete' 完整回滚 | 'partial' 部分回滚 | 'failed' 回滚失败。 */
-const _rollbackToBackup = async (contract, prevRec) => {
-    const rec = storageOps.readBackup();
-    if (!rec || !rec.params) return { ok: false, modelRolledBack: false, recordRolledBack: false, status: 'failed', err: 'no backup', errors: ['找不到更新前备份，无法回滚'] };
-    const srcErrs = verifyRestoreSource(rec, contract.dims, contract.schemaVersion);
-    if (srcErrs.length) return { ok: false, modelRolledBack: false, recordRolledBack: false, status: 'failed', err: 'backup invalid', errors: srcErrs };
-    const bridge = await buildBridge();
-    if (!bridge) return { ok: false, modelRolledBack: false, recordRolledBack: false, status: 'failed', err: 'bridge unavailable', errors: ['模型模块未就绪'] };
-    const decoded = decodeBackupParams(rec, contract.dims);
-    if (!decoded) return { ok: false, modelRolledBack: false, recordRolledBack: false, status: 'failed', err: 'backup decode failed', errors: ['备份参数无法解码'] };
-    const bundleLike = { params: rec.params, trained: (rec.meta && rec.meta.trained) || 0, accuracy: (rec.meta && rec.meta.accuracy) || 0, size: 0 };
-    const r = await applyOfficialBundle({
-        bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null,
-        runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion, mode: 'restore',
-    });
-    const modelRolledBack = r.ok === true;
-    let recordRolledBack = false, recordErrors = [];
-    if (modelRolledBack) {
-        const rr = _restoreOfficialRecord(prevRec);
-        recordRolledBack = rr.ok;
-        recordErrors = rr.errors;
-    }
-    const status = combineRollbackStatus(modelRolledBack, recordRolledBack);
-    return {
-        ok: status === 'complete', modelRolledBack, recordRolledBack, status,
-        errors: [].concat(r.errors || [], recordErrors),
-    };
-};
-
-/* ★ P1-3：回滚状态如实告知（区分完整 / 部分 / 失败） */
-const _rollbackStatusText = rb => {
-    if (rb.status === 'complete') return '已完整回滚到更新前的模型与版本记录。';
-    if (rb.status === 'partial') return '模型已回滚，但版本记录未能恢复（' + (rb.errors || []).join('；') + '）。请重启游戏后检查；原备份仍保留。';
-    return '回滚未能完成（' + (rb.errors || []).join('；') + '）。当前状态可能不一致，请重启游戏后检查；原备份仍保留。';
-};
-/* 回滚不完整时：保留仍有恢复价值的数据（待生效记录 + 备份），但置 hold 停止自动重试，
- * 避免存储配额不足时反复重试再次损坏数据（P1-3 要求 6/7）。 */
-const _settleIncompleteRollback = rb => {
-    if (rb.status === 'complete') {
-        removeKey(PENDING_KEY);
-        _stopPendingWatch();
-        return;
-    }
+/* ★ P0-1：事务结果 → 待生效任务收尾。
+ * 事务内部已完成回滚（只使用本次事务的基线，不读长期备份）。
+ * 回滚完整 → 清理待生效记录；回滚不完整 → 保留记录与备份并置 hold 停止自动重试。 */
+const _finishPendingTx = r => {
+    if (r && r.ok) { removeKey(PENDING_KEY); _stopPendingWatch(); return; }
+    if (r && r.rollbackStatus === 'complete') { removeKey(PENDING_KEY); _stopPendingWatch(); return; }
     const p = readPending();
-    if (p) { p.hold = true; p.holdReason = '上次回滚未完成'; writeJSON(PENDING_KEY, p); }
+    if (p) { p.hold = true; p.holdReason = '上次事务回滚未完成，已保留恢复数据'; writeJSON(PENDING_KEY, p); }
     _stopPendingWatch();
+};
+
+/* 事务结果如实告知（区分完整回滚 / 回滚失败） */
+const _txRollbackText = r => {
+    if (!r) return '';
+    if (r.rollbackStatus === 'complete') return '已完整回滚到更新前的模型与版本记录。';
+    if (r.rollbackStatus === 'failed') {
+        return '回滚未能完成（' + ((r.rollbackErrors || []).join('；') || '原因未知') + '），当前状态可能不一致，请重启游戏后检查；原长期备份仍保留。';
+    }
+    return '';
+};
+
+/* ---------- 崩溃恢复（P0-1） ----------
+ * 恢复逻辑在 applyWeights.recoverInterruptedTransaction（依赖注入，可在 Node 侧直接测试），
+ * 这里只注入宿主侧依赖。阶段语义见 updateCore.classifyInterruptedTx。
+ * 返回 { action, reason }；action='manual' 时调用方必须阻止继续安装。 */
+export const recoverInterruptedTransaction = async () => {
+    const plan = await recoverTx({
+        storageOps,
+        getBridge: buildBridge,
+        contract: await getContract(),
+        onStep: m => _log(m, true),
+    });
+    if (plan && plan.action === 'manual') {
+        _log('检测到未完成且无法自动恢复的安装事务：' + plan.reason + '（已保留恢复数据，暂停自动安装）', true);
+    }
+    return plan;
+};
+
+/* 是否因未完成事务而暂停安装 */
+const _txBlocked = () => {
+    const plan = classifyInterruptedTx(storageOps.readTx());
+    return plan.action === 'manual';
 };
 
 const buildBridge = async () => {
@@ -589,6 +569,10 @@ const storageOps = {
     writeStagingBackup: rec => writeJSON(STAGING_KEY, rec),
     readStagingBackup: () => readJSON(STAGING_KEY),
     removeStagingBackup: () => removeKey(STAGING_KEY),
+    /* 安装事务日志（P0-1）：记录事务阶段，供崩溃后重启识别与安全恢复 */
+    writeTx: journal => writeJSON(TX_KEY, journal),
+    readTx: () => readJSON(TX_KEY),
+    removeTx: () => removeKey(TX_KEY),
 };
 
 /* ★ P1-1：统一事务锁——下载安装 / 待生效应用 / 恢复备份 共用，
@@ -609,8 +593,20 @@ export const downloadAndApply = async opt => {
     }
     const prog = progressDialog('下载模型权重…');
     try {
+        /* ★ P0-1：存在无法自动恢复的未完成事务 → 阻止继续安装（保留恢复数据） */
+        if (_txBlocked()) {
+            prog.close();
+            await styledDialog({
+                title: '检测到未完成的安装事务',
+                message: '上次安装事务未能自动恢复，为避免覆盖唯一可用的恢复数据，已暂停在线安装。\n\n'
+                    + '· 你的长期备份与事务暂存备份均已保留\n'
+                    + '· 请重启游戏后再试；若仍无法恢复，可在控制台用 __DJSC.modelUpdate.restoreBackup() 手动还原更新前的模型',
+            });
+            return { ok: false, err: 'unfinished transaction requires attention' };
+        }
         prog.update('下载并校验权重包…');
         const { bundle, res, contract } = await downloadBundle(opt.latest);
+        const txId = generateTxId();
 
         /* ★ 保护玩家本地训练成果：检测到本地训练模型时，绝不静默覆盖 */
         const active = await activeParamsNow();
@@ -664,7 +660,7 @@ export const downloadAndApply = async opt => {
                 ],
                 dangerous: true, defaultValue: 'keep',
             });
-            return choice === 'apply' ? { ok: true, reauthorized: true } : { ok: false, reason: '用户在模型变化后选择保留当前模型' };
+            return choice === 'apply' ? { ok: true, rebaseline: true } : { ok: false, reason: '用户在模型变化后选择保留当前模型' };
         };
 
         const gate = await canApplyNow();
@@ -689,50 +685,39 @@ export const downloadAndApply = async opt => {
         prog.update('写入并校验新权重…');
         const bridge = await buildBridge();
         if (!bridge) { prog.close(); await styledDialog({ title: '无法安装', message: '模型模块未就绪，本次更新未应用。' }); return { ok: false, err: 'bridge unavailable' }; }
+        /* ★ P0-1 / P0-2：单事务完成"取基线 → 备份 → 应用 → 提交记录 → 轮换备份 → 清理"，
+         *   最终授权复核返回 rebaseline 时由事务内部重建基线（绝不复用过期快照）。 */
         const r = await applyOfficialBundle({
             bridge, storageOps, bundle, decoded: res.decoded, dims: contract.dims,
             probe: res.probe, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
-            mode: 'install', preserveUserModel,
-            /* ★ P0 / P1-1：真正替换前的最终状态与授权基线复核（唯一权威判定） */
-            confirmBeforeWrite: async () => {
-                const fc = await finalCheck();
-                return fc.ok === true;
-            },
+            mode: 'install', preserveUserModel, txId,
+            confirmBeforeWrite: finalCheck,
+            commitRecord: async info => writeOfficialRecordVerified(bundle, info.digest, info.size, contract),
+            revertRecord: async () => _restoreOfficialRecord(rec),
             onStep: m => prog.update(m),
         });
         prog.close();
         if (r.ok) {
-            /* ★ P1-4：权重与版本元数据同一事务——记录写入并读回核对成功后才算完成 */
-            const wr = writeOfficialRecordVerified(bundle, r.digest, r.size, contract);
-            if (wr.ok) {
-                removeKey(PENDING_KEY);
-                await styledDialog({
-                    title: '模型权重更新完成',
-                    message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
-                        + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
-                        + '· 版本记录已写入并读回核对通过\n'
-                        + '· 优化器状态已重置，后续本地训练从新权重继续\n'
-                        + '· 重启游戏后仍会加载该权重'
-                        + (r.backupRotated ? '' : '\n\n（提示：长期备份未能轮换，原备份未受影响）'),
-                });
-                return { ok: true, applied: true, modelVersion: bundle.modelVersion };
-            }
-            /* 权重已应用但版本记录未持久化 → 回滚旧权重与旧记录，保持一致状态 */
-            const rb = await _rollbackToBackup(contract, rec);
-            _settleIncompleteRollback(rb);
+            removeKey(PENDING_KEY);
             await styledDialog({
-                title: rb.status === 'complete' ? '更新未完成（已回滚）' : '更新未完成（回滚不完整，请重启检查）',
-                message: '权重已下载校验通过，但版本记录未能持久化：\n' + (wr.errors || []).join('\n')
-                    + '\n\n' + _rollbackStatusText(rb),
+                title: '模型权重更新完成',
+                message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
+                    + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
+                    + '· 版本记录已写入并读回核对通过\n'
+                    + '· 长期备份已轮换为更新前的模型\n'
+                    + '· 优化器状态已重置，后续本地训练从新权重继续\n'
+                    + '· 重启游戏后仍会加载该权重',
             });
-            return { ok: false, err: 'official record not persisted', errors: wr.errors, rolledBack: rb.status === 'complete', rollbackStatus: rb.status };
+            return { ok: true, applied: true, modelVersion: bundle.modelVersion, txId: r.txId };
         }
         await styledDialog({
             title: '安装未完成',
-            message: '新权重未通过校验，已' + (r.rolledBack ? '完整回滚到更新前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）')
-                + (r.partialWrite ? '。\n（检测到写入过程已产生部分修改，已尝试恢复）' : '') + '。\n\n原因：\n' + (r.errors || []).join('\n'),
+            message: '新权重未通过校验或提交步骤失败，已' + (r.rolledBack ? '完整回滚到更新前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）')
+                + (r.partialWrite ? '。\n（检测到写入过程已产生部分修改，已尝试恢复）' : '')
+                + '。\n\n原因：\n' + (r.errors || []).join('\n')
+                + (r.rollbackStatus === 'failed' ? '\n\n' + _txRollbackText(r) : ''),
         });
-        return { ok: false, errors: r.errors, rolledBack: r.rolledBack, partialWrite: !!r.partialWrite, failedAt: r.failedAt };
+        return { ok: false, errors: r.errors, rolledBack: r.rolledBack, partialWrite: !!r.partialWrite, failedAt: r.failedAt, rollbackStatus: r.rollbackStatus };
     } catch (e) {
         prog.close();
         const msg = String((e && e.message) || e);
@@ -754,6 +739,11 @@ export const tryApplyPending = async () => {
     if (pending.hold === true) {
         _stopPendingWatch();
         return { ok: false, skipped: true, reason: '待生效任务处于保留状态（上次回滚未完成），请重启或重新下载后处理' };
+    }
+    /* ★ P0-1：存在无法自动恢复的未完成安装事务 → 阻止继续安装（保留恢复数据） */
+    if (_txBlocked()) {
+        _stopPendingWatch();
+        return { ok: false, skipped: true, reason: '存在未完成的安装事务，已暂停自动安装以避免覆盖恢复数据' };
     }
     if (!_acquireTx()) return { ok: false, skipped: true, reason: 'busy' };
     try {
@@ -804,42 +794,52 @@ const _tryApplyPendingLocked = async pending => {
     const bridge = await buildBridge();
     if (!bridge) return { ok: false, skipped: true, reason: '模型模块未就绪' };
     const det = detectUserModel({ activeParams: active, defaultParams: defaultParams(), officialDigest: officialRec && officialRec.sha256, dims: contract.dims });
+    const txId = generateTxId();
     const r = await applyOfficialBundle({
         bridge, storageOps, bundle: pending.bundle, decoded: res.decoded, dims: contract.dims,
         probe: res.probe, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
-        mode: 'install', preserveUserModel: !!(det.known && det.isUserModel),
-        /* ★ P0 / P1-1：真正写入前再次用同一套授权规则复核状态与模型基线 */
+        mode: 'install', preserveUserModel: !!(det.known && det.isUserModel), txId,
+        /* ★ P0 / P1-1：真正写入前再次用同一套授权规则复核状态与模型基线；
+         * 若复核期间模型再次变化 → 返回 rebaseline，由事务重建基线（不复用过期快照）。 */
         confirmBeforeWrite: async () => {
             const g = await canApplyNow();
-            if (!g.ok) return false;
+            if (!g.ok) return { ok: false, reason: g.reason };
             const cur = await activeParamsNow();
             const curDigest = cur ? paramsDigest(cur, contract.dims) : null;
             const d2 = evaluatePending({ pending: authorized, contract, currentDigest: curDigest, officialRec: readOfficialRecord(), gate: g });
-            return d2.action === 'apply';
+            if (d2.action === 'apply') return { ok: true };
+            if (d2.action === 'drop') return { ok: false, reason: d2.reason };
+            /* reprompt：复核期间模型又变化 → 重新征询，并请求重建事务基线 */
+            const choice = await styledDialog({
+                title: '当前模型又发生变化，需要重新确认',
+                message: '在你确认安装期间，当前生效模型再次发生了变化：\n' + d2.reason + '。\n\n'
+                    + '· 「保留当前模型」：放弃本次安装，你的当前模型继续生效（推荐）\n'
+                    + '· 「仍然安装」：用官方权重替换当前模型（更新前的模型会被重新备份保存）',
+                buttons: [
+                    { label: '保留当前模型', value: 'keep', primary: true },
+                    { label: '仍然安装', value: 'apply' },
+                ],
+                dangerous: true, defaultValue: 'keep',
+            });
+            if (choice !== 'apply') return { ok: false, reason: '用户在模型再次变化后选择保留当前模型' };
+            authorized = Object.assign({}, authorized, { baseModelDigest: curDigest, userAuthorized: true });
+            return { ok: true, rebaseline: true };
         },
+        commitRecord: async info => writeOfficialRecordVerified(pending.bundle, info.digest, info.size, contract),
+        revertRecord: async () => _restoreOfficialRecord(officialRec),
     });
     if (r.ok) {
-        /* ★ P1-4：版本记录写入并读回核对成功后才算完成；失败则回滚旧权重与旧记录 */
-        const wr = writeOfficialRecordVerified(pending.bundle, r.digest, r.size, contract);
-        if (wr.ok) {
-            removeKey(PENDING_KEY);
-            _stopPendingWatch();
-            await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion + '\n\n（版本记录已写入并读回核对通过）' });
-            return r;
-        }
-        const rb = await _rollbackToBackup(contract, officialRec);
-        _settleIncompleteRollback(rb);
-        await styledDialog({
-            title: rb.status === 'complete' ? '待生效权重未完成（已回滚）' : '待生效权重未完成（回滚不完整，请重启检查）',
-            message: '权重已应用，但版本记录未能持久化：\n' + (wr.errors || []).join('\n')
-                + '\n\n' + _rollbackStatusText(rb),
-        });
-        return { ok: false, err: 'official record not persisted', errors: wr.errors, rolledBack: rb.status === 'complete', rollbackStatus: rb.status };
+        _finishPendingTx(r);
+        await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion + '\n\n（版本记录已写入并读回核对通过）' });
+        return r;
     }
-    removeKey(PENDING_KEY);
-    _stopPendingWatch();
-    await styledDialog({ title: '权重应用失败', message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚')
-        + (r.partialWrite ? '（检测到写入过程已产生部分修改，已尝试恢复）' : '') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
+    _finishPendingTx(r);
+    await styledDialog({
+        title: r.rollbackStatus === 'complete' ? '权重应用失败（已回滚）' : '权重应用失败（回滚不完整，请重启检查）',
+        message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚')
+            + (r.partialWrite ? '（检测到写入过程已产生部分修改，已尝试恢复）' : '') + '。\n\n原因：\n' + (r.errors || []).join('\n')
+            + (r.rollbackStatus === 'failed' ? '\n\n' + _txRollbackText(r) : ''),
+    });
     return r;
 };
 
@@ -895,6 +895,8 @@ export const modelUpdateStatus = () => ({
     official: readOfficialRecord(),
     hasPending: !!readPending(),
     hasBackup: hasBackup(),
+    txJournal: storageOps.readTx(),
+    txAction: classifyInterruptedTx(storageOps.readTx()).action,
     lastCheckTs: parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0,
     intervalHours: Math.round(CHECK_INTERVAL_MS / 3600000),
 });
@@ -927,10 +929,12 @@ export const installModelUpdate = () => {
                 if (_disposed || _ensureBus() || ++n > 20) { if (_busTimer) clearInterval(_busTimer); _busTimer = null; }
             }, 1000);
         }
-        /* 启动时：先尝试应用待生效权重（若存在），再按 6 小时节流做一次静默检查 */
+        /* 启动时：先按事务日志恢复未完成的安装事务，再尝试应用待生效权重，最后按 6 小时节流静默检查 */
         if (readPending()) _startPendingWatch();
         const ts = parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0;
-        tryApplyPending().catch(_swallow).then(() => {
+        recoverInterruptedTransaction().catch(_swallow).then(() => {
+            return tryApplyPending().catch(_swallow);
+        }).then(() => {
             if (Date.now() - ts > CHECK_INTERVAL_MS) checkModelUpdate({ manual: false }).catch(_swallow);
         });
     } catch (e) {

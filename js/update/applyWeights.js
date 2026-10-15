@@ -19,7 +19,11 @@
  *  - 任何失败都 restoreModel(备份) 并再次落盘，绝不留下半成品或随机参数。
  */
 import { encodeBase64, decodeBase64, paramSpec, paramsDigest } from './weightBundle.js?v=41a';
-import { buildBackupRecord, verifyBackupRecord, BACKUP_KIND_PARAMS } from './updateCore.js?v=41a';
+import {
+    buildBackupRecord, verifyBackupRecord, BACKUP_KIND_PARAMS,
+    generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx,
+    decodeBackupParams, backupRecordToBundleLike,
+} from './updateCore.js?v=41a';
 
 /* 在线快照键 → 权重包参数键（对应 weights.js __snapshotModel 的契约） */
 export const SNAP_TO_PARAM = {
@@ -194,61 +198,135 @@ export const runtimeStateDiff = (live, snapshot, dims) => {
 };
 
 /* ---------- 主流程 ----------
- * mode = 'install'（默认）：写暂存备份并读回校验 → 应用 → 成功后轮换长期备份；
- * mode = 'restore'        ：恢复历史备份，**绝不写入/覆盖任何备份**。 */
+ * mode = 'install'（默认）：暂存备份 → 应用权重 → 提交官方记录 → 轮换长期备份 → 清理事务；
+ * mode = 'restore'        ：恢复历史备份 → 清除官方记录 → 清理事务；**绝不写入/覆盖任何备份**。
+ *
+ * ★ P0-1 事务一致性：
+ *   - 每次安装/恢复都携带唯一 `txId`；暂存备份记录该 txId；
+ *   - 回滚只使用**本次事务**创建并校验过的内存快照 / 暂存备份，
+ *     绝不直接读取可能属于历史事务的长期备份（BACKUP_KEY）；
+ *   - "提交官方记录"与"轮换长期备份"都是**必要提交步骤**，任一失败即回滚且不报完整成功；
+ *   - 单键事务日志记录阶段，供崩溃后重启识别与恢复。
+ * ★ P0-2 重新授权安全：
+ *   - 最终授权复核若发现模型已变化，必须**重新建立事务基线**（重取快照 + 重写并校验暂存备份），
+ *     绝不复用已过期的旧快照/旧备份；重复变化超过上限则中止，不做无限重试。 */
+const MAX_REBASE = 2;
+
+const _journalWrite = (storageOps, journal) => {
+    try { return !!(storageOps && typeof storageOps.writeTx === 'function' && storageOps.writeTx(journal) !== false); } catch (e) { return false; }
+};
+const _journalClear = storageOps => {
+    try { if (storageOps && typeof storageOps.removeTx === 'function') storageOps.removeTx(); } catch (e) {}
+};
+
 export const applyOfficialBundle = async ctx => {
     const { bridge, storageOps, bundle, decoded, dims, probe, runtimeEpoch, schemaVersion, onStep,
-        mode = 'install', preserveUserModel = false, confirmBeforeWrite = null } = ctx || {};
+        mode = 'install', preserveUserModel = false, confirmBeforeWrite = null,
+        commitRecord = null, revertRecord = null, txId = null } = ctx || {};
     const isRestore = mode === 'restore';
     const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
     const errors = [];
+    const tx = txId ? String(txId) : generateTxId();
 
     /* 如实反馈的状态位，绝不谎报 */
-    let backupWritten = false, backupRotated = false, partialWrite = false;
+    let backupWritten = false, backupRotated = false, partialWrite = false, journalWritten = false;
     const fail = (list, failedAt, extra) => Object.assign({
         ok: false, rolledBack: false, errors: Array.isArray(list) ? list : [list],
-        digest: null, size: 0, mode: isRestore ? 'restore' : 'install',
-        backupWritten, backupRotated, partialWrite, rollbackStatus: 'none', failedAt: failedAt || 'precheck',
+        digest: null, size: 0, mode: isRestore ? 'restore' : 'install', txId: tx,
+        backupWritten, backupRotated, partialWrite, journalWritten,
+        rollbackStatus: 'none', failedAt: failedAt || 'precheck',
     }, extra || {});
 
     if (!bridge || !decoded || !bundle) return fail('缺少必要参数');
 
-    /* 1) 内存快照（仅用于本次事务内的回滚，不作为"永久备份"） */
-    let snapshot = null;
-    try { snapshot = bridge.snapshotModel(); } catch (e) { snapshot = null; }
-    if (!snapshot) return fail('无法获取当前模型快照，已中止（未做任何改动）');
-    const snapshotParams = snapshotToParams(snapshot);
-    const snapshotMeta = (bridge.getMeta && bridge.getMeta()) || null;
-
-    /* 2) 安装模式：写暂存备份（不触碰长期恢复点）；恢复模式：绝不触碰任何备份 */
-    let stagingRecord = null;
-    if (!isRestore) {
-        if (!snapshotParams) {
-            return fail('当前模型为隔离态（float32-v1），无法导出参数用于在线备份，已中止（未做任何改动）');
-        }
-        stagingRecord = buildBackupRecord({
-            params: snapshotParams, meta: snapshotMeta, dims,
-            schemaVersion, dataEpoch: runtimeEpoch, savedAt: Date.now(),
-        });
-        const wb = writeBackupVerified(storageOps, 'writeStagingBackup', 'readStagingBackup', stagingRecord, dims);
-        if (!wb.ok) {
-            const prefix = preserveUserModel
-                ? '检测到本地训练成果，但无法安全备份，已中止（未做任何改动，你的模型保持生效）：'
-                : '更新前无法安全备份原有模型，已中止（未做任何改动）：';
-            return fail(prefix + wb.errors.join('；'), 'backup');
-        }
-        backupWritten = true;
-        step('已暂存原有模型参数并读回校验通过（成功后才会轮换长期备份）');
-    } else {
-        step('恢复模式：不写入、不覆盖任何备份');
-    }
-
-    /* 丢弃暂存备份（失败/中止路径），长期恢复点不受影响 */
+    /* 暂存备份与事务日志属于**安装事务**；恢复模式绝不触碰它们
+     * （恢复既可能是独立操作，也可能是安装事务崩溃后的恢复动作）。 */
     const discardStaging = () => {
+        if (isRestore) return;
         try { if (storageOps && typeof storageOps.removeStagingBackup === 'function') storageOps.removeStagingBackup(); } catch (e) {}
     };
+    const journalClear = () => { if (isRestore) return; _journalClear(storageOps); };
+    const cleanupTx = () => { discardStaging(); journalClear(); };
+    /* 中止后清理：回滚不完整时保留事务数据（仍有恢复价值）并标记需人工处理 */
+    const cleanupAfterAbort = rbOk => {
+        if (rbOk) { cleanupTx(); return; }
+        if (!isRestore) {
+            _journalWrite(storageOps, buildTxJournal({
+                txId: tx, phase: 'weights-written', needsManual: true,
+                reason: '上次事务回滚未完成，已保留暂存备份与事务日志供恢复', startedAt: Date.now(),
+            }));
+        }
+    };
+    const safeRevertRecord = async () => {
+        if (typeof revertRecord !== 'function') return [];
+        try {
+            const r = await revertRecord();
+            return (r && r.ok === false) ? (r.errors || ['版本记录回滚未确认']) : [];
+        } catch (e) { return ['版本记录回滚抛出异常：' + ((e && e.message) || e)]; }
+    };
 
-    /* 回滚：errors = 未能确认回滚；notes = 已回滚但需如实告知的限制（不算失败） */
+    /* ===== 建立事务基线（快照 + 暂存备份 + 最终授权复核），支持重新授权后重建 ===== */
+    let snapshot = null, snapshotParams = null, snapshotMeta = null, stagingRecord = null, applied = null;
+    let rebaseCount = 0;
+    for (;;) {
+        try { snapshot = bridge.snapshotModel(); } catch (e) { snapshot = null; }
+        if (!snapshot) return fail('无法获取当前模型快照，已中止（未做任何改动）');
+        snapshotParams = snapshotToParams(snapshot);
+        snapshotMeta = (bridge.getMeta && bridge.getMeta()) || null;
+
+        if (!isRestore) {
+            if (!snapshotParams) return fail('当前模型为隔离态（float32-v1），无法导出参数用于在线备份，已中止（未做任何改动）');
+            stagingRecord = buildBackupRecord({
+                params: snapshotParams, meta: snapshotMeta, dims,
+                schemaVersion, dataEpoch: runtimeEpoch, savedAt: Date.now(), txId: tx,
+            });
+            const wb = writeBackupVerified(storageOps, 'writeStagingBackup', 'readStagingBackup', stagingRecord, dims);
+            if (!wb.ok) {
+                const prefix = preserveUserModel
+                    ? '检测到本地训练成果，但无法安全备份，已中止（未做任何改动，你的模型保持生效）：'
+                    : '更新前无法安全备份原有模型，已中止（未做任何改动）：';
+                _journalClear(storageOps);
+                return fail(prefix + wb.errors.join('；'), 'backup');
+            }
+            backupWritten = true;
+        }
+
+        try { applied = buildAppliedSnapshot(decoded, dims, bundle, snapshot.META || {}); } catch (e) { applied = null; }
+        if (!applied) { cleanupTx(); return fail('组装待生效模型失败'); }
+
+        if (typeof confirmBeforeWrite === 'function') {
+            const baseDigest = snapshotParams ? paramsDigest(snapshotParams, dims) : null;
+            let g = null;
+            try { g = await confirmBeforeWrite({ txId: tx, snapshotDigest: baseDigest }); } catch (e) { g = null; }
+            const ok = (g === true) || (g && g.ok === true);
+            if (!ok) { cleanupTx(); return fail('最终状态复核未通过（对局或训练进行中，或模型已变化），已中止（未做任何改动）', 'gate'); }
+            if (g && g.rebaseline === true) {
+                /* ★ P0-2：授权期间模型已变化 → 丢弃旧基线，重新取快照 + 重写并校验暂存备份 */
+                if (++rebaseCount > MAX_REBASE) {
+                    cleanupTx();
+                    return fail('授权确认期间模型反复变化，已中止（未做任何改动），请稍后重试', 'gate');
+                }
+                discardStaging();
+                continue;
+            }
+        }
+        break;
+    }
+
+    /* 事务日志：基线已就绪（暂存备份已写入并读回校验）；恢复模式不写日志 */
+    const baseDigest = snapshotParams ? paramsDigest(snapshotParams, dims) : null;
+    if (!isRestore) {
+        journalWritten = _journalWrite(storageOps, buildTxJournal({
+            txId: tx, phase: 'prepared', baseDigest,
+            targetDigest: String(bundle.sha256 || '').toLowerCase(),
+            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
+            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
+        }));
+        if (!journalWritten) step('提示：事务日志写入失败，崩溃恢复能力受限（备份与校验仍然有效）');
+    }
+
+    /* 回滚：errors = 未能确认回滚；notes = 已回滚但需如实告知的限制（不算失败）
+     * ★ 只使用本次事务的内存快照，绝不读取长期备份。 */
     const rollback = () => {
         const rErrors = [], notes = [];
         try {
@@ -274,18 +352,6 @@ export const applyOfficialBundle = async ctx => {
         return { errors: rErrors, notes };
     };
 
-    /* 3) 组装待写入快照（官方权重 / 恢复内容 + 优化器状态清零） */
-    let applied = null;
-    try { applied = buildAppliedSnapshot(decoded, dims, bundle, snapshot.META || {}); } catch (e) { applied = null; }
-    if (!applied) { discardStaging(); return fail('组装待生效模型失败'); }
-
-    /* 3b) 真正替换前的最终状态复核（对局/训练状态可能已变化）——未写入前中止无需回滚 */
-    if (typeof confirmBeforeWrite === 'function') {
-        let ok = false;
-        try { ok = await confirmBeforeWrite(); } catch (e) { ok = false; }
-        if (!ok) { discardStaging(); return fail('最终状态复核未通过（对局或训练进行中，或模型已变化），已中止（未做任何改动）', 'gate'); }
-    }
-
     /* 4) 写入（可能部分修改后失败/抛异常 → 必须检测并回滚） */
     let wrote = false, writeThrew = null;
     try { wrote = bridge.restoreModel(applied) !== false; } catch (e) { writeThrew = e; wrote = false; }
@@ -295,7 +361,7 @@ export const applyOfficialBundle = async ctx => {
         if (diffs === null) {
             /* 无法确认是否发生部分修改 → 必须回滚并如实报告风险 */
             const rb = rollback();
-            discardStaging();
+            cleanupAfterAbort(rb.errors.length === 0);
             return fail(
                 ['写入新权重失败且无法确认是否已部分修改（' + ((writeThrew && writeThrew.message) || '结构不兼容') + '）',
                     '已尝试回滚：' + (rb.errors.length ? rb.errors.join('；') : '完成')],
@@ -305,12 +371,12 @@ export const applyOfficialBundle = async ctx => {
         }
         if (!diffs.length) {
             /* 确认未发生任何修改 → 无需回滚，如实说明 */
-            discardStaging();
+            cleanupTx();
             return fail('写入新权重被模型拒绝（结构不兼容），已确认运行时状态未发生任何变化', 'write');
         }
         /* 已发生部分修改 → 立即回滚 */
         const rb = rollback();
-        discardStaging();
+        cleanupAfterAbort(rb.errors.length === 0);
         return fail(
             ['写入新权重失败（' + ((writeThrew && writeThrew.message) || '返回 false') + '）且已发生部分修改：' + diffs.join('、'),
                 rb.errors.length ? ('回滚未完全确认：' + rb.errors.join('；')) : '已回滚到原有模型'],
@@ -319,6 +385,14 @@ export const applyOfficialBundle = async ctx => {
         );
     }
     step('新权重已写入在线模型');
+    if (!isRestore) {
+        _journalWrite(storageOps, buildTxJournal({
+            txId: tx, phase: 'weights-written', baseDigest,
+            targetDigest: String(bundle.sha256 || '').toLowerCase(),
+            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
+            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
+        }));
+    }
 
     /* 5) 落盘（返回值不可信，仅作提示） */
     try { bridge.saveWeights(); } catch (e) {}
@@ -348,29 +422,130 @@ export const applyOfficialBundle = async ctx => {
 
     if (errors.length) {
         const rb = rollback();
-        discardStaging();
+        cleanupAfterAbort(rb.errors.length === 0);
         return fail(errors.concat(rb.errors, rb.notes), 'verify',
             { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors });
     }
 
-    /* 9) 全部校验通过 → 才把暂存备份轮换为长期恢复点（P2-1：绝不过早销毁原恢复点） */
-    if (!isRestore) {
-        const rot = writeBackupVerified(storageOps, 'writeBackup', 'readBackup', stagingRecord, dims);
-        if (rot.ok) {
-            backupRotated = true;
-            discardStaging();
-            step('已轮换长期备份为更新前的模型');
-        } else {
-            /* 未销毁任何数据：原长期备份仍在、暂存备份仍在；如实告知未轮换 */
-            step('长期备份未能轮换（原备份未受影响）：' + rot.errors.join('；'));
+    /* 9) 提交步骤一：官方版本记录（安装=写入并核验；恢复=清除并核验） */
+    if (typeof commitRecord === 'function') {
+        let cr = null;
+        try { cr = await commitRecord({ txId: tx, digest: paramsDigest(bundle.params, dims), size: Number(bundle.size) || 0 }); }
+        catch (e) { cr = { ok: false, errors: ['版本记录提交抛出异常：' + ((e && e.message) || e)] }; }
+        if (!cr || cr.ok !== true) {
+            const rb = rollback();
+            const rv = await safeRevertRecord();
+            cleanupAfterAbort(rb.errors.length === 0 && rv.length === 0);
+            return fail(
+                ['版本记录提交失败：' + (((cr && cr.errors) || ['未知原因']).join('；'))]
+                    .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : ['已回滚到更新前的模型'])
+                    .concat(rv),
+                'record',
+                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors.concat(rv), notes: rb.notes },
+            );
         }
+        if (!isRestore) {
+            _journalWrite(storageOps, buildTxJournal({
+                txId: tx, phase: 'record-committed', baseDigest,
+                targetDigest: String(bundle.sha256 || '').toLowerCase(),
+                modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
+                schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
+            }));
+        }
+        step('版本记录已提交并核验');
     }
 
+    /* 10) 提交步骤二：长期备份轮换（失败 = 提交失败 → 恢复本次更新前的模型，原长期备份不变） */
+    if (!isRestore) {
+        const rot = writeBackupVerified(storageOps, 'writeBackup', 'readBackup', stagingRecord, dims);
+        if (!rot.ok) {
+            const rb = rollback();
+            const rv = await safeRevertRecord();
+            cleanupAfterAbort(rb.errors.length === 0 && rv.length === 0);
+            return fail(
+                ['长期备份轮换失败：' + rot.errors.join('；'),
+                    '已优先恢复本次更新前的模型；原长期备份保持不变']
+                    .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : [])
+                    .concat(rv),
+                'backup-rotate',
+                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors.concat(rv), notes: rb.notes },
+            );
+        }
+        backupRotated = true;
+        _journalWrite(storageOps, buildTxJournal({
+            txId: tx, phase: 'backup-rotated', baseDigest,
+            targetDigest: String(bundle.sha256 || '').toLowerCase(),
+            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
+            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
+        }));
+        step('已轮换长期备份为更新前的模型');
+    }
+
+    /* 11) 权重、官方记录、可用恢复点全部核验通过 → 才清理临时事务数据 */
+    cleanupTx();
     step(isRestore ? '已安全恢复历史备份' : '官方权重已安全应用');
     return {
         ok: true, rolledBack: false, errors: [], digest: paramsDigest(bundle.params, dims),
-        size: Number(bundle.size) || 0, mode: isRestore ? 'restore' : 'install',
-        backupWritten, backupRotated, partialWrite: false, rollbackStatus: 'none', failedAt: null,
-        backupRotateErrors: backupRotated ? [] : (isRestore ? [] : ['长期备份未轮换（原备份未受影响）']),
+        size: Number(bundle.size) || 0, mode: isRestore ? 'restore' : 'install', txId: tx,
+        backupWritten, backupRotated, journalWritten, partialWrite: false, rollbackStatus: 'none', failedAt: null,
     };
+};
+
+/* ---------- 崩溃 / 重启后的未完成事务恢复（P0-1） ----------
+ * 依据单键事务日志的阶段，执行最小可行的安全恢复。**绝不**在没有可靠恢复数据时
+ * 清除唯一可用的恢复点；无法自动恢复时保留全部数据并返回 action='manual'，
+ * 由调用方阻止继续安装并提示人工处理。
+ * 依赖注入（storageOps / getBridge / contract），因此可在 Node 侧直接测试生产实现。 */
+export const recoverInterruptedTransaction = async ctx => {
+    const { storageOps, getBridge, contract, onStep } = ctx || {};
+    const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
+    const readTx = () => { try { return (storageOps && typeof storageOps.readTx === 'function') ? storageOps.readTx() : null; } catch (e) { return null; } };
+    const clearTx = () => { try { if (storageOps && typeof storageOps.removeTx === 'function') storageOps.removeTx(); } catch (e) {} };
+    const clearStaging = () => { try { if (storageOps && typeof storageOps.removeStagingBackup === 'function') storageOps.removeStagingBackup(); } catch (e) {} };
+
+    const journal = readTx();
+    const plan = classifyInterruptedTx(journal);
+    if (plan.action === 'none') return plan;
+    if (plan.action === 'manual') {
+        step('检测到无法自动恢复的未完成事务，已保留恢复数据并暂停自动安装：' + plan.reason);
+        return plan;
+    }
+    if (plan.action === 'cleanup') {
+        /* prepared：权重未改动；backup-rotated：提交已完成 → 仅清理事务数据 */
+        clearStaging(); clearTx();
+        step('已清理未完成事务的临时数据（' + plan.reason + '）');
+        return { action: plan.action, ok: true };
+    }
+    if (!contract) return { action: 'manual', reason: '运行时契约不可用，无法安全恢复未完成事务' };
+    let staging = null;
+    try { staging = (storageOps && typeof storageOps.readStagingBackup === 'function') ? storageOps.readStagingBackup() : null; } catch (e) { staging = null; }
+    const srcErrs = verifyStagingForTx(staging, journal, contract.dims);
+    if (srcErrs.length) {
+        step('未完成事务的暂存备份不可用，已保留数据并暂停自动安装：' + srcErrs.join('；'));
+        return { action: 'manual', reason: '暂存备份与事务日志不匹配：' + srcErrs.join('；') };
+    }
+    if (plan.action === 'finish-rotation') {
+        /* 权重与官方记录已提交（一致指向新权重），只需把长期恢复点补做轮换 */
+        const rot = writeBackupVerified(storageOps, 'writeBackup', 'readBackup', staging, contract.dims);
+        if (rot.ok) { clearStaging(); clearTx(); step('已补做长期备份轮换并清理事务数据'); return { action: 'finish-rotation', ok: true }; }
+        step('补做长期备份轮换失败，已保留数据：' + rot.errors.join('；'));
+        return { action: 'finish-rotation', ok: false, reason: rot.errors.join('；') };
+    }
+    /* restore：权重可能已写入但记录未提交 → 用**本事务的暂存备份**回滚 */
+    const bridge = (typeof getBridge === 'function') ? await getBridge() : null;
+    if (!bridge) return { action: 'manual', reason: '模型模块未就绪，无法安全恢复未完成事务' };
+    const decoded = decodeBackupParams(staging, contract.dims);
+    if (!decoded) return { action: 'manual', reason: '暂存备份参数无法解码' };
+    const r = await applyOfficialBundle({
+        bridge, storageOps, bundle: backupRecordToBundleLike(staging), decoded, dims: contract.dims,
+        probe: null, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion, mode: 'restore',
+    });
+    if (r.ok) {
+        clearStaging(); clearTx();
+        step('已按事务日志回滚未完成的安装事务（恢复到更新前模型）');
+        return { action: 'restore', ok: true };
+    }
+    try { if (storageOps && typeof storageOps.writeTx === 'function') storageOps.writeTx(Object.assign({}, journal, { needsManual: true, reason: '按事务日志回滚失败：' + (r.errors || []).join('；') })); } catch (e) {}
+    step('按事务日志回滚失败，已保留数据并暂停自动安装：' + (r.errors || []).join('；'));
+    return { action: 'restore', ok: false, reason: (r.errors || []).join('；') };
 };
