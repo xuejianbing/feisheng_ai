@@ -1471,5 +1471,131 @@ section('重新授权期间的事务基线（P0-2）');
     }
 }
 
+/* ---------- 29. 恢复事务与官方记录清理（P1） ---------- */
+section('恢复事务与官方记录清理（P1）');
+{
+    const contract9 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams;              /* 用户长期备份（将被恢复） */
+    const Bmodel = officialParams;     /* 恢复前的当前模型（官方权重） */
+    const bundleLike = { params: A, trained: 9, accuracy: 0.5, size: 0 };
+    const decodedA = buildTyped(A);
+
+    const runRestore = async (opt) => {
+        opt = opt || {};
+        const bridge = makeFakeWeights({ initialParams: Bmodel, corruptFirstSave: !!opt.corruptFirstSave });
+        const storageOps = mkStorageFull(bridge, opt.storageOpt || {});
+        storageOps.st.backup = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeBackup = JSON.stringify(storageOps.st.backup);
+        let reverted = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: bundleLike, decoded: decodedA, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore', txId: 'tx-29',
+            commitRecord: opt.commitRecord || (async () => ({ ok: true, errors: [] })),
+            revertRecord: async () => { reverted++; return (opt.revert || (() => ({ ok: true, errors: [] })))(); },
+        });
+        return { bridge, storageOps, r, beforeBackup, reverted: () => reverted };
+    };
+
+    /* 29a) 模型恢复成功 + 记录清理成功 */
+    {
+        const { bridge, storageOps, r, beforeBackup, reverted } = await runRestore({});
+        ok('29a 恢复成功', r.ok === true, JSON.stringify(r.errors));
+        ok('29a 当前模型 = 备份 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('29a 未触碰长期备份', JSON.stringify(storageOps.st.backup) === beforeBackup);
+        ok('29a 恢复模式不写暂存/日志', storageOps.st.staging === null && storageOps.st.tx === null);
+        ok('29a 未调用记录回滚', reverted() === 0);
+    }
+    /* 29b) 记录清理失败（返回 false）→ 回滚模型恢复，不虚报成功 */
+    {
+        const { bridge, storageOps, r, beforeBackup, reverted } = await runRestore({ commitRecord: async () => ({ ok: false, errors: ['记录删除失败'] }) });
+        ok('29b 记录清理失败 → 判定失败且 failedAt=record', r.ok === false && r.failedAt === 'record', JSON.stringify(r.errors));
+        ok('29b 已回滚到恢复前的模型 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('29b 已调用记录回滚（恢复原记录）', reverted() === 1);
+        ok('29b 长期备份未被修改', JSON.stringify(storageOps.st.backup) === beforeBackup);
+        ok('29b 不谎报完整恢复', r.rollbackStatus === 'complete');
+    }
+    /* 29c) 记录清理抛异常 → 同样回滚 */
+    {
+        const { bridge, r } = await runRestore({ commitRecord: async () => { throw new Error('quota exceeded'); } });
+        ok('29c 记录清理抛异常 → 判定失败', r.ok === false && r.failedAt === 'record', JSON.stringify(r.errors));
+        ok('29c 已回滚到恢复前的模型 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 29d) 删除返回成功但记录仍可读回（调用方判定为失败） */
+    {
+        const { bridge, r } = await runRestore({ commitRecord: async () => ({ ok: false, errors: ['新版本记录删除失败（仍可读回）'] }) });
+        ok('29d 记录仍可读回 → 判定失败并回滚', r.ok === false && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 29e) 模型恢复成功、元数据处理失败且回滚记录也失败 → 如实区分部分/失败 */
+    {
+        const { r, reverted } = await runRestore({
+            commitRecord: async () => ({ ok: false, errors: ['记录删除失败'] }),
+            revert: () => ({ ok: false, errors: ['记录回滚失败'] }),
+        });
+        ok('29e 记录回滚失败 → 不报完整成功', r.ok === false);
+        ok('29e 记录回滚错误被并入 errors', (r.errors || []).some(e => /记录回滚失败/.test(e)), JSON.stringify(r.errors));
+        ok('29e 记录回滚被调用', reverted() === 1);
+    }
+    /* 29f) 恢复中途持久化异常 → 回滚（不留下半成品） */
+    {
+        const { bridge, r } = await runRestore({ corruptFirstSave: true });
+        ok('29f 恢复落盘损坏 → 判定失败', r.ok === false, JSON.stringify(r.errors));
+        ok('29f 已回滚到恢复前的模型 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 29g) restoreOfficialRecord：清除路径（prevRec=null）的异常处理 */
+    {
+        const mk = o => ({
+            writeRecord: () => true,
+            readRecord: () => (o && o.still ? { modelId: MODEL_ID, modelVersion: 'x', releaseSeq: 1 } : null),
+            removeRecord: () => { if (o && o.removeThrow) throw new Error('quota'); },
+            verify: verifyOfficialRecord,
+        });
+        ok('29g 清除成功且读回不存在 → ok', restoreOfficialRecord(Object.assign({ prevRec: null }, mk({}))).ok === true);
+        ok('29g 清除后仍可读回 → 失败', restoreOfficialRecord(Object.assign({ prevRec: null }, mk({ still: true }))).ok === false);
+        ok('29g 清除抛异常 → 不崩溃且判失败', restoreOfficialRecord(Object.assign({ prevRec: null }, mk({ removeThrow: true, still: true }))).ok === false);
+    }
+    /* 29h) 重复点击恢复按钮：备份始终保留、结果一致 */
+    {
+        const bridge = makeFakeWeights({ initialParams: Bmodel });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeBackup = JSON.stringify(storageOps.st.backup);
+        const r1 = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded: decodedA, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore', txId: 'tx-29h1', commitRecord: async () => ({ ok: true, errors: [] }) });
+        const r2 = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded: decodedA, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore', txId: 'tx-29h2', commitRecord: async () => ({ ok: true, errors: [] }) });
+        ok('29h 重复恢复均成功', r1.ok === true && r2.ok === true);
+        ok('29h 重复恢复后备份仍完整', JSON.stringify(storageOps.st.backup) === beforeBackup);
+        ok('29h 重复恢复后模型仍为 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
+}
+
+/* ---------- 30. 待生效授权强制校验（P2） ---------- */
+section('待生效授权强制校验（P2）');
+{
+    const contract10 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const mkP = ua => {
+        const p = buildPendingRecord({ bundle: mkBundle(), baseModelDigest: userDigest, userAuthorized: ua === undefined ? undefined : ua, contract: contract10 });
+        if (ua !== undefined) p.userAuthorized = ua;   /* 直接注入原始值，模拟历史/异常/人为构造记录 */
+        return p;
+    };
+    const ev10 = (pending, cur) => evaluatePending({ pending, contract: contract10, currentDigest: cur === undefined ? userDigest : cur, officialRec: null, gate: { ok: true } });
+    ok('30 userAuthorized=true → 可 apply', ev10(mkP(true)).action === 'apply');
+    ok('30 userAuthorized=false → 绝不 apply', ev10(mkP(false)).action !== 'apply');
+    ok('30 userAuthorized=false → reprompt（需重新确认）', ev10(mkP(false)).action === 'reprompt');
+    ok('30 userAuthorized 缺失 → 绝不 apply', ev10(mkP(undefined)).action !== 'apply');
+    ok('30 userAuthorized 缺失 → reprompt', ev10(mkP(undefined)).action === 'reprompt');
+    ok('30 userAuthorized="true" 字符串 → 不算授权', ev10(mkP('true')).action === 'reprompt');
+    ok('30 userAuthorized=1 → 不算授权', ev10(mkP(1)).action === 'reprompt');
+    ok('30 未授权记录不会触发 apply（即使模型基线一致）', ev10(mkP(false), userDigest).action === 'reprompt');
+    /* 旧版 v1 记录继续安全丢弃 */
+    ok('30 旧版 v1 记录 → drop', evaluatePending({ pending: { version: 1, bundle: mkBundle() }, contract: contract10, currentDigest: userDigest, officialRec: null, gate: { ok: true } }).action === 'drop');
+    /* 授权模型摘要变化 → 仍为 reprompt（授权绑定基线） */
+    ok('30 授权基线变化 → reprompt', ev10(mkP(true), thirdDigest).action === 'reprompt');
+    /* 已安装/被取代优先于授权检查（避免无意义地追问用户） */
+    ok('30 已安装同版本 → drop（优先于授权检查）', evaluatePending({ pending: mkP(false), contract: contract10, currentDigest: userDigest, officialRec: { releaseSeq: 1, modelVersion: 'w7d5-t01', sha256: officialDigest }, gate: { ok: true } }).action === 'drop');
+    /* 对局中 → wait 优先于授权追问 */
+    ok('30 对局中 → wait', evaluatePending({ pending: mkP(false), contract: contract10, currentDigest: userDigest, officialRec: null, gate: { ok: false, reason: '对局进行中' } }).action !== 'apply');
+    /* 未授权 + 用户拒绝覆盖 → 调用方终止任务（此处验证判定不为 apply，确保不会静默应用） */
+    ok('30 未授权记录在任何情况下都不会 apply', [true, false, undefined, 'true', 1].every(ua => ev10(mkP(ua)).action !== 'apply' || ua === true));
+}
+
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');
 process.exit(fail === 0 ? 0 : 1);

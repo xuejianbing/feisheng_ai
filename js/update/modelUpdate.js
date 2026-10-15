@@ -502,6 +502,13 @@ const _restoreOfficialRecord = prevRec => restoreOfficialRecord({
     removeRecord: () => removeKey(OFFICIAL_KEY),
     verify: verifyOfficialRecord,
 });
+/* ★ P1：清除官方记录并**读回确认不存在**（removeKey 的返回值与结果都不可信） */
+const _clearOfficialRecordVerified = () => restoreOfficialRecord({
+    prevRec: null,
+    readRecord: readOfficialRecord,
+    removeRecord: () => removeKey(OFFICIAL_KEY),
+    verify: verifyOfficialRecord,
+});
 
 /* ★ P0-1：事务结果 → 待生效任务收尾。
  * 事务内部已完成回滚（只使用本次事务的基线，不读长期备份）。
@@ -872,18 +879,33 @@ export const restoreBackup = async () => {
     const bundleLike = { params: rec.params, trained: (rec.meta && rec.meta.trained) || 0, accuracy: (rec.meta && rec.meta.accuracy) || 0, size: 0 };
     const decoded = decodeBackupParams(rec, contract.dims);
     if (!decoded) { styledDialog({ title: '备份已损坏', message: '备份参数不完整，无法还原。' }); return { ok: false, err: 'backup corrupt' }; }
+    /* ★ P1：模型恢复与官方记录清理属于**同一个恢复事务**。
+     * 记录清理失败 → 事务回滚模型恢复（使用本次操作开始前的完整运行时快照），
+     * 并恢复记录，绝不留下"模型 A 已恢复、记录仍指向 B"的不一致状态。 */
+    const prevRec = readOfficialRecord();
     const r = await applyOfficialBundle({
         bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null,
         runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
         mode: 'restore', preserveUserModel: true,
         confirmBeforeWrite: async () => (await canApplyNow()).ok,
+        commitRecord: async () => _clearOfficialRecordVerified(),
+        revertRecord: async () => _restoreOfficialRecord(prevRec),
     });
     if (r.ok) {
-        /* 只有恢复成功后才清除官方记录；原备份保留（支持反复恢复，绝不自我覆盖） */
-        removeKey(OFFICIAL_KEY);
-        await styledDialog({ title: '已还原', message: '已恢复更新前的模型（官方权重记录已清除，原备份仍保留）。' });
+        await styledDialog({ title: '已还原', message: '已恢复更新前的模型（官方权重记录已清除并读回确认，原备份仍保留）。' });
+    } else if (r.failedAt === 'record') {
+        await styledDialog({
+            title: '还原未完成（官方记录未能清理）',
+            message: '模型已恢复，但官方版本记录未能清除并核验：\n' + (r.errors || []).join('\n')
+                + '\n\n为避免"模型与版本记录不一致"，已' + (r.rolledBack ? '回滚到还原前的模型与记录' : '尝试回滚（未能完全确认，请重启游戏后检查）')
+                + '。\n\n原长期备份未被修改。',
+        });
     } else {
-        await styledDialog({ title: '还原失败', message: '已' + (r.rolledBack ? '回滚到当前模型' : '尝试回滚') + '，原备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n') });
+        await styledDialog({
+            title: '还原失败',
+            message: '已' + (r.rolledBack ? '回滚到还原前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查）')
+                + '，原长期备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n'),
+        });
     }
     return r;
     } finally { _releaseTx(); }
