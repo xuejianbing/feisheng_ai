@@ -156,3 +156,44 @@ node tools/export-weights.mjs --verify dist/main-actor-critic-w7d5-20261015-01-x
   `{"status":"ok","service":"wuming-ingest",...}`，客户端据此判定 `unsupported` 并安全降级（已实测）。
 - 未在真实服务器上验证「权重包上传 + 客户端下载应用」的完整链路（需要服务端先按本协议托管文件）。
 - 探针 `expectTop` 需由工作台用与扩展一致的前向实现计算；本期客户端将其视为可选校验项。
+
+## 九、整包发布兼容性核验清单（不改动现有打包流程）
+
+本期新增文件：`js/update/*.js`（客户端）、`tools/export-weights.mjs`、`tools/test-weights.mjs`、
+`tools/MODEL_UPDATE_PROTOCOL.md`。以上**不改变工作台原有的输入 / 输出 / 上传行为**。
+
+### 9.1 已在仓库内静态核验通过（322 个 JS 模块、1097 条相对引用）
+
+| 检查项 | 结果 |
+|---|---|
+| 相对 `import / export … from / 字面量 import()` 目标是否存在 | 无缺失（唯一被标记项 `shadow/shadowCore.js` 的 `/extension/无名AI/…/features.js` 是**运行时绝对路径**，注释已注明手机端验证可 import，非打包缺陷） |
+| 越出扩展根目录的相对引用 | 仅 `js/shared/utils.js` 与 `score/foundation/adapt/host.js` 指向宿主 `noname.js`（**预期的唯一宿主耦合点**，本体中存在） |
+| 非相对（裸）说明符 | 仅 `tools/*.mjs` 的 `node:fs / node:path / node:url / node:crypto`（静态审计按「相对引用」扫描，裸说明符不受影响） |
+| 关键运行时文件与资源 | `info.json`、`extension.js`、`css/AIjinjiang.css`、`js/config/changelog.js`、`logs/*.js`（3 个）、`model/v5_mixup_s42.json`、`model/v5_mixup_s456.json`、`score/model/weights/defaultWeights.js`、`js/update/modelUpdate.js` 全部存在 |
+| ZIP 根结构 | 扩展根目录本身即 ZIP 根（`info.json` / `extension.js` 在根），符合「无名杀可直接导入格式」 |
+
+### 9.2 需要打包侧注意（清单，不是代码改动）
+
+1. `model/*.json`、`logs/*.js` 是通过**运行时路径**（`lib.assetURL` / 绝对路径）加载的，
+   静态引用审计**发现不了缺失**，请确认它们始终进包。
+2. `tools/` 是构建期工具，**可选**从发布 ZIP 中排除（`.md` 会被打包器的 empty loader 置空，
+   `.mjs` 不被游戏加载，保留亦无害）。是否排除由工作台决定，本仓库不做强制。
+3. 发布模型权重**不需要**重新分发完整安装包：服务端新增 2 个静态文件即可。
+4. **网络结构变更（`schemaVersion` / `dims`）时必须重新分发完整安装包**：
+   客户端会因结构不匹配拒绝在线替换，并提示用户领取新安装包。
+
+### 9.3 离线安装与新旧用户兼容
+
+| 场景 | 结论 |
+|---|---|
+| 全新离线安装、无网络 | `loadWeights()` 无存档 → 载入内置默认权重（`_decodeDefault` 只校验 `v===VERSION`，与数据纪元无关）→ 开箱可用 |
+| 安装包默认模型 vs 同次权重元数据 | 一致性由协议约束：权重包 `schemaVersion` 必须等于运行时 `MODEL_SCHEMA.version`（7）、`dims` 必须为 `[134,128,64,6]`、`dataEpoch >= DATA_EPOCH`（当前 5），三者由 `validateBundle` 强制校验 |
+| 旧用户升级安装包后 | 本地训练成果（`djsc_weights_v3`）与训练样本 / 候选 / 专项模型数据**均不因整包更新而改动**；官方权重记录与备份键独立存在，继续按规则生效 |
+| 结构不兼容的新权重 | 客户端拒绝在线替换（`schemaVersion` / `dims` 不符即 `invalid`），只提示领取新安装包 |
+
+> ⚠ 已知既有不一致（**未修改**，遵循"不得为了通过校验随意修改版本常量"）：
+> 内置默认权重 `DEFAULT_WEIGHTS.dv = 4`，而运行时 `DATA_EPOCH = 5`。
+> 内置默认权重走 `_decodeDefault()`（只校验结构版本，不校验数据纪元），因此离线可用不受影响；
+> 但**若用 `--from-default` 导出官方权重包，必须显式 `--epoch 5`**，否则客户端会以「数据纪元过旧」拒绝。
+> 导出脚本已内置该默认值与告警。
+
