@@ -27,6 +27,8 @@ import {
 import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot } from '../js/update/applyWeights.js';
 import {
     buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
+    createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
+    evaluateExportCompatibility,
     BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
 } from '../js/update/updateCore.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
@@ -476,6 +478,98 @@ ok('当前摘要不可读 → reprompt（保守）', ev(rec0, null, null) === 'r
 ok('旧格式 v1 记录 → drop', ev({ version: 1, bundle: mkBundle() }, baseDigest, null) === 'drop');
 ok('重启后摘要变化 → reprompt（同一套检查）', ev(rec0, thirdDigest, null) === 'reprompt');
 ok('用户已明确授权且模型未变 → apply', ev(rec0, baseDigest, null, { ok: true }) === 'apply');
+
+/* ---------- 13. 事务锁（P1-1） ---------- */
+section('事务锁（P1-1）');
+{
+    const lock = createTransactionLock();
+    ok('初始未加锁', lock.isLocked() === false);
+    ok('首次获取成功', lock.acquire() === true && lock.isLocked() === true);
+    ok('二次获取被拒（同一时刻只允许一个事务）', lock.acquire() === false);
+    lock.release();
+    ok('释放后可再次获取', lock.isLocked() === false && lock.acquire() === true);
+    lock.release();
+    /* 异常后必须释放：模拟 try/finally */
+    const guarded = () => { if (!lock.acquire()) return 'busy'; try { throw new Error('boom'); } finally { lock.release(); } };
+    try { guarded(); } catch (e) {}
+    ok('异常路径仍释放锁', lock.isLocked() === false && lock.acquire() === true);
+    lock.release();
+}
+
+/* ---------- 14. 应用闸门（P1-2） ---------- */
+section('应用闸门（P1-2）');
+const gate = o => evaluateApplyGate(o).ok;
+ok('状态机 stable + 未训练 + 无候选 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasCandidate: false, over: true }) === true);
+ok('状态机 training → 拒绝', gate({ modelState: 'training', modelStateKnown: true, isTraining: false, trainerKnown: true }) === false);
+ok('状态机 candidate → 拒绝', gate({ modelState: 'candidate', modelStateKnown: true, isTraining: false, trainerKnown: true }) === false);
+ok('真实训练器 isTraining=true → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: true, trainerKnown: true }) === false);
+ok('存在 A/B 候选 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasCandidate: true }) === false);
+ok('模型状态不可知 → 保守拒绝', gate({ modelState: null, modelStateKnown: false, isTraining: false, trainerKnown: true }) === false);
+ok('训练状态不可知 → 保守拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: null, trainerKnown: false }) === false);
+ok('对局中 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, inGame: true, inGameKnown: true }) === false);
+ok('对局已知结束 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, inGame: false, inGameKnown: true }) === true);
+ok('存在活动事件链 → 拒绝', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, hasActiveEvent: true }) === false);
+ok('_status.over 优先 → 放行', gate({ modelState: 'stable', modelStateKnown: true, isTraining: false, trainerKnown: true, over: true, inGame: true, inGameKnown: true }) === true);
+
+/* ---------- 15. 官方记录事务（P1-4） ---------- */
+section('官方记录事务（P1-4）');
+{
+    const contract2 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const rec = buildOfficialRecord({ modelId: MODEL_ID, bundle: mkBundle(), digest: officialDigest, size: officialSize, contract: contract2 });
+    ok('记录含版本/摘要/体积/结构版本', rec.modelVersion === 'w7d5-t01' && rec.sha256 === officialDigest && rec.size === officialSize && rec.schemaVersion === SCHEMA);
+    ok('记录形状合法', isOfficialRecordShape(rec, MODEL_ID) === true);
+    ok('读回一致 → 无错误', verifyOfficialRecord(rec, rec).length === 0);
+    ok('读回摘要不符 → 报错', verifyOfficialRecord(Object.assign({}, rec, { sha256: '0'.repeat(64) }), rec).some(e => e.includes('sha256')));
+    ok('读回版本不符 → 报错', verifyOfficialRecord(Object.assign({}, rec, { modelVersion: 'x' }), rec).some(e => e.includes('modelVersion')));
+    ok('读回体积不符 → 报错', verifyOfficialRecord(Object.assign({}, rec, { size: 1 }), rec).some(e => e.includes('size')));
+    ok('读回为空 → 报错', verifyOfficialRecord(null, rec).length > 0);
+    ok('modelId 不符 → 形状非法', isOfficialRecordShape(Object.assign({}, rec, { modelId: 'x' }), MODEL_ID) === false);
+}
+
+/* ---------- 16. 导出工具兼容性硬校验（P1-5） ---------- */
+section('导出工具兼容性（P1-5）');
+{
+    /* 16a) 直接覆盖生产判定函数（与 tools/export-weights.mjs 同源） */
+    const ec = o => evaluateExportCompatibility(Object.assign({ schemaVersion: SCHEMA, dataEpoch: EPOCH }, o));
+    ok('结构版本一致 + 纪元一致 → 放行', ec({ inputV: SCHEMA, inputDv: EPOCH }).ok === true);
+    ok('结构版本不符 → 拒绝', ec({ inputV: SCHEMA - 1, inputDv: EPOCH }).ok === false);
+    ok('数据纪元过旧（非默认）→ 拒绝', ec({ inputV: SCHEMA, inputDv: EPOCH - 2 }).ok === false);
+    ok('数据纪元过旧 + 显式迁移 + 依据 → 放行并记录', (() => { const r = ec({ inputV: SCHEMA, inputDv: EPOCH - 2, allowEpochMigration: true, migrationNote: '核验通过' }); return r.ok === true && r.epochMigration && r.epochMigration.from === EPOCH - 2; })());
+    ok('数据纪元过旧 + 允许迁移但缺依据 → 拒绝', ec({ inputV: SCHEMA, inputDv: EPOCH - 2, allowEpochMigration: true }).ok === false);
+    ok('内置默认权重（dv 陈旧）→ 按基线放行', (() => { const r = ec({ inputV: SCHEMA, inputDv: EPOCH - 1, isFromDefault: true }); return r.ok === true && r.epochMigration && r.epochMigration.from === EPOCH - 1; })());
+    ok('内置默认权重但结构版本不符 → 仍拒绝', ec({ inputV: SCHEMA - 1, inputDv: EPOCH - 1, isFromDefault: true }).ok === false);
+    ok('无版本字段（未知来源）→ 放行', ec({}).ok === true);
+
+    /* 16b) CLI 冒烟测试：真实调用 tools/export-weights.mjs。
+     * 沙箱环境可能禁止 spawn 子进程（EBUSY）→ 如实标记 SKIP，不伪装通过。 */
+    const { execFileSync } = await import('node:child_process');
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const root = path.resolve(here, '..');
+    const tool = path.join(root, 'tools', 'export-weights.mjs');
+    let canSpawn = true;
+    try { execFileSync(process.execPath, ['-e', '0'], { stdio: 'pipe' }); } catch (e) { if (e && e.code === 'EBUSY') canSpawn = false; }
+    if (!canSpawn) {
+        console.log('SKIP 导出工具 CLI 冒烟测试：当前环境禁止 spawn 子进程（EBUSY），需在常规开发机复验');
+    } else {
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wmz-exp-'));
+        const mkInput = (v, dv) => { const o = { v, dv, trained: 5, accuracy: 0.4 }; for (const s of spec) o[s.key] = defaultParams[s.key]; return o; };
+        fs.writeFileSync(path.join(tmp, 'ok.json'), JSON.stringify(mkInput(SCHEMA, EPOCH)));
+        fs.writeFileSync(path.join(tmp, 'badv.json'), JSON.stringify(mkInput(SCHEMA - 1, EPOCH)));
+        fs.writeFileSync(path.join(tmp, 'baddv.json'), JSON.stringify(mkInput(SCHEMA, EPOCH - 2)));
+        const run = args => { try { execFileSync(process.execPath, [tool, ...args], { stdio: 'pipe' }); return 0; } catch (e) { return e.status == null ? -1 : e.status; } };
+        ok('导出：合法同纪元输入 → 退出码 0', run(['--input', path.join(tmp, 'ok.json'), '--model-version', 't-ok', '--seq', '1', '--out', path.join(tmp, 'd1')]) === 0);
+        ok('导出：结构版本不符 → 退出码 1（拒绝）', run(['--input', path.join(tmp, 'badv.json'), '--model-version', 't-bad', '--seq', '1', '--out', path.join(tmp, 'd2')]) === 1);
+        ok('导出：数据纪元过旧 → 退出码 1（拒绝）', run(['--input', path.join(tmp, 'baddv.json'), '--model-version', 't-dv', '--seq', '1', '--out', path.join(tmp, 'd3')]) === 1);
+        ok('导出：显式纪元迁移 + 说明 → 退出码 0', run(['--input', path.join(tmp, 'baddv.json'), '--model-version', 't-mig', '--seq', '1', '--out', path.join(tmp, 'd4'), '--allow-epoch-migration', '--migration-note', '核验通过']) === 0);
+        ok('导出：允许迁移但缺说明 → 退出码 1', run(['--input', path.join(tmp, 'baddv.json'), '--model-version', 't-mig2', '--seq', '1', '--out', path.join(tmp, 'd5'), '--allow-epoch-migration']) === 1);
+        ok('导出：内置默认权重仍可导出（不破坏合法场景）', run(['--from-default', '--model-version', 't-def', '--seq', '1', '--out', path.join(tmp, 'd6')]) === 0);
+        ok('导出：结构不符时不产出权重文件', !fs.existsSync(path.join(tmp, 'd2')));
+    }
+}
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');
 process.exit(fail === 0 ? 0 : 1);

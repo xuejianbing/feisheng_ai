@@ -28,7 +28,7 @@ const __VERSION__ = "v" + VERSION;
 
 import { modeModelsReady } from './score/model/weights/modeModelStore.js?v=41a';
 import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
-import { installModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
+import { installModelUpdate, uninstallModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
 window.__DJSC = window.__DJSC || {};
 // Inspectable readiness promise for browser/host release checks.
 window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
@@ -153,6 +153,7 @@ extensionPackage.content = async function (config, pack) {
 /* ★ 卸载时清理决策积分引擎 + 还原 useCard 猴补丁（P1-25） */
 const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
+	try { uninstallModelUpdate(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
 	try { uninstallScoreEngine(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ P1-25：还原 Player.prototype.useCard，取消未执行的 3s 补丁定时器 */
 	try { if (_useCardPatchTimer) { clearTimeout(_useCardPatchTimer); _useCardPatchTimer = null; } } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
