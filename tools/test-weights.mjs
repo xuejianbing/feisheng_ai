@@ -30,8 +30,9 @@ import {
     createTransactionLock, createRecoveryGuard, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
-    generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
-    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION, reauthorizeRecord, rollbackStatusText, createStrictKeyReader,
+    generateTxId, buildTxJournal, classifyInterruptedTx, planTxRecovery, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
+    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION, reauthorizeRecord, rollbackStatusText,
+    createStrictKeyReader, isTxJournalShape,
 } from '../js/update/updateCore.js';
 import { safeGet } from '../score/foundation/storage/storage.js';
 import { styledDialog } from '../js/update/updateUi.js';
@@ -1386,9 +1387,14 @@ section('崩溃 / 重启恢复（P0-1）');
         ok('27h 标记 needsManual 并保留日志', storageOps.st.tx && storageOps.st.tx.needsManual === true);
         ok('27h 暂存备份保留', storageOps.st.staging !== null);
     }
-    /* 27i) 事务阶段分类纯函数 */
+    /* 27i) 事务阶段分类纯函数
+     * ★ P2 补丁：旧断言"无 txId → none"已纠正——键存在但结构无效的记录必须保守
+     * manual（否则损坏/伪造的日志会被当成"没有未完成事务"而放行下一次安装）；
+     * 只有 null/undefined（键确实不存在）才是 none。 */
     ok('27i 未知阶段 → manual', classifyInterruptedTx({ txId: 'x', phase: 'weird' }).action === 'manual');
-    ok('27i 无 txId → none', classifyInterruptedTx({ phase: 'prepared' }).action === 'none');
+    ok('27i 无 txId（结构无效）→ manual（不再误放行）', classifyInterruptedTx({ phase: 'prepared' }).action === 'manual');
+    ok('27i 确实不存在（null/undefined）→ none', classifyInterruptedTx(null).action === 'none' && classifyInterruptedTx(undefined).action === 'none');
+    ok('27i 非对象内容（字符串/数组）→ manual', classifyInterruptedTx('rubbish').action === 'manual' && classifyInterruptedTx([]).action === 'manual');
 }
 
 /* 可外部改变模型的假 bridge（模拟训练晋升改写共享主模型；P0-2 / P1-1 段共用） */
@@ -2336,7 +2342,7 @@ section('宿主存储适配层：严格读取（P1）');
         ok('37d 删除报告成功但键仍在 → cleanupPending（不谎报清理完成）', r.ok === true && r.cleanupPending === true, JSON.stringify(r));
         ok('37d 暂存保留 + 日志仍在（供后续处理）', storageOps.st.staging !== null && storageOps.st.tx !== null);
     }
-    /* 37e) 端到端：事务日志整链路接到"真实模拟存储 + 生产严格读取"上——
+    /* 37e) 端到端：事务日志整链路接到"真实模拟存储 + 生产严格读取（含结构校验）"上——
      *   损坏日志 → manual 阻断且原文保留；存储恢复后同一数据按正常路径处置 */
     {
         const contract37 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
@@ -2347,7 +2353,7 @@ section('宿主存储适配层：严格读取（P1）');
             setItem: (k, v) => { s2.set(k, String(v)); },
             removeItem: k => { s2.delete(k); },
         };
-        const readStrict2 = createStrictKeyReader(() => ls2);
+        const readStrict2 = createStrictKeyReader(() => ls2, isTxJournalShape);
         const bridge = makeFakeWeights({ initialParams: userParams });
         const storageOps = mkStorageFull(bridge);
         storageOps.readTx = () => readStrict2(TXK);
@@ -2361,6 +2367,67 @@ section('宿主存储适配层：严格读取（P1）');
         const plan2 = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
         ok('37e 存储恢复后按正常路径处置（cleanup，不误判阻塞）', plan2.action === 'cleanup' && plan2.ok === true, JSON.stringify(plan2));
         ok('37e 处置后日志键已清理', !s2.has(TXK));
+    }
+    /* 37f) ★ P2 补丁：结构校验（直接断言）——合法 JSON ≠ 合法事务日志 */
+    {
+        const s3 = new Map();
+        const ls3 = {
+            getItem: k => (s3.has(k) ? s3.get(k) : null),
+            setItem: (k, v) => { s3.set(k, String(v)); },
+            removeItem: k => { s3.delete(k); },
+        };
+        const readTx3 = createStrictKeyReader(() => ls3, isTxJournalShape);
+        ok('37f 键确实不存在 → null（唯一允许判"无事务"的情形）', readTx3('tx') === null);
+        s3.set('tx', '{"txId":"tx-1","phase":"prepared"}');
+        ok('37f 合法事务日志 → 解析成功', readTx3('tx').txId === 'tx-1');
+        const badCases = ['{}', 'null', '[]', '{"phase":"prepared"}', '{"txId":""}', '42', '"str"'];
+        let allThrow = true;
+        for (const raw of badCases) {
+            s3.set('tx', raw);
+            let threw = false;
+            try { readTx3('tx'); } catch (e) { threw = true; }
+            if (!threw) allThrow = false;
+        }
+        ok('37f {}、null、[]、缺 txId、空 txId、数字、字符串 → 一律抛异常（' + badCases.length + ' 例）', allThrow);
+        ok('37f isTxJournalShape 边界', isTxJournalShape(null) === false && isTxJournalShape({}) === false
+            && isTxJournalShape([]) === false && isTxJournalShape({ txId: '' }) === false && isTxJournalShape({ txId: 'tx-1' }) === true);
+        /* 分类/决策纯函数同口径兜底 */
+        ok('37f classifyInterruptedTx：null → none、{} → manual', classifyInterruptedTx(null).action === 'none' && classifyInterruptedTx({}).action === 'manual');
+        ok('37f planTxRecovery 同口径：null → none、结构无效 → manual',
+            planTxRecovery(null, {}).action === 'none' && planTxRecovery({}, {}).action === 'manual' && planTxRecovery([], {}).action === 'manual');
+    }
+    /* 37g) 端到端：结构无效的日志（{}、null、[]）经真实适配层 → manual 阻断且原文保留 */
+    {
+        const contract37 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+        const TXK = 'djsc_model_update_tx_v1';
+        const s4 = new Map();
+        const ls4 = {
+            getItem: k => (s4.has(k) ? s4.get(k) : null),
+            setItem: (k, v) => { s4.set(k, String(v)); },
+            removeItem: k => { s4.delete(k); },
+        };
+        const readStrict4 = createStrictKeyReader(() => ls4, isTxJournalShape);
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.readTx = () => readStrict4(TXK);
+        storageOps.writeTx = j => { ls4.setItem(TXK, JSON.stringify(j)); return true; };
+        storageOps.removeTx = () => { ls4.removeItem(TXK); return true; };
+        for (const raw of ['{}', 'null', '[]']) {
+            s4.set(TXK, raw);
+            const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
+            ok('37g 无效日志 ' + raw + ' → manual 阻断', plan.action === 'manual' && plan.manual === true, JSON.stringify(plan));
+            ok('37g 无效日志 ' + raw + ' 原文未被改写', s4.get(TXK) === raw);
+        }
+    }
+    /* 37h) 防御纵深：即便读取层未拦下（自定义存储直接返回无效对象），分类层同样保守 manual */
+    {
+        const contract37 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.tx = { phase: 'prepared' };   /* 键存在但缺 txId */
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
+        ok('37h 结构无效 → manual（分类层兜底，不误放行）', plan.action === 'manual', JSON.stringify(plan));
+        ok('37h 数据保留（未改写、未回滚）', storageOps.st.tx !== null && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
     }
 }
 

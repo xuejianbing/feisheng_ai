@@ -266,15 +266,26 @@ export const createRecoveryGuard = lock => {
  * 与 safeGet/readJSON 的"静默吞错"形成明确区分（事务日志与官方记录的读取语义统一）：
  *   键确实不存在（含空串）        → 返回 null
  *   存储访问失败 / 内容损坏       → **抛异常**（调用方保守处理，绝不冒充"不存在"）
+ *   合法 JSON 但结构无效（可选 validate 拒绝）→ **抛异常**（P2 补丁：
+ *     "合法 JSON ≠ 合法记录"，{}、null、[]、缺字段 等都不得当作"键不存在"）
  * getStore 为注入的存储访问器（生产 = 直读 localStorage，访问异常不吞），
  * 因此可在 Node 侧用真实模拟存储直接验证生产实现。 */
-export const createStrictKeyReader = getStore => key => {
+export const createStrictKeyReader = (getStore, validate) => key => {
     const ls = getStore();          /* 存储访问异常向上抛 */
     if (!ls) return null;           /* 无存储环境：等同不存在（写入同样会失败，不会产生该键） */
     const raw = ls.getItem(key);    /* 读取异常向上抛 */
     if (raw === null || raw === undefined || raw === '') return null;
-    return JSON.parse(raw);         /* 解析异常向上抛：内容损坏 */
+    const value = JSON.parse(raw);  /* 解析异常向上抛：内容损坏 */
+    if (typeof validate === 'function' && validate(value) !== true) {
+        throw new Error('内容为合法 JSON 但结构无效（键存在，但记录格式不符）');
+    }
+    return value;
 };
+
+/* 事务日志结构校验（P2 补丁）：仅当键确实不存在时才是"没有未完成事务"；
+ * 键存在但结构无效（{}、null、[]、缺/空 txId 等）一律按"无法确认"保守处理。 */
+export const isTxJournalShape = v => !!v && typeof v === 'object' && !Array.isArray(v)
+    && typeof v.txId === 'string' && v.txId.length > 0;
 
 /* ---------------- 应用闸门（P0 / P1-2） ----------------
  * 更新开始前与真正替换前都必须过这道闸门。
@@ -492,7 +503,12 @@ export const digestOfArchive = (raw, dims) => {
  *   finish-rotation 记录已提交、仅缺长期备份轮换 → 从暂存备份补做轮换
  *   manual          无法自动判定 / 上次回滚未完成 → 保留数据并阻止继续安装 */
 export const classifyInterruptedTx = journal => {
-    if (!journal || typeof journal !== 'object' || !journal.txId) return { action: 'none' };
+    /* ★ P2 补丁：仅"确实不存在"（null/undefined）才返回 none；
+     *   非空但结构无效（{}、[]、缺 txId 等）→ 保守 manual，绝不误放行下一次安装。 */
+    if (journal === null || journal === undefined) return { action: 'none' };
+    if (typeof journal !== 'object' || !journal.txId) {
+        return { action: 'manual', reason: '事务日志结构无效（键存在但缺少事务标识），无法确认是否存在未完成事务' };
+    }
     if (journal.needsManual === true) return { action: 'manual', reason: journal.reason || '上次事务回滚未完成，需人工确认' };
     switch (journal.phase) {
         case 'prepared': return { action: 'cleanup', reason: '事务尚未改动权重，直接清理' };
@@ -522,7 +538,11 @@ export const classifyInterruptedTx = journal => {
  *   'manual'           无法自动判定 → 保留全部数据并阻止继续安装 */
 export const planTxRecovery = (journal, state) => {
     const opt = state || {};
-    if (!journal || typeof journal !== 'object' || !journal.txId) return { action: 'none' };
+    /* ★ P2 补丁：与 classifyInterruptedTx 同一口径——确实不存在 → none；结构无效 → manual */
+    if (journal === null || journal === undefined) return { action: 'none' };
+    if (typeof journal !== 'object' || !journal.txId) {
+        return { action: 'manual', reason: '事务日志结构无效（键存在但缺少事务标识），无法确认是否存在未完成事务' };
+    }
     if (journal.needsManual === true) return { action: 'manual', reason: journal.reason || '上次事务回滚未完成，需人工确认' };
     const base = journal.baseDigest ? String(journal.baseDigest).toLowerCase() : null;
     const target = journal.targetDigest ? String(journal.targetDigest).toLowerCase() : null;

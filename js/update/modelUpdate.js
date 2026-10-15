@@ -37,7 +37,8 @@ import {
 import { applyOfficialBundle, snapshotToParams, detectUserModel, recoverInterruptedTransaction as recoverTx } from './applyWeights.js?v=41a';
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
-    createTransactionLock, createRecoveryGuard, createStrictKeyReader, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
+    createTransactionLock, createRecoveryGuard, createStrictKeyReader, isTxJournalShape,
+    evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
     generateTxId, classifyInterruptedTx, reauthorizeRecord, rollbackStatusText,
@@ -72,8 +73,12 @@ const _strictStore = () => {
     return localStorage;                                     /* 访问异常向上抛（不吞） */
 };
 const _readStrict = createStrictKeyReader(_strictStore);
+/* ★ P2 补丁：事务日志在严格读取之外还要做**结构校验**——键存在但内容不是合法日志
+ * （{}、null、[]、缺 txId 等合法 JSON）同样视为不可用（保守阻断），
+ * 仅当键确实不存在时才是"没有未完成事务"。 */
+const _readTxKey = createStrictKeyReader(_strictStore, isTxJournalShape);
 const readOfficialRecordStrict = () => _readStrict(OFFICIAL_KEY);
-const readTxStrict = () => _readStrict(TX_KEY);
+const readTxStrict = () => _readTxKey(TX_KEY);
 
 /* ---------- 模块解析：优先 window 挂载（生产引擎挂载点），兜底动态导入同一实例 ---------- */
 let _wFallback = null, _msFallback = null;
