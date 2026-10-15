@@ -26,7 +26,7 @@
  */
 import { styledDialog, progressDialog } from './updateUi.js?v=41a';
 import { VERSION } from '../config/version.js?v=41a';
-import { safeGet, safeSet, safeRemove } from '../../score/foundation/storage/storage.js?v=41a';
+import { safeGet, safeSet, safeRemove, getStore } from '../../score/foundation/storage/storage.js?v=41a';
 import { lib, game, _status } from '../../score/foundation/adapt/host.js?v=41a';
 import { DEFAULT_WEIGHTS } from '../../score/model/weights/defaultWeights.js?v=41a';
 import {
@@ -40,7 +40,7 @@ import {
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
-    generateTxId, classifyInterruptedTx,
+    generateTxId, classifyInterruptedTx, reauthorizeRecord, rollbackStatusText,
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
@@ -62,6 +62,17 @@ const _log = (msg, warn) => { try { const t = '[无名AI·模型权重] ' + msg;
 const readJSON = key => { try { const raw = safeGet(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } };
 const writeJSON = (key, val) => { try { return safeSet(key, JSON.stringify(val)) === true; } catch (e) { return false; } };
 const removeKey = key => { try { return safeRemove(key) === true; } catch (e) { return false; } };
+/* ★ P1-3：可靠的底层读取——safeGet 会吞掉存储异常，"读失败"与"缺键"无法区分。
+ * 直读 getStore()：存储访问异常 / JSON 解析异常向调用方抛出；返回 null 仅表示"确实不存在"。
+ * 供官方记录删除核验与崩溃恢复判定使用（绝不允许读失败冒充"记录不存在"）。 */
+const readOfficialRecordStrict = () => {
+    let ls = null;
+    try { ls = getStore(); } catch (e) { throw e; }
+    if (!ls) return null;                       /* 无存储环境：等同不存在（写入/删除同样会失败并不被采信） */
+    const raw = ls.getItem(OFFICIAL_KEY);       /* 异常向上抛：存储访问失败 */
+    if (raw === null || raw === undefined || raw === '') return null;
+    return JSON.parse(raw);                     /* 解析异常向上抛：记录损坏 */
+};
 
 /* ---------- 模块解析：优先 window 挂载（生产引擎挂载点），兜底动态导入同一实例 ---------- */
 let _wFallback = null, _msFallback = null;
@@ -494,18 +505,19 @@ const writeOfficialRecordVerified = (bundle, digest, size, contract) => {
     return { ok: true, record: want, errors: [] };
 };
 /* ★ P1-3：恢复旧版本记录必须读回核验；无旧记录时必须确认新记录已删除。
+ * 读回一律走 readOfficialRecordStrict：读取抛异常 = 验证失败（绝不当成"记录不存在"）。
  * 返回 { ok, errors }，供上层区分"完整回滚 / 部分回滚 / 回滚失败"。 */
 const _restoreOfficialRecord = prevRec => restoreOfficialRecord({
     prevRec,
     writeRecord: rec => writeJSON(OFFICIAL_KEY, rec),
-    readRecord: readOfficialRecord,
+    readRecord: readOfficialRecordStrict,
     removeRecord: () => removeKey(OFFICIAL_KEY),
     verify: verifyOfficialRecord,
 });
-/* ★ P1：清除官方记录并**读回确认不存在**（removeKey 的返回值与结果都不可信） */
+/* ★ P1：清除官方记录并**读回确认不存在**（删除的返回值与"读取异常"都不可信） */
 const _clearOfficialRecordVerified = () => restoreOfficialRecord({
     prevRec: null,
-    readRecord: readOfficialRecord,
+    readRecord: readOfficialRecordStrict,
     removeRecord: () => removeKey(OFFICIAL_KEY),
     verify: verifyOfficialRecord,
 });
@@ -521,15 +533,8 @@ const _finishPendingTx = r => {
     _stopPendingWatch();
 };
 
-/* 事务结果如实告知（区分完整回滚 / 回滚失败） */
-const _txRollbackText = r => {
-    if (!r) return '';
-    if (r.rollbackStatus === 'complete') return '已完整回滚到更新前的模型与版本记录。';
-    if (r.rollbackStatus === 'failed') {
-        return '回滚未能完成（' + ((r.rollbackErrors || []).join('；') || '原因未知') + '），当前状态可能不一致，请重启游戏后检查；原长期备份仍保留。';
-    }
-    return '';
-};
+/* 事务结果如实告知：一律引用 updateCore.rollbackStatusText（三态与返回值一致，
+ * 绝不用文案掩盖错误的状态；partial = 模型已回滚但官方记录未恢复）。 */
 
 /* ---------- 崩溃恢复（P0-1） ----------
  * 恢复逻辑在 applyWeights.recoverInterruptedTransaction（依赖注入，可在 Node 侧直接测试），
@@ -542,7 +547,8 @@ export const recoverInterruptedTransaction = async () => {
         storageOps,
         getBridge: buildBridge,
         contract: await getContract(),
-        readRecord: () => readOfficialRecord(),
+        /* ★ P1-3：读取异常必须可区分于"记录不存在"（抛异常 → 恢复判定为"不可读" → 保守人工处理） */
+        readRecord: readOfficialRecordStrict,
         writeRecord: rec => writeJSON(OFFICIAL_KEY, rec),
         removeRecord: () => removeKey(OFFICIAL_KEY),
         verifyRecord: verifyOfficialRecord,
@@ -649,8 +655,10 @@ export const downloadAndApply = async opt => {
         const preserveUserModel = !!(det.known && det.isUserModel);
         const baseModelDigest = active ? paramsDigest(active, contract.dims) : null;
         /* ★ P1-1：把本次安装当作一次"已授权事务"，复用 evaluatePending 的授权规则，
-         *   在真正写入前重新核对当前模型是否仍是授权时的模型。 */
-        const authRecord = buildPendingRecord({
+         *   在真正写入前重新核对当前模型是否仍是授权时的模型。
+         *   authRecord 是**事务内可变状态**：用户重新授权覆盖新模型 B 后必须把授权基线
+         *   重绑为 B 的摘要（否则下一次复核仍拿 A 的旧摘要判断，反复弹窗直至达到重建上限）。 */
+        let authRecord = buildPendingRecord({
             latest: opt.latest, bundle, baseModelDigest, userAuthorized: true,
             reason: '手动安装', savedAt: Date.now(), contract,
         });
@@ -677,7 +685,11 @@ export const downloadAndApply = async opt => {
                 ],
                 dangerous: true, defaultValue: 'keep',
             });
-            return choice === 'apply' ? { ok: true, rebaseline: true } : { ok: false, reason: '用户在模型变化后选择保留当前模型' };
+            if (choice !== 'apply') return { ok: false, reason: '用户在模型变化后选择保留当前模型' };
+            if (!curDigest) return { ok: false, reason: '无法读取当前模型基线，已中止安装（未做任何改动）' };
+            /* 重新授权绑定"即将被覆盖的模型"：事务随后会重建快照与暂存备份（rebaseline） */
+            authRecord = reauthorizeRecord(authRecord, curDigest);
+            return { ok: true, rebaseline: true };
         };
 
         const gate = await canApplyNow();
@@ -731,10 +743,10 @@ export const downloadAndApply = async opt => {
         }
         await styledDialog({
             title: '安装未完成',
-            message: '新权重未通过校验或提交步骤失败，已' + (r.rolledBack ? '完整回滚到更新前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）')
-                + (r.partialWrite ? '。\n（检测到写入过程已产生部分修改，已尝试恢复）' : '')
-                + '。\n\n原因：\n' + (r.errors || []).join('\n')
-                + (r.rollbackStatus === 'failed' ? '\n\n' + _txRollbackText(r) : ''),
+            message: '新权重未通过校验或提交步骤失败。'
+                + (rollbackStatusText(r) || '已尝试回滚（未能完全确认，请重启游戏后检查模型状态）。')
+                + (r.partialWrite ? '\n（检测到写入过程已产生部分修改，已尝试恢复）' : '')
+                + '\n\n原因：\n' + (r.errors || []).join('\n'),
         });
         return { ok: false, errors: r.errors, rolledBack: r.rolledBack, partialWrite: !!r.partialWrite, failedAt: r.failedAt, rollbackStatus: r.rollbackStatus };
     } catch (e) {
@@ -801,8 +813,9 @@ const _tryApplyPendingLocked = async pending => {
             dangerous: true, defaultValue: 'keep',
         });
         if (choice !== 'apply') { removeKey(PENDING_KEY); return { ok: false, err: 'user kept local model' }; }
-        /* 用户重新授权"当前模型" → 重绑授权基线，避免最终复核再次误判 */
-        authorized = Object.assign({}, pending, { baseModelDigest: currentDigest, userAuthorized: true });
+        /* 用户重新授权"当前模型" → 重绑授权基线（与手动安装共用同一原则），避免最终复核再次误判 */
+        if (!currentDigest) return { ok: false, skipped: true, reason: '无法读取当前模型基线' };
+        authorized = reauthorizeRecord(pending, currentDigest);
     }
     const res = validateBundle(pending.bundle, contract);
     if (!res.ok) {
@@ -841,7 +854,8 @@ const _tryApplyPendingLocked = async pending => {
                 dangerous: true, defaultValue: 'keep',
             });
             if (choice !== 'apply') return { ok: false, reason: '用户在模型再次变化后选择保留当前模型' };
-            authorized = Object.assign({}, authorized, { baseModelDigest: curDigest, userAuthorized: true });
+            if (!curDigest) return { ok: false, reason: '无法读取当前模型基线，已中止（未做任何改动）' };
+            authorized = reauthorizeRecord(authorized, curDigest);
             return { ok: true, rebaseline: true };
         },
         /* ★ P0-1：安装前的官方记录纳入事务恢复信息 */
@@ -857,9 +871,9 @@ const _tryApplyPendingLocked = async pending => {
     _finishPendingTx(r);
     await styledDialog({
         title: r.rollbackStatus === 'complete' ? '权重应用失败（已回滚）' : '权重应用失败（回滚不完整，请重启检查）',
-        message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚')
-            + (r.partialWrite ? '（检测到写入过程已产生部分修改，已尝试恢复）' : '') + '。\n\n原因：\n' + (r.errors || []).join('\n')
-            + (r.rollbackStatus === 'failed' ? '\n\n' + _txRollbackText(r) : ''),
+        message: (rollbackStatusText(r) || '已尝试回滚（未能完全确认，请重启游戏后检查模型状态）。')
+            + (r.partialWrite ? '\n（检测到写入过程已产生部分修改，已尝试恢复）' : '')
+            + '\n\n原因：\n' + (r.errors || []).join('\n'),
     });
     return r;
 };
@@ -911,14 +925,14 @@ export const restoreBackup = async () => {
         await styledDialog({
             title: '还原未完成（官方记录未能清理）',
             message: '模型已恢复，但官方版本记录未能清除并核验：\n' + (r.errors || []).join('\n')
-                + '\n\n为避免"模型与版本记录不一致"，已' + (r.rolledBack ? '回滚到还原前的模型与记录' : '尝试回滚（未能完全确认，请重启游戏后检查）')
-                + '。\n\n原长期备份未被修改。',
+                + '\n\n为避免"模型与版本记录不一致"，' + (rollbackStatusText(r) || '已尝试回滚（未能完全确认，请重启游戏后检查）。')
+                + '\n\n原长期备份未被修改。',
         });
     } else {
         await styledDialog({
             title: '还原失败',
-            message: '已' + (r.rolledBack ? '回滚到还原前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查）')
-                + '，原长期备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n'),
+            message: (rollbackStatusText(r) || '已尝试回滚（未能完全确认，请重启游戏后检查模型状态）。')
+                + '原长期备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n'),
         });
     }
     return r;

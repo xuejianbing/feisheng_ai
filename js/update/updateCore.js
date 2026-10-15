@@ -328,7 +328,10 @@ export const verifyOfficialRecord = (got, want) => {
 
 /* ---------------- 版本记录回滚（P1-3） ----------------
  * 权重恢复成功 ≠ 事务回滚成功：旧版本记录必须写入后读回核验；
- * 无旧记录时必须确认新记录已被删除。返回 { ok, errors }。 */
+ * 无旧记录时必须确认新记录已被删除。返回 { ok, errors }。
+ * ★ 清除路径（P1-3 修复）：必须"删除成功"且"读回确认不存在"才算 ok——
+ *   读回抛异常 / 缺少读取能力 / 删除返回失败或抛异常，均绝不允许报告删除成功；
+ *   三类情况（删除操作失败、读回失败、删除后记录仍存在）在错误信息中明确区分。 */
 export const restoreOfficialRecord = opt => {
     const { prevRec, writeRecord, readRecord, removeRecord, verify } = opt || {};
     if (prevRec) {
@@ -343,11 +346,45 @@ export const restoreOfficialRecord = opt => {
         if (errs.length) return { ok: false, errors: errs };
         return { ok: true, errors: [] };
     }
-    if (typeof removeRecord === 'function') { try { removeRecord(); } catch (e) {} }
+    /* 无旧记录 → 必须删除当前记录并读回确认不存在 */
+    if (typeof readRecord !== 'function') return { ok: false, errors: ['缺少官方记录读回能力，无法确认记录已删除'] };
+    if (typeof removeRecord !== 'function') {
+        /* 无删除能力：仅当读回确认记录本就不存在时才可接受 */
+        let pre = null;
+        try { pre = readRecord(); } catch (e) { return { ok: false, errors: ['官方记录读取抛出异常，无法确认删除状态：' + ((e && e.message) || e)] }; }
+        if (pre !== null && pre !== undefined) return { ok: false, errors: ['缺少官方记录清除能力且记录仍存在'] };
+        return { ok: true, errors: [] };
+    }
+    let removeNote = '';
+    try { if (removeRecord() === false) removeNote = '（删除操作返回失败）'; }
+    catch (e) { removeNote = '（删除操作抛出异常：' + ((e && e.message) || e) + '）'; }
     let still = null;
-    try { still = typeof readRecord === 'function' ? readRecord() : null; } catch (e) { still = null; }
-    if (still) return { ok: false, errors: ['新版本记录删除失败（仍可读回）'] };
+    try { still = readRecord(); } catch (e) { return { ok: false, errors: ['官方记录删除后读回抛出异常，无法确认删除结果' + removeNote] }; }
+    if (still !== null && still !== undefined) return { ok: false, errors: ['新版本记录删除失败（仍可读回）' + removeNote] };
+    if (removeNote) return { ok: false, errors: ['官方记录删除未获确认' + removeNote + '：读回虽为空，但删除操作未成功，保守判为未完成'] };
     return { ok: true, errors: [] };
+};
+
+/* ★ P1-1：用户重新授权"当前模型" → 重绑授权基线。
+ * 手动安装的最终复核与待生效安装共用同一原则：授权必须绑定"重新授权时的目标模型"，
+ * 否则每次复核仍拿旧摘要判定，导致反复弹窗直至达到重建上限而失败。 */
+export const reauthorizeRecord = (rec, currentDigest) => Object.assign({}, rec, {
+    baseModelDigest: currentDigest ? String(currentDigest).toLowerCase() : null,
+    userAuthorized: true,
+});
+
+/* ★ P1-2：回滚结果 → 用户可读文案（三态与 rolledBack / rollbackErrors 保持一致，
+ * UI 一律引用本函数，绝不用文案掩盖错误的状态返回值）。 */
+export const rollbackStatusText = r => {
+    if (!r) return '';
+    if (r.rollbackStatus === 'complete') return '已完整回滚到更新前的模型与版本记录。';
+    if (r.rollbackStatus === 'partial') {
+        return '模型已回滚，但官方版本记录未能恢复（' + ((r.rollbackErrors || []).join('；') || '原因未知') + '），恢复数据已保留，请重启游戏后检查。';
+    }
+    if (r.rollbackStatus === 'failed') {
+        return '回滚未能完成（' + ((r.rollbackErrors || []).join('；') || '原因未知') + '），当前状态可能不一致，请重启游戏后检查；原长期备份仍保留。';
+    }
+    return '';
 };
 
 /* 回滚状态合成：完整 / 部分 / 失败（上层 UI 据此区分提示，绝不把部分回滚报成完整成功） */
