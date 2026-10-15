@@ -570,7 +570,6 @@ export const recoverInterruptedTransaction = async ctx => {
     const { storageOps, getBridge, contract, onStep,
         readRecord = null, writeRecord = null, removeRecord = null, verifyRecord = null } = ctx || {};
     const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
-    const readTx = () => { try { return (storageOps && typeof storageOps.readTx === 'function') ? storageOps.readTx() : null; } catch (e) { return null; } };
     const clearTxVerified = () => _journalRemoveVerified(storageOps);
     const clearStaging = () => { try { if (storageOps && typeof storageOps.removeStagingBackup === 'function') storageOps.removeStagingBackup(); } catch (e) {} };
     const markManual = reason => {
@@ -581,7 +580,19 @@ export const recoverInterruptedTransaction = async ctx => {
         } catch (e) {}
     };
 
-    const journal = readTx();
+    /* ★ 严格读取事务日志：读取失败 / 内容损坏 / 缺少读取能力
+     *   → 绝不当作"没有未完成事务"，进入安全阻塞状态并**保留原始日志**不改写
+     *   （存储恢复后仍可正常恢复；人工介入时现场完整可查）。 */
+    let journal = null, journalReadError = null;
+    try {
+        if (storageOps && typeof storageOps.readTx === 'function') journal = storageOps.readTx();
+        else journalReadError = new Error('存储缺少事务日志读取能力');
+    } catch (e) { journalReadError = e; }
+    if (journalReadError) {
+        const reason = '事务日志无法读取（' + ((journalReadError && journalReadError.message) || journalReadError) + '），无法确认是否存在未完成事务';
+        step('检测到事务日志不可读，已保留全部数据并暂停自动安装：' + reason);
+        return { action: 'manual', ok: false, manual: true, reason };
+    }
     const plan0 = classifyInterruptedTx(journal);
     if (plan0.action === 'none') return plan0;
     if (plan0.action === 'manual') {

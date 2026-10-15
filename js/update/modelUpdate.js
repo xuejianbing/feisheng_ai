@@ -26,7 +26,7 @@
  */
 import { styledDialog, progressDialog } from './updateUi.js?v=41a';
 import { VERSION } from '../config/version.js?v=41a';
-import { safeGet, safeSet, safeRemove, getStore } from '../../score/foundation/storage/storage.js?v=41a';
+import { safeGet, safeSet, safeRemove } from '../../score/foundation/storage/storage.js?v=41a';
 import { lib, game, _status } from '../../score/foundation/adapt/host.js?v=41a';
 import { DEFAULT_WEIGHTS } from '../../score/model/weights/defaultWeights.js?v=41a';
 import {
@@ -37,7 +37,7 @@ import {
 import { applyOfficialBundle, snapshotToParams, detectUserModel, recoverInterruptedTransaction as recoverTx } from './applyWeights.js?v=41a';
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
-    createTransactionLock, createRecoveryGuard, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
+    createTransactionLock, createRecoveryGuard, createStrictKeyReader, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
     generateTxId, classifyInterruptedTx, reauthorizeRecord, rollbackStatusText,
@@ -62,17 +62,18 @@ const _log = (msg, warn) => { try { const t = '[无名AI·模型权重] ' + msg;
 const readJSON = key => { try { const raw = safeGet(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } };
 const writeJSON = (key, val) => { try { return safeSet(key, JSON.stringify(val)) === true; } catch (e) { return false; } };
 const removeKey = key => { try { return safeRemove(key) === true; } catch (e) { return false; } };
-/* ★ P1-3：可靠的底层读取——safeGet 会吞掉存储异常，"读失败"与"缺键"无法区分。
- * 直读 getStore()：存储访问异常 / JSON 解析异常向调用方抛出；返回 null 仅表示"确实不存在"。
- * 供官方记录删除核验与崩溃恢复判定使用（绝不允许读失败冒充"记录不存在"）。 */
-const readOfficialRecordStrict = () => {
-    let ls = null;
-    try { ls = getStore(); } catch (e) { throw e; }
-    if (!ls) return null;                       /* 无存储环境：等同不存在（写入/删除同样会失败并不被采信） */
-    const raw = ls.getItem(OFFICIAL_KEY);       /* 异常向上抛：存储访问失败 */
-    if (raw === null || raw === undefined || raw === '') return null;
-    return JSON.parse(raw);                     /* 解析异常向上抛：记录损坏 */
+/* ★ P1-3 / 宿主适配层补丁（P1）：可靠的底层读取——safeGet 会吞掉存储异常，
+ * "读失败/内容损坏"与"缺键"无法区分。这里用严格访问器直读 localStorage：
+ * 存储访问异常 / JSON 解析异常向上抛；返回 null 仅表示"确实不存在"。
+ * 官方记录（删除核验、崩溃恢复）与事务日志（恢复判定、安装门禁）统一使用，
+ * 绝不允许读失败或损坏内容被冒充为"不存在"。 */
+const _strictStore = () => {
+    if (typeof localStorage === 'undefined') return null;   /* 无存储环境 */
+    return localStorage;                                     /* 访问异常向上抛（不吞） */
 };
+const _readStrict = createStrictKeyReader(_strictStore);
+const readOfficialRecordStrict = () => _readStrict(OFFICIAL_KEY);
+const readTxStrict = () => _readStrict(TX_KEY);
 
 /* ---------- 模块解析：优先 window 挂载（生产引擎挂载点），兜底动态导入同一实例 ---------- */
 let _wFallback = null, _msFallback = null;
@@ -574,11 +575,17 @@ export const recoverInterruptedTransaction = async () => {
     return out.value;
 };
 
-/* 是否因未完成事务而暂停安装（人工标记内存缓存 + 持久日志双保险；恢复进行中一律暂停） */
+/* 是否因未完成事务而暂停安装（人工标记内存缓存 + 持久日志双保险；恢复进行中一律暂停）。
+ * ★ P1 补丁：日志读取失败/内容损坏 → 无法确认事务状态 → 保守阻断（绝不静默开始安装）。 */
 const _txBlocked = () => {
     if (_recoveryGuard.blocked() || _txManualBlocked) return true;
-    const plan = classifyInterruptedTx(storageOps.readTx());
-    return plan.action === 'manual';
+    try {
+        const plan = classifyInterruptedTx(storageOps.readTx());
+        return plan.action === 'manual';
+    } catch (e) {
+        _log('事务日志不可读，已保守暂停安装：' + ((e && e.message) || e), true);
+        return true;
+    }
 };
 
 const buildBridge = async () => {
@@ -603,9 +610,11 @@ const storageOps = {
     writeStagingBackup: rec => writeJSON(STAGING_KEY, rec),
     readStagingBackup: () => readJSON(STAGING_KEY),
     removeStagingBackup: () => removeKey(STAGING_KEY),
-    /* 安装事务日志（P0-1）：记录事务阶段，供崩溃后重启识别与安全恢复 */
+    /* 安装事务日志（P0-1）：记录事务阶段，供崩溃后重启识别与安全恢复。
+     * ★ 严格读取（P1 补丁）：读取失败/内容损坏 **抛异常**（恢复与安装门禁据此保守阻断），
+     *   绝不允许被 safeGet/JSON.parse 吞成 null 而冒充"没有未完成事务"。 */
     writeTx: journal => writeJSON(TX_KEY, journal),
-    readTx: () => readJSON(TX_KEY),
+    readTx: readTxStrict,
     removeTx: () => removeKey(TX_KEY),
 };
 
@@ -952,17 +961,29 @@ export const restoreBackup = async () => {
     } finally { _releaseTx(); }
 };
 
-export const modelUpdateStatus = () => ({
-    extensionVersion: VERSION,
-    local: localModelRelease(),
-    official: readOfficialRecord(),
-    hasPending: !!readPending(),
-    hasBackup: hasBackup(),
-    txJournal: storageOps.readTx(),
-    txAction: classifyInterruptedTx(storageOps.readTx()).action,
-    lastCheckTs: parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0,
-    intervalHours: Math.round(CHECK_INTERVAL_MS / 3600000),
-});
+export const modelUpdateStatus = () => {
+    /* ★ P1 补丁：状态查询同样走严格读取——损坏/读取失败如实报告为 unreadable，绝不谎报 none */
+    let txJournal = null, txAction = 'none', txReadError = null;
+    try {
+        txJournal = storageOps.readTx();
+        txAction = classifyInterruptedTx(txJournal).action;
+    } catch (e) {
+        txAction = 'unreadable';
+        txReadError = String((e && e.message) || e);
+    }
+    return {
+        extensionVersion: VERSION,
+        local: localModelRelease(),
+        official: readOfficialRecord(),
+        hasPending: !!readPending(),
+        hasBackup: hasBackup(),
+        txJournal,
+        txAction,
+        txReadError,
+        lastCheckTs: parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0,
+        intervalHours: Math.round(CHECK_INTERVAL_MS / 3600000),
+    };
+};
 
 /* ---------- 装配 ---------- */
 export const installModelUpdate = () => {
