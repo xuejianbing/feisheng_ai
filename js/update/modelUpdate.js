@@ -38,6 +38,7 @@ import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyW
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
+    classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
@@ -80,11 +81,18 @@ const loadModelState = async () => {
 const getContract = async () => {
     const wm = await loadWeightsModule();
     if (!wm || !wm.MODEL_SCHEMA || !Array.isArray(wm.MODEL_SCHEMA.dims)) return null;
+    const schema = wm.MODEL_SCHEMA;
     return {
-        schemaVersion: wm.MODEL_SCHEMA.version,
-        featureDim: wm.MODEL_SCHEMA.featureDim,
-        dims: wm.MODEL_SCHEMA.dims.slice(),
+        schemaVersion: schema.version,
+        featureDim: schema.featureDim,
+        dims: schema.dims.slice(),
         dataEpoch: Number(wm.DATA_EPOCH),
+        /* ★ P2-5：把 dtype / architecture 一并下发，供 validateBundle 校验模型语义 */
+        dtype: schema.dtype ? { weights: schema.dtype.weights, biases: schema.dtype.biases } : undefined,
+        architecture: schema.architecture ? {
+            activation: schema.architecture.activation, norm: schema.architecture.norm,
+            residual: schema.architecture.residual, critic: schema.architecture.critic,
+        } : undefined,
     };
 };
 
@@ -168,6 +176,7 @@ const _startPendingWatch = () => {
     if (_pendingWatcher || _disposed) return;
     _pendingWatcher = setInterval(function () {
         if (_disposed || !readPending()) { _stopPendingWatch(); return; }
+        _ensureBus();   /* 事件被清空后自愈重订阅（幂等，不会重复订阅） */
         tryApplyPending().catch(_swallow);
     }, PENDING_WATCH_MS);
 };
@@ -219,59 +228,57 @@ export const localModelRelease = () => {
     return { releaseSeq: BUILTIN_RELEASE_SEQ, modelVersion: 'builtin-default', source: 'builtin' };
 };
 
-/* ★ 完整性核验：官方记录存在时，读回存档逐项核对（不依赖在线内存），
- *   用于识别「版本相同但文件损坏」→ 允许重新获取；同时区分「已被本地训练覆盖」（正常）。 */
+/* ★ 完整性核验（P2-1）：官方记录存在时读回存档逐项核对，区分三种情况：
+ *   broken     存档结构无效/缺失/回退默认 → 损坏（可重新获取修复）
+ *   superseded 结构有效且确为本地训练成果 → 正常（非异常）
+ *   mismatch   结构有效但无法判定训练还是外部改写 → 保守，绝不自动覆盖 */
 export const verifyOfficialIntegrity = async () => {
     const rec = readOfficialRecord();
     if (!rec) return { state: 'none' };
     const contract = await getContract();
-    if (!contract) return { state: 'unknown', reason: '运行时契约不可用' };
     const wm = weightsModuleSync();
     const raw = (wm && typeof wm.__readArchive === 'function') ? wm.__readArchive() : null;
-    if (!raw) return { state: 'broken', reason: '官方权重记录存在，但权重存档缺失（运行时已回退内置默认模型）' };
-    let obj = null;
-    try { obj = JSON.parse(raw); } catch (e) { return { state: 'broken', reason: '权重存档无法解析' }; }
-    if (!obj || obj.v !== contract.schemaVersion) return { state: 'broken', reason: '权重存档网络结构版本不符' };
-    if (Number(obj.dv || 0) < contract.dataEpoch) return { state: 'broken', reason: '权重存档数据纪元 ' + obj.dv + ' 过旧（会被拒载）' };
-    const spec = paramSpec(contract.dims);
-    const params = {};
-    for (let i = 0; i < spec.length; i++) {
-        const s = spec[i];
-        const bytes = decodeBase64(obj[s.key]);
-        const need = s.kind === 'int16' ? s.len * 2 : s.len;
-        if (!bytes || bytes.byteLength !== need) return { state: 'broken', reason: '存档参数 ' + s.key + ' 缺失或长度不符' };
-        params[s.key] = obj[s.key];
+    /* 训练证据：结构有效 + 既非内置默认也非官方摘要 + 存档 trained>0。
+     * 不能仅凭"摘要不同"就认定用户做了训练。 */
+    let hasTrainingEvidence = false, defaultDigest = null;
+    if (contract) {
+        defaultDigest = paramsDigest(defaultParams(), contract.dims);
+        try {
+            const obj = raw ? JSON.parse(raw) : null;
+            if (obj && typeof obj === 'object') {
+                const active = {};
+                const spec = paramSpec(contract.dims);
+                let okShape = true;
+                for (let i = 0; i < spec.length; i++) {
+                    const b = decodeBase64(obj[spec[i].key]);
+                    const need = spec[i].kind === 'int16' ? spec[i].len * 2 : spec[i].len;
+                    if (!b || b.byteLength !== need) { okShape = false; break; }
+                    active[spec[i].key] = obj[spec[i].key];
+                }
+                if (okShape) {
+                    const d = paramsDigest(active, contract.dims);
+                    const det = detectUserModel({ activeParams: active, defaultParams: defaultParams(), officialDigest: rec.sha256, dims: contract.dims });
+                    hasTrainingEvidence = !!d && det.isUserModel && Number(obj.trained || 0) > 0;
+                }
+            }
+        } catch (e) { _swallow(e); }
     }
-    const digest = paramsDigest(params, contract.dims);
-    if (!digest) return { state: 'broken', reason: '存档参数无法计算摘要' };
-    if (digest !== String(rec.sha256 || '').toLowerCase()) {
-        return { state: 'superseded', reason: '当前生效模型已不是该官方权重（例如本地训练成果已生效）', digest };
-    }
-    return { state: 'ok', digest };
+    return classifyIntegrityArchive({ raw, contract, officialRec: rec, hasTrainingEvidence, defaultDigest });
 };
 
-/* ---------- 网络 ---------- */
-const _fetchOnce = async (url, timeoutMs, asText) => {
-    if (typeof fetch !== 'function') throw new Error('当前环境不支持网络请求');
-    const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
-    const timer = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, timeoutMs) : null;
-    let res;
-    try { res = await fetch(url, ctl ? { signal: ctl.signal } : undefined); }
-    finally { if (timer) clearTimeout(timer); }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return asText ? await res.text() : await res.json();
-};
-const _fetchWithRetry = async (url, opt) => {
-    opt = opt || {};
-    const retries = Number.isFinite(opt.retries) ? opt.retries : 0;
-    const timeoutMs = opt.timeoutMs || FETCH_TIMEOUT_MS;
-    let lastErr = null;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_BACKOFF_MS * attempt));
-        try { return await _fetchOnce(url, timeoutMs, !!opt.asText); } catch (e) { lastErr = e; }
-    }
-    throw lastErr || new Error('请求失败');
-};
+/* ---------- 网络（P2-2 / P2-3） ----------
+ * 统一走 updateCore.fetchTextWithLimits：超时覆盖"完整下载过程"（含正文读取），
+ * 并按维度派生的上限做体积预检，异常大响应提前拒绝，避免内存被撑爆。 */
+const _fetchText = (url, opt) => fetchTextWithLimits({
+    url,
+    fetchImpl: (typeof fetch === 'function') ? fetch : null,
+    AbortControllerImpl: (typeof AbortController === 'function') ? AbortController : null,
+    timeoutMs: (opt && opt.timeoutMs) || FETCH_TIMEOUT_MS,
+    retries: (opt && Number.isFinite(opt.retries)) ? opt.retries : 0,
+    maxBytes: (opt && opt.maxBytes) || MAX_MANIFEST_BYTES,
+    backoffMs: RETRY_BACKOFF_MS,
+    sleep: ms => new Promise(r => setTimeout(r, ms)),
+});
 
 const _touchCheckTs = () => { try { safeSet(CHECK_TS_KEY, String(Date.now())); } catch (e) { _swallow(e); } };
 
@@ -315,7 +322,22 @@ const _report = (result, manual) => {
                     { label: '重新下载修复', value: 'fix', primary: true },
                     { label: '暂不处理', value: 'no' },
                 ],
-            }).then(v => { if (v === 'fix') downloadAndApply({ latest: result.latest }); });
+                dangerous: true, defaultValue: 'no',
+            }).then(v => { if (v === 'fix' && result.latest) downloadAndApply({ latest: result.latest }); });
+            break;
+        case 'mismatch':
+            styledDialog({
+                title: '本地权重与官方记录不一致',
+                message: (result.integrity && result.integrity.reason || '权重存档内容与官方记录不一致')
+                    + '\n\n为避免误覆盖，本程序不会自动替换当前权重。\n'
+                    + '· 若这是你自己的训练成果 → 保持现状即可\n'
+                    + '· 若确认存档损坏 → 可重新下载同一版本权重修复',
+                buttons: [
+                    { label: '重新下载修复', value: 'fix', primary: true },
+                    { label: '保持现状', value: 'no' },
+                ],
+                dangerous: true, defaultValue: 'no',
+            }).then(v => { if (v === 'fix' && result.latest) downloadAndApply({ latest: result.latest }); });
             break;
         case 'needsExtensionUpdate':
             styledDialog({
@@ -340,6 +362,7 @@ const _report = (result, manual) => {
                     { label: '下载并安装', value: 'go', primary: true },
                     { label: '暂不更新', value: 'no' },
                 ],
+                dangerous: true, defaultValue: 'no',
             }).then(v => { if (v === 'go') downloadAndApply({ latest }); });
             break;
         case 'superseded':
@@ -360,10 +383,11 @@ export const checkModelUpdate = async opt => {
     /* 1) 先做本地完整性核验：损坏时必须能重新获取（与"是最新"区分开） */
     const integrity = await verifyOfficialIntegrity().catch(() => ({ state: 'unknown' }));
 
-    /* 2) 拉清单 */
+    /* 2) 拉清单（清单体积上限收口） */
     let manifest = null, fetchErr = null;
     try {
-        manifest = await _fetchWithRetry(MODEL_MANIFEST_URL, { retries: manual ? 1 : 0 });
+        const text = await _fetchText(MODEL_MANIFEST_URL, { retries: manual ? 1 : 0, maxBytes: MAX_MANIFEST_BYTES });
+        manifest = JSON.parse(text);
     } catch (e) { fetchErr = e; }
 
     const hasUserModel = await (async () => {
@@ -390,9 +414,12 @@ export const checkModelUpdate = async opt => {
     const cls = classifyManifestState({
         manifest, localSeq: local.releaseSeq, extensionVersion: VERSION, integrityState: integrity.state,
     });
-    const result = { state: cls.state, local, latest: cls.latest, integrity, hasUserModel, message: cls.message };
-    /* available / broken / needsExtensionUpdate 有可操作项 → 自动检查也要提示；latest 等仅在手动检查时提示 */
-    const actionable = (cls.state === 'available' || cls.state === 'broken' || cls.state === 'needsExtensionUpdate');
+    /* ★ P2-1：同版本但内容与官方记录不一致且无法判定（mismatch）→ 单独提示，绝不自动替换 */
+    let state = cls.state, message = cls.message;
+    if (integrity.state === 'mismatch' && cls.state === 'latest') { state = 'mismatch'; message = integrity.reason; }
+    const result = { state, local, latest: cls.latest, integrity, hasUserModel, message };
+    /* available / broken / needsExtensionUpdate / mismatch 有可操作项 → 自动检查也要提示 */
+    const actionable = (state === 'available' || state === 'broken' || state === 'needsExtensionUpdate' || state === 'mismatch');
     _report(result, manual || actionable);
     return result;
 };
@@ -406,7 +433,9 @@ const downloadBundle = async latest => {
     const contract = await getContract();
     if (!contract) throw new Error('无法读取运行时模型契约（模型模块未就绪）');
     const url = _absolutize(latest.url);
-    const raw = await _fetchWithRetry(url, { retries: 1, asText: true });
+    /* ★ P2-3：体积上限由网络维度派生，异常大响应在下载阶段即被拒绝 */
+    const maxBytes = computeMaxBundleBytes(contract.dims);
+    const raw = await _fetchText(url, { retries: 1, maxBytes });
     if (typeof raw !== 'string' || !raw.length) throw new Error('权重包为空');
     let bundle = null;
     try { bundle = JSON.parse(raw); } catch (e) { throw new Error('权重包不是合法 JSON'); }
@@ -525,6 +554,7 @@ export const downloadAndApply = async opt => {
                     { label: '备份并切换为官方权重', value: 'apply', primary: true },
                     { label: '保留本地模型', value: 'keep' },
                 ],
+                dangerous: true, defaultValue: 'keep',
             });
             if (choice !== 'apply') return { ok: false, err: 'user kept local model' };
         }
@@ -641,6 +671,7 @@ const _tryApplyPendingLocked = async pending => {
                 { label: '保留当前模型', value: 'keep', primary: true },
                 { label: '仍然安装', value: 'apply' },
             ],
+            dangerous: true, defaultValue: 'keep',
         });
         if (choice !== 'apply') { removeKey(PENDING_KEY); return { ok: false, err: 'user kept local model' }; }
     }
@@ -705,6 +736,7 @@ export const restoreBackup = async () => {
         message: '将把当前模型替换为更新前的备份（' + new Date(rec.savedAt || Date.now()).toLocaleString() + '）。\n\n'
             + '· 训练样本与统计不受影响\n· 还原后原备份仍会保留，可反复还原',
         buttons: [{ label: '确认还原', value: 'go', primary: true }, { label: '取消', value: 'no' }],
+        dangerous: true, defaultValue: 'no',
     });
     if (need !== 'go') return { ok: false, err: 'cancelled' };
     const gate = await canApplyNow();

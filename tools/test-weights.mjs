@@ -28,15 +28,20 @@ import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSna
 import {
     buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
     createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
-    evaluateExportCompatibility,
+    evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
 } from '../js/update/updateCore.js';
+import { styledDialog } from '../js/update/updateUi.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
 
 const DIMS = [134, 128, 64, 6];
 const SCHEMA = 7;
 const EPOCH = 5;
-const EXPECT = { schemaVersion: SCHEMA, featureDim: DIMS[0], dims: DIMS.slice(), dataEpoch: EPOCH };
+const EXPECT = {
+    schemaVersion: SCHEMA, featureDim: DIMS[0], dims: DIMS.slice(), dataEpoch: EPOCH,
+    dtype: { weights: 'int8', biases: 'int16' },
+    architecture: { activation: 'gelu', norm: 'layernorm', residual: true, critic: true },
+};
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => {
@@ -82,6 +87,7 @@ const mkBundle = mut => {
         format: BUNDLE_FORMAT, modelId: MODEL_ID, modelVersion: 'w7d5-t01', releaseSeq: 1,
         schemaVersion: SCHEMA, featureDim: DIMS[0], dims: DIMS.slice(), dataEpoch: EPOCH,
         dtype: { weights: 'int8', biases: 'int16' }, params: { ...officialParams },
+        architecture: { activation: 'gelu', norm: 'layernorm', residual: true, critic: true },
         trained: 1, accuracy: 0.5, size: officialSize, sha256: officialDigest,
     };
     if (mut) mut(b);
@@ -101,6 +107,16 @@ ok('模型标识不符 → 拒绝', !validateBundle(mkBundle(b => { b.modelId = 
 ok('体积不符 → 拒绝', !validateBundle(mkBundle(b => { b.size = 7; }), EXPECT).ok);
 ok('非 JSON 对象 → 拒绝', !validateBundle('rubbish', EXPECT).ok);
 ok('探针维度不符 → 拒绝', !validateBundle(mkBundle(b => { b.probe = { input: new Array(130).fill(0), expectTop: 1 }; }), EXPECT).ok);
+/* P2-5：模型语义（架构）与数值类型必须与运行时一致，同维度但语义不符必须拒绝 */
+ok('激活函数不符 → 拒绝', !validateBundle(mkBundle(b => { b.architecture = { activation: 'relu', norm: 'layernorm', residual: true, critic: true }; }), EXPECT).ok);
+ok('归一化方式不符 → 拒绝', !validateBundle(mkBundle(b => { b.architecture = { activation: 'gelu', norm: 'batchnorm', residual: true, critic: true }; }), EXPECT).ok);
+ok('残差连接约定不符 → 拒绝', !validateBundle(mkBundle(b => { b.architecture = { activation: 'gelu', norm: 'layernorm', residual: false, critic: true }; }), EXPECT).ok);
+ok('Critic 头约定不符 → 拒绝', !validateBundle(mkBundle(b => { b.architecture = { activation: 'gelu', norm: 'layernorm', residual: true, critic: false }; }), EXPECT).ok);
+ok('缺少 architecture 元数据 → 拒绝', !validateBundle(mkBundle(b => { delete b.architecture; }), EXPECT).ok);
+ok('缺少 dtype 元数据 → 拒绝', !validateBundle(mkBundle(b => { delete b.dtype; }), EXPECT).ok);
+ok('权重数据类型不符 → 拒绝', !validateBundle(mkBundle(b => { b.dtype = { weights: 'int16', biases: 'int16' }; }), EXPECT).ok);
+ok('偏置数据类型不符 → 拒绝', !validateBundle(mkBundle(b => { b.dtype = { weights: 'int8', biases: 'int8' }; }), EXPECT).ok);
+ok('未提供语义期望时保持向后兼容（旧包可校验）', validateBundle(mkBundle(b => { delete b.architecture; }), { schemaVersion: SCHEMA, featureDim: DIMS[0], dims: DIMS.slice(), dataEpoch: EPOCH }).ok === true);
 
 /* ---------- 4. 版本判断 ---------- */
 section('版本判断');
@@ -569,6 +585,110 @@ section('导出工具兼容性（P1-5）');
         ok('导出：内置默认权重仍可导出（不破坏合法场景）', run(['--from-default', '--model-version', 't-def', '--seq', '1', '--out', path.join(tmp, 'd6')]) === 0);
         ok('导出：结构不符时不产出权重文件', !fs.existsSync(path.join(tmp, 'd2')));
     }
+}
+
+/* ---------- 17. 存档完整性分类（P2-1） ---------- */
+section('存档完整性分类（P2-1）');
+{
+    const contract3 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const rec = { modelId: MODEL_ID, modelVersion: 'w7d5-t01', releaseSeq: 1, sha256: officialDigest };
+    const encodeArchive = (params, v, dv, trained) => { const o = { v, dv, trained }; for (const s of spec) o[s.key] = params[s.key]; return JSON.stringify(o); };
+    const cls = o => classifyIntegrityArchive(Object.assign({ contract: contract3, officialRec: rec }, o));
+
+    ok('无官方记录 → none', classifyIntegrityArchive({ officialRec: null }).state === 'none');
+    ok('契约不可用 → unknown', cls({ contract: null, raw: 'x' }).state === 'unknown');
+    ok('存档缺失 → broken', cls({ raw: null }).state === 'broken');
+    ok('存档无法解析 → broken', cls({ raw: '{bad json' }).state === 'broken');
+    ok('结构版本不符 → broken', cls({ raw: encodeArchive(officialParams, SCHEMA - 1, EPOCH, 0) }).state === 'broken');
+    ok('数据纪元过旧 → broken', cls({ raw: encodeArchive(officialParams, SCHEMA, EPOCH - 1, 0) }).state === 'broken');
+    ok('参数缺失 → broken', cls({ raw: JSON.stringify({ v: SCHEMA, dv: EPOCH, w1: 'AA==' }) }).state === 'broken');
+    ok('内容 = 官方权重 → ok', cls({ raw: encodeArchive(officialParams, SCHEMA, EPOCH, 0) }).state === 'ok');
+    ok('摘要不同 + 无训练证据 → mismatch（保守，不自动覆盖）', cls({ raw: encodeArchive(userParams, SCHEMA, EPOCH, 0), hasTrainingEvidence: false }).state === 'mismatch');
+    ok('摘要不同 + 有训练证据 → superseded（正常）', cls({ raw: encodeArchive(userParams, SCHEMA, EPOCH, 9), hasTrainingEvidence: true }).state === 'superseded');
+    ok('内容 = 内置默认 → broken（官方权重丢失）', cls({ raw: encodeArchive(defaultParams, SCHEMA, EPOCH, 0), defaultDigest: paramsDigest(defaultParams, DIMS) }).state === 'broken');
+    /* 关键：仅摘要不同不得直接判为"用户训练" */
+    const r = cls({ raw: encodeArchive(userParams, SCHEMA, EPOCH, 0), hasTrainingEvidence: false });
+    ok('不得仅凭摘要不同就认定用户训练', r.state !== 'superseded');
+}
+
+/* ---------- 18. 下载超时与体积限制（P2-2 / P2-3） ---------- */
+section('下载超时与体积限制（P2-2 / P2-3）');
+{
+    const mkAbort = () => class {
+        constructor() { this.signal = { aborted: false, _onAbort: null }; }
+        abort() { this.signal.aborted = true; if (this.signal._onAbort) this.signal._onAbort(); }
+    };
+    const okRes = (text, headers) => ({ ok: true, status: 200, headers: { get: k => (headers && headers[k] !== undefined ? headers[k] : null) }, text: () => Promise.resolve(text) });
+    const base = { url: 'u', AbortControllerImpl: mkAbort(), timeoutMs: 30, retries: 0, maxBytes: 1e9, sleep: () => Promise.resolve() };
+
+    /* 正文读取阶段超时：fetch 立即返回，但 text() 悬挂直到 abort */
+    {
+        const fetchImpl = (u, opt) => Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, text: () => new Promise((_, rej) => { opt.signal._onAbort = () => rej(new Error('aborted')); }) });
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl })); } catch (e) { err = e; }
+        ok('正文读取悬挂 → 超时被中断（不会永久卡住）', !!err && /超时/.test(err.message), err && err.message);
+    }
+    /* HTTP 状态错误 */
+    {
+        const fetchImpl = () => Promise.resolve({ ok: false, status: 404, headers: { get: () => null }, text: () => Promise.resolve('') });
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl })); } catch (e) { err = e; }
+        ok('HTTP 非 2xx → 抛错', !!err && /404/.test(err.message));
+    }
+    /* Content-Length 预检 */
+    {
+        const fetchImpl = () => Promise.resolve(okRes('x', { 'content-length': '99999999' }));
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl, maxBytes: 100 })); } catch (e) { err = e; }
+        ok('Content-Length 超限 → 提前拒绝', !!err && /体积超限/.test(err.message));
+    }
+    /* 正文实际长度超限 */
+    {
+        const fetchImpl = () => Promise.resolve(okRes('x'.repeat(5000)));
+        let err = null;
+        try { await fetchTextWithLimits(Object.assign({}, base, { fetchImpl, maxBytes: 1000 })); } catch (e) { err = e; }
+        ok('正文长度超限 → 拒绝', !!err && /体积超限/.test(err.message));
+    }
+    /* 重试后成功 */
+    {
+        let n = 0;
+        const fetchImpl = () => { n++; if (n < 2) throw new Error('net down'); return Promise.resolve(okRes('hello')); };
+        const text = await fetchTextWithLimits(Object.assign({}, base, { fetchImpl, retries: 1, sleep: () => Promise.resolve() }));
+        ok('失败重试后可成功', text === 'hello' && n === 2);
+    }
+    /* JSON 非法由调用方识别 */
+    {
+        const fetchImpl = () => Promise.resolve(okRes('not-json'));
+        const text = await fetchTextWithLimits(Object.assign({}, base, { fetchImpl }));
+        let bad = false; try { JSON.parse(text); } catch (e) { bad = true; }
+        ok('非法 JSON → 调用方可识别（解析抛错）', bad);
+    }
+    /* 体积上限由维度派生且不过小 */
+    {
+        const mb = computeMaxBundleBytes(DIMS);
+        ok('体积上限 ≥ 512KB（不会过小误拒）', mb >= 512 * 1024, mb);
+        ok('体积上限远大于合法权重包', mb > officialSize * 4, mb + ' vs ' + officialSize);
+        ok('体积上限随维度增长', computeMaxBundleBytes([268, 256, 128, 6]) > mb);
+        ok('清单上限为 256KB', MAX_MANIFEST_BYTES === 256 * 1024);
+    }
+}
+
+/* ---------- 19. 弹窗降级安全（P2-4） ---------- */
+section('弹窗降级安全（P2-4）');
+{
+    /* Node 无 document → 走降级分支；alert 不可用被内部 try/catch 吞掉 */
+    const destructive = {
+        title: '覆盖权重', message: '确认？',
+        buttons: [{ label: '确认覆盖', value: 'go', primary: true }, { label: '取消', value: 'no' }],
+        dangerous: true,
+    };
+    ok('DOM 不可用 + 危险操作 → 默认取消（绝不默认确认）', (await styledDialog(destructive)) === 'no');
+    ok('DOM 不可用 + 危险操作（取消为主按钮）→ 取非主按钮', (await styledDialog({
+        buttons: [{ label: '取消', value: 'no', primary: true }, { label: '仍然安装', value: 'apply' }], dangerous: true,
+    })) === 'apply');
+    ok('DOM 不可用 + 显式 defaultValue → 用指定安全值', (await styledDialog(Object.assign({}, destructive, { defaultValue: 'safe' }))) === 'safe');
+    ok('DOM 不可用 + 只读提示 → 安全降级为确定', (await styledDialog({ title: '提示', message: '只读' })) === 'ok');
+    ok('DOM 不可用 + 危险且无按钮 → 返回 null（取消）', (await styledDialog({ title: 'x', message: 'y', dangerous: true })) === null);
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');

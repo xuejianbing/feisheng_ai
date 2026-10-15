@@ -271,6 +271,31 @@ export const validateBundle = (bundle, expect) => {
         else if (de < expect.dataEpoch) push('数据纪元过旧：包 ' + de + ' < 运行时 ' + expect.dataEpoch + '（会被拒载）');
     }
 
+    /* 数据类型：影响每个参数的字节宽度与取值范围，必须与运行时一致 */
+    if (expect && expect.dtype) {
+        const d = bundle.dtype;
+        if (!d || typeof d !== 'object') push('缺少 dtype 元数据（无法确认数值类型）');
+        else {
+            if (expect.dtype.weights && d.weights !== expect.dtype.weights) push('权重数据类型不符：' + d.weights + ' ≠ ' + expect.dtype.weights);
+            if (expect.dtype.biases && d.biases !== expect.dtype.biases) push('偏置数据类型不符：' + d.biases + ' ≠ ' + expect.dtype.biases);
+        }
+    }
+    /* 模型语义：同维度但激活/归一化/残差/Critic 约定不同 → 前向结果不可比，必须拒绝。
+     * 不允许"为了通过校验而硬编码虚假兼容标记"。 */
+    if (expect && expect.architecture) {
+        const a = bundle.architecture;
+        if (!a || typeof a !== 'object') push('缺少 architecture 元数据（无法确认模型语义兼容）');
+        else {
+            const keys = ['activation', 'norm', 'residual', 'critic'];
+            for (let i = 0; i < keys.length; i++) {
+                const k = keys[i];
+                if (expect.architecture[k] !== undefined && a[k] !== expect.architecture[k]) {
+                    push('模型语义 ' + k + ' 不符：包 ' + a[k] + ' ≠ 运行时 ' + expect.architecture[k]);
+                }
+            }
+        }
+    }
+
     /* 全部 10 项参数：必须齐备、长度精确、数值有限且在类型范围内 */
     const params = bundle.params;
     const decoded = {};
