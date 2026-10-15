@@ -240,6 +240,28 @@ export const createTransactionLock = () => {
     };
 };
 
+/* ---------------- 崩溃恢复互斥门（P1 补丁） ----------------
+ * 启动恢复与"手动安装 / 手动恢复 / 待生效应用"必须互斥：
+ *   - 恢复全程持有统一事务锁，杜绝"恢复读取旧事务数据的同时新安装覆盖暂存/日志"的竞态；
+ *   - 恢复进行期间额外置 recovering 标志（供 _txBlocked 快速拦截）；
+ *   - fn 抛异常也必须释放锁与标志（finally），绝不让一次失败的恢复卡死后续操作。
+ * 纯逻辑 + 注入锁，Node 侧可直接验证生产实现。 */
+export const createRecoveryGuard = lock => {
+    let recovering = false;
+    return {
+        isRecovering() { return recovering; },
+        /* 恢复进行中 → 一律视为"需暂停新安装" */
+        blocked() { return recovering; },
+        /* 返回 { started:false } 表示已有事务在运行：调用方不得改动任何数据 */
+        async run(fn) {
+            if (!lock.acquire()) return { started: false };
+            recovering = true;
+            try { return { started: true, value: await fn() }; }
+            finally { recovering = false; lock.release(); }
+        },
+    };
+};
+
 /* ---------------- 应用闸门（P0 / P1-2） ----------------
  * 更新开始前与真正替换前都必须过这道闸门。
  *

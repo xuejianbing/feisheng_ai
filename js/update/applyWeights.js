@@ -230,12 +230,18 @@ const _journalWriteVerified = (storageOps, journal) => {
     if (!back || typeof back !== 'object') return false;
     return String(back.txId || '') === String(journal.txId || '') && String(back.phase || '') === String(journal.phase || '');
 };
-/* 删除事务日志同样要读回核验消失（删除失败/读回异常 → 未清理） */
+/* 删除事务日志同样要读回核验消失（删除失败/读回异常/读回仍有值 → 一律未清理）。
+ * ★ P2 补丁：读回必须"成功执行且确认为空"才算清理成功——
+ *   读取抛异常绝不允许被当作"键已不存在"（与官方记录删除核验同一原则），
+ *   失败时由调用方保留暂存备份等数据，留待下次启动安全处理。 */
 const _journalRemoveVerified = storageOps => {
     try {
-        if (!storageOps || typeof storageOps.removeTx !== 'function') return false;
+        if (!storageOps || typeof storageOps.removeTx !== 'function' || typeof storageOps.readTx !== 'function') return false;
         if (storageOps.removeTx() === false) return false;
-        return !_journalRead(storageOps);
+    } catch (e) { return false; }
+    try {
+        const back = storageOps.readTx();
+        return back === null || back === undefined;
     } catch (e) { return false; }
 };
 

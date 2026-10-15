@@ -27,7 +27,7 @@ import {
 import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot, runtimeStateDiff, recoverInterruptedTransaction } from '../js/update/applyWeights.js';
 import {
     buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
-    createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
+    createTransactionLock, createRecoveryGuard, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
     generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
@@ -405,6 +405,7 @@ const mkStorageFull = (bridge, opt) => {
         },
         readTx() {
             if (opt.readTxThrow) throw new Error('storage read failed');
+            if (opt.readTxThrowAfterRemove && (st.txRemoved || 0) > 0) throw new Error('storage read failed after remove');
             if (opt.readTxNull) return null;
             return st.tx;
         },
@@ -1935,6 +1936,28 @@ section('事务日志故障矩阵（P0-2）');
         const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32, readRecord: () => null });
         ok('32i 重启后 → none/cleanup（不误判回滚）', plan.action === 'none' || (plan.action === 'cleanup' && plan.ok === true), JSON.stringify(plan));
     }
+    /* 32j) ★ P2 补丁：日志删除成功但读回抛异常 → 不得视为清理成功（保留暂存，不谎报） */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32j' }, { readTxThrowAfterRemove: true });
+        ok('32j 删除后读回异常 → ok:true 但 cleanupPending', r.ok === true && r.cleanupPending === true, JSON.stringify(r));
+        ok('32j 暂存数据保留（留待后续处理）', storageOps.st.staging !== null);
+        ok('32j 提交本身完整（权重/记录/备份就位）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest
+            && storageOps.st.official && String(storageOps.st.official.sha256) === officialDigest
+            && paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+    }
+    /* 32k) 恢复"仅清理残留"路径的同一故障 → 同样不报清理完成、数据保留 */
+    {
+        const bridge = makeFakeWeights({ initialParams: userParams });
+        const storageOps = mkStorageFull(bridge, { readTxThrowAfterRemove: true });
+        storageOps.st.backup = buildBackupRecord({ params: userParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const j = buildTxJournal({ txId: 'tx-32k', phase: 'prepared', baseDigest: userDigest, targetDigest: officialDigest, prevRecord: null });
+        storageOps.st.tx = j;
+        storageOps.st.staging = buildBackupRecord({ params: userParams, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: j.txId });
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32 });
+        ok('32k 恢复清理时删除后读回异常 → 不报清理完成', plan.ok === false && plan.action === 'cleanup', JSON.stringify(plan));
+        ok('32k 暂存数据保留', storageOps.st.staging !== null);
+        ok('32k 模型未被触碰', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
 }
 
 /* ---------- 33. 手动安装重新授权基线（P1-1） ---------- */
@@ -2201,6 +2224,54 @@ section('官方记录删除核验（P1-3）');
     ok('35k 旧记录写回+读回核验通过 → ok（既有路径不受影响）', r.ok === true);
     r = restoreOfficialRecord(mk({ prevRec: recB, readRecord: () => { throw new Error('x'); } }));
     ok('35k 旧记录写回后读回异常 → 失败（同样不冒充成功）', r.ok === false);
+}
+
+/* ---------- 36. 崩溃恢复互斥（P1 补丁：启动恢复与新的模型修改操作互斥） ---------- */
+section('崩溃恢复互斥（P1）');
+{
+    /* createRecoveryGuard 即 modelUpdate 侧启动恢复锁的实际实现
+     * （宿主层模块在 Node 侧无法导入，但恢复持锁/放锁/标志全部由该工厂完成） */
+    const lock = createTransactionLock();
+    const guard = createRecoveryGuard(lock);
+
+    /* 36a) 恢复进行中：标志置位 + 同一把锁不可再获取（新安装/恢复被拒），并发恢复被跳过 */
+    let duringBlocked = null, duringRecovering = null, duringAcquire = null;
+    const p1 = guard.run(async () => {
+        duringBlocked = guard.blocked();
+        duringRecovering = guard.isRecovering();
+        duringAcquire = lock.acquire();   /* 模拟并发的手动安装/手动恢复取锁 */
+        return 'recovered';
+    });
+    const r2 = await guard.run(async () => 'never');   /* 并发触发的第二次恢复 */
+    const r1 = await p1;
+    ok('36a 恢复期间 blocked()=true（_txBlocked 据此拦截）', duringBlocked === true && duringRecovering === true);
+    ok('36a 恢复期间新事务取锁失败（互斥成立）', duringAcquire === false);
+    ok('36a 并发的第二次恢复被拒绝（started=false，绝不执行）', r2.started === false);
+    ok('36a 恢复本身正常完成', r1.started === true && r1.value === 'recovered');
+
+    /* 36b) 恢复结束后：标志与锁全部释放，后续事务可正常进入（无泄漏） */
+    ok('36b 恢复结束后 recovering=false 且锁可用', guard.blocked() === false && guard.isRecovering() === false && lock.acquire() === true);
+    lock.release();
+
+    /* 36c) 恢复过程抛异常也必须释放锁与标志（finally），不得卡死后续操作 */
+    let threw = null;
+    try { await guard.run(async () => { throw new Error('recovery exploded'); }); } catch (e) { threw = e; }
+    ok('36c 恢复抛异常 → 向上抛出且锁/标志已释放', !!threw && guard.blocked() === false && lock.acquire() === true);
+    lock.release();
+
+    /* 36d) 锁已被占用时 run 绝不执行 fn（不改动任何数据） */
+    lock.acquire();
+    let ran = false;
+    const r4 = await guard.run(async () => { ran = true; });
+    ok('36d 锁被占用 → started=false 且 fn 不执行', r4.started === false && ran === false);
+    lock.release();
+
+    /* 36e) 与手动入口共用同一把锁：模拟"恢复持锁期间 downloadAndApply 取锁"必须失败 */
+    const p5 = guard.run(async () => { await new Promise(r => setTimeout(r, 5)); });
+    const manualAcquire = lock.acquire();
+    await p5;
+    ok('36e 恢复持锁期间手动安装入口取锁失败（与下载/恢复/待生效共用锁）', manualAcquire === false && lock.acquire() === true);
+    lock.release();
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');

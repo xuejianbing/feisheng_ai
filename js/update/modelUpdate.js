@@ -37,7 +37,7 @@ import {
 import { applyOfficialBundle, snapshotToParams, detectUserModel, recoverInterruptedTransaction as recoverTx } from './applyWeights.js?v=41a';
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
-    createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
+    createTransactionLock, createRecoveryGuard, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord,
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
     generateTxId, classifyInterruptedTx, reauthorizeRecord, rollbackStatusText,
@@ -536,36 +536,47 @@ const _finishPendingTx = r => {
 /* 事务结果如实告知：一律引用 updateCore.rollbackStatusText（三态与返回值一致，
  * 绝不用文案掩盖错误的状态；partial = 模型已回滚但官方记录未恢复）。 */
 
-/* ---------- 崩溃恢复（P0-1） ----------
+/* ---------- 崩溃恢复（P0-1 / 并发保护） ----------
  * 恢复逻辑在 applyWeights.recoverInterruptedTransaction（依赖注入，可在 Node 侧直接测试），
  * 这里注入宿主侧依赖：存储 + 模型 bridge + **官方记录读写能力**
  * （恢复需要核对/修复官方记录实际内容，而不是只看日志阶段）。
+ * ★ 并发保护（P1 补丁）：恢复**全程持有统一事务锁**（与手动安装/手动恢复/待生效应用同一把锁），
+ *   并在恢复期间置 recovering 标志——两者任意一项即拒绝新的模型修改操作，
+ *   杜绝"启动恢复读取旧事务数据的同时新安装覆盖暂存/日志"的竞态窗口。
  * 返回 { action, reason }；action='manual' 时调用方必须阻止继续安装。 */
 let _txManualBlocked = false;
 export const recoverInterruptedTransaction = async () => {
-    const plan = await recoverTx({
-        storageOps,
-        getBridge: buildBridge,
-        contract: await getContract(),
-        /* ★ P1-3：读取异常必须可区分于"记录不存在"（抛异常 → 恢复判定为"不可读" → 保守人工处理） */
-        readRecord: readOfficialRecordStrict,
-        writeRecord: rec => writeJSON(OFFICIAL_KEY, rec),
-        removeRecord: () => removeKey(OFFICIAL_KEY),
-        verifyRecord: verifyOfficialRecord,
-        onStep: m => _log(m, true),
+    const out = await _recoveryGuard.run(async () => {
+        const plan = await recoverTx({
+            storageOps,
+            getBridge: buildBridge,
+            contract: await getContract(),
+            /* ★ P1-3：读取异常必须可区分于"记录不存在"（抛异常 → 恢复判定为"不可读" → 保守人工处理） */
+            readRecord: readOfficialRecordStrict,
+            writeRecord: rec => writeJSON(OFFICIAL_KEY, rec),
+            removeRecord: () => removeKey(OFFICIAL_KEY),
+            verifyRecord: verifyOfficialRecord,
+            onStep: m => _log(m, true),
+        });
+        if (plan && (plan.action === 'manual' || plan.manual === true)) {
+            _txManualBlocked = true;
+            _log('检测到未完成且无法自动恢复的安装事务：' + (plan.reason || '') + '（已保留恢复数据，暂停自动安装）', true);
+        } else if (plan) {
+            _txManualBlocked = false;
+        }
+        return plan;
     });
-    if (plan && (plan.action === 'manual' || plan.manual === true)) {
-        _txManualBlocked = true;
-        _log('检测到未完成且无法自动恢复的安装事务：' + (plan.reason || '') + '（已保留恢复数据，暂停自动安装）', true);
-    } else if (plan) {
-        _txManualBlocked = false;
+    if (!out.started) {
+        /* 已有事务在运行（极少数启动竞态）：不改动任何数据，保留日志供下次启动恢复 */
+        _log('启动恢复被跳过：已有更新任务正在运行（事务数据保留）', true);
+        return { action: 'busy', ok: false, reason: '已有更新任务正在运行' };
     }
-    return plan;
+    return out.value;
 };
 
-/* 是否因未完成事务而暂停安装（人工处理标记有内存缓存 + 持久日志双保险） */
+/* 是否因未完成事务而暂停安装（人工标记内存缓存 + 持久日志双保险；恢复进行中一律暂停） */
 const _txBlocked = () => {
-    if (_txManualBlocked) return true;
+    if (_recoveryGuard.blocked() || _txManualBlocked) return true;
     const plan = classifyInterruptedTx(storageOps.readTx());
     return plan.action === 'manual';
 };
@@ -599,8 +610,10 @@ const storageOps = {
 };
 
 /* ★ P1-1：统一事务锁——下载安装 / 待生效应用 / 恢复备份 共用，
- * 同一时刻只允许一个修改主模型的更新事务。 */
+ * 同一时刻只允许一个"修改主模型"的更新事务。
+ * ★ P1 补丁：崩溃恢复同样受此锁约束（见 createRecoveryGuard 的使用）。 */
 const _tx = createTransactionLock();
+const _recoveryGuard = createRecoveryGuard(_tx);
 const _acquireTx = () => _tx.acquire();
 const _releaseTx = () => _tx.release();
 
@@ -979,7 +992,8 @@ export const installModelUpdate = () => {
                 if (_disposed || _ensureBus() || ++n > 20) { if (_busTimer) clearInterval(_busTimer); _busTimer = null; }
             }, 1000);
         }
-        /* 启动时：先按事务日志恢复未完成的安装事务，再尝试应用待生效权重，最后按 6 小时节流静默检查 */
+        /* 启动时：先按事务日志恢复未完成的安装事务（**恢复全程持统一事务锁**，
+         * 期间新的安装/恢复/待生效应用一律被拒绝），再尝试应用待生效权重，最后按 6 小时节流静默检查 */
         if (readPending()) _startPendingWatch();
         const ts = parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0;
         recoverInterruptedTransaction().catch(_swallow).then(() => {
