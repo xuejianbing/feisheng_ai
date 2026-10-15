@@ -31,7 +31,7 @@ import { game, _status } from '../../score/foundation/adapt/host.js?v=41a';
 import { DEFAULT_WEIGHTS } from '../../score/model/weights/defaultWeights.js?v=41a';
 import {
     MODEL_PROTOCOL, MODEL_ID, MODEL_MANIFEST_URL, BUILTIN_RELEASE_SEQ,
-    normalizeReleaseSeq, isNewerRelease, satisfiesExtensionRange,
+    normalizeReleaseSeq, classifyManifestState,
     decodeBase64, paramSpec, paramsDigest, validateBundle,
 } from './weightBundle.js?v=41a';
 import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyWeights.js?v=41a';
@@ -325,42 +325,14 @@ export const checkModelUpdate = async opt => {
         return result;
     }
 
-    if (typeof manifest !== 'object' || manifest.protocol !== MODEL_PROTOCOL
-        || manifest.modelId !== MODEL_ID || !manifest.latest || typeof manifest.latest !== 'object') {
-        const result = { state: 'unsupported', local, integrity, hasUserModel, message: '协议未启用或清单格式不符' };
-        _report(result, manual);
-        return result;
-    }
-
-    const latest = manifest.latest;
-    if (typeof latest.modelVersion !== 'string' || !Number.isFinite(Number(latest.releaseSeq))
-        || typeof latest.url !== 'string' || !latest.url) {
-        const result = { state: 'invalid', local, latest, integrity, hasUserModel, message: '缺少 modelVersion / releaseSeq / url' };
-        _report(result, manual);
-        return result;
-    }
-
-    if (!satisfiesExtensionRange(VERSION, latest.requiresExtension)) {
-        const result = { state: 'needsExtensionUpdate', local, latest, integrity, hasUserModel };
-        _report(result, true);
-        return result;
-    }
-
-    /* 损坏且服务器已提供同版本包 → 优先修复提示 */
-    if (integrity.state === 'broken' && normalizeReleaseSeq(latest.releaseSeq) <= local.releaseSeq) {
-        const result = { state: 'broken', local, latest, integrity, hasUserModel };
-        _report(result, true);
-        return result;
-    }
-
-    if (isNewerRelease(latest.releaseSeq, local.releaseSeq)) {
-        const result = { state: 'available', local, latest, integrity, hasUserModel };
-        _report(result, true);
-        return result;
-    }
-
-    const result = { state: 'latest', local, latest, integrity, hasUserModel };
-    _report(result, manual);
+    /* 状态判定走纯函数（weightBundle.classifyManifestState），与自动化测试同一口径 */
+    const cls = classifyManifestState({
+        manifest, localSeq: local.releaseSeq, extensionVersion: VERSION, integrityState: integrity.state,
+    });
+    const result = { state: cls.state, local, latest: cls.latest, integrity, hasUserModel, message: cls.message };
+    /* available / broken / needsExtensionUpdate 有可操作项 → 自动检查也要提示；latest 等仅在手动检查时提示 */
+    const actionable = (cls.state === 'available' || cls.state === 'broken' || cls.state === 'needsExtensionUpdate');
+    _report(result, manual || actionable);
     return result;
 };
 
