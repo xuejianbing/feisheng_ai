@@ -25,6 +25,10 @@ import {
     compareVersion, isNewerRelease, satisfiesExtensionRange, normalizeReleaseSeq, classifyManifestState,
 } from '../js/update/weightBundle.js';
 import { applyOfficialBundle, detectUserModel, snapshotToParams, buildAppliedSnapshot } from '../js/update/applyWeights.js';
+import {
+    buildBackupRecord, verifyBackupRecord, verifyRestoreSource, buildPendingRecord, evaluatePending,
+    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
+} from '../js/update/updateCore.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
 
 const DIMS = [134, 128, 64, 6];
@@ -233,16 +237,17 @@ const rst = (name, cond, extra) => ok(name, cond, extra);
     rst('失败原因包含存档校验', (r.errors || []).some(e => e.includes('存档')), JSON.stringify(r.errors));
 }
 
-/* 6c) 无持久化存储（读回拿不到存档）→ 拒绝并回滚，不谎报成功 */
+/* 6c) 备份写入失败（返回 false）→ 更新前即中止，绝不替换模型（P0-1） */
 {
     const bridge = makeFakeWeights({ initialParams: defaultParams });
     const badStorage = { readArchive: () => null, writeBackup: () => false, readBackup: () => null };
     const bundle = mkBundle();
     const res = validateBundle(bundle, EXPECT);
     const r = await applyOfficialBundle({ bridge, storageOps: badStorage, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH });
-    rst('无持久化 → 拒绝应用', r.ok === false, JSON.stringify(r.errors));
-    rst('无持久化 → 已回滚', r.rolledBack === true, JSON.stringify(r.errors));
-    rst('无持久化 → 在线恢复为旧模型', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === paramsDigest(defaultParams, DIMS));
+    rst('备份写入 false → 拒绝应用', r.ok === false, JSON.stringify(r.errors));
+    rst('备份写入 false → 在备份阶段中止', r.failedAt === 'backup', JSON.stringify(r));
+    rst('备份写入 false → 模型完全未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === paramsDigest(defaultParams, DIMS));
+    rst('备份写入 false → 不谎报已备份', r.backupWritten === false);
 }
 
 /* 6d) 探针标签不符 → 拒绝并回滚 */
@@ -318,6 +323,159 @@ ok('内置默认权重结构版本 = 运行时 v' + SCHEMA, DEFAULT_WEIGHTS.v ==
 ok('内置默认权重维度 = 运行时 dims', JSON.stringify(DEFAULT_WEIGHTS.dims) === JSON.stringify(DIMS));
 ok('内置默认权重 ready = true（离线开箱可用）', DEFAULT_WEIGHTS.ready === true);
 ok('已知既有不一致：内置 dv=4 < DATA_EPOCH=5（走 _decodeDefault 不受影响，未修改）', Number(DEFAULT_WEIGHTS.dv) < EPOCH, DEFAULT_WEIGHTS.dv);
+
+/* ---------- 10. 备份安全（P0-1） ---------- */
+section('备份安全（P0-1）');
+/* 全功能假存储：可注入写入失败 / 读回失败 / 写入后损坏 */
+const mkStorageFull = (bridge, opt) => {
+    opt = opt || {};
+    const st = { backup: null, writes: 0, reads: 0 };
+    return {
+        st,
+        readArchive() { return opt.archiveNull ? null : (bridge.state.corrupt || bridge.state.archive); },
+        writeBackup(rec) {
+            st.writes++;
+            if (opt.writeThrow) throw new Error('QuotaExceededError');
+            if (opt.writeFalse) return false;
+            st.backup = JSON.parse(JSON.stringify(rec));
+            if (opt.corruptBackup) { const b = decodeBase64(st.backup.params.w1); b[0] = (b[0] + 1) & 0xff; st.backup.params.w1 = encodeBase64(b); }
+            return true;
+        },
+        readBackup() { st.reads++; if (opt.readBackupNull) return null; return st.backup; },
+    };
+};
+
+/* 10a) 备份写入抛异常 → 中止且模型未变 */
+{
+    const bridge = makeFakeWeights({ initialParams: defaultParams });
+    const storageOps = mkStorageFull(bridge, { writeThrow: true });
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+    ok('备份抛异常 → 拒绝应用', r.ok === false, JSON.stringify(r.errors));
+    ok('备份抛异常 → 在备份阶段中止', r.failedAt === 'backup');
+    ok('备份抛异常 → 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === paramsDigest(defaultParams, DIMS));
+    ok('备份抛异常 → 不谎报已备份', r.backupWritten === false);
+}
+/* 10b) 备份写入成功但读回失败 → 拒绝 */
+{
+    const bridge = makeFakeWeights({ initialParams: defaultParams });
+    const storageOps = mkStorageFull(bridge, { readBackupNull: true });
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+    ok('备份读回失败 → 拒绝应用', r.ok === false && r.failedAt === 'backup', JSON.stringify(r.errors));
+    ok('备份读回失败 → 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === paramsDigest(defaultParams, DIMS));
+}
+/* 10c) 备份写入后内容损坏（读回与期望不一致）→ 拒绝 */
+{
+    const bridge = makeFakeWeights({ initialParams: defaultParams });
+    const storageOps = mkStorageFull(bridge, { corruptBackup: true });
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+    ok('备份读回内容损坏 → 拒绝应用', r.ok === false && r.failedAt === 'backup', JSON.stringify(r.errors));
+    ok('备份损坏 → 错误信息指出不一致', (r.errors || []).some(e => /不一致|摘要/.test(e)), JSON.stringify(r.errors));
+    ok('备份损坏 → 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === paramsDigest(defaultParams, DIMS));
+}
+/* 10d) 备份记录自描述、如实标注恢复范围 */
+{
+    const rec = buildBackupRecord({ params: defaultParams, meta: { trained: 111 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+    ok('备份记录含结构版本/维度/摘要', rec.schemaVersion === SCHEMA && !!rec.digest && rec.dims.join(',') === DIMS.join(','), JSON.stringify({ v: rec.schemaVersion, d: rec.digest }));
+    ok('备份记录 kind = ' + BACKUP_KIND_PARAMS, rec.kind === BACKUP_KIND_PARAMS);
+    ok('备份记录如实标注不含优化器状态', rec.hasOptimizerState === false);
+    ok('备份记录 version = ' + BACKUP_RECORD_VERSION, rec.version === BACKUP_RECORD_VERSION);
+    ok('备份读回校验：一致 → 无错误', verifyBackupRecord(rec, rec, DIMS).length === 0);
+    ok('备份读回校验：摘要被改 → 报错', verifyBackupRecord(Object.assign({}, rec, { digest: '0'.repeat(64) }), rec, DIMS).length > 0);
+    const recTampered = Object.assign({}, rec, { params: Object.assign({}, rec.params) });
+    { const b = decodeBase64(recTampered.params.w1); b[0] = (b[0] + 1) & 0xff; recTampered.params.w1 = encodeBase64(b); }
+    ok('备份读回校验：参数被改 → 报错', verifyBackupRecord(recTampered, rec, DIMS).length > 0);
+}
+/* 10e) 安装成功后：备份内容 = 更新前模型 */
+{
+    const bridge = makeFakeWeights({ initialParams: defaultParams });
+    const storageOps = mkStorageFull(bridge);
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+    ok('安装成功', r.ok === true, JSON.stringify(r.errors));
+    ok('返回 backupWritten=true', r.backupWritten === true);
+    ok('备份内容 = 更新前模型', paramsDigest(storageOps.st.backup.params, DIMS) === paramsDigest(defaultParams, DIMS));
+    ok('备份摘要字段与内容一致', storageOps.st.backup.digest === paramsDigest(defaultParams, DIMS));
+    ok('备份保存了原模型元数据', storageOps.st.backup.meta && storageOps.st.backup.meta.trained === 111);
+}
+
+/* ---------- 11. 恢复事务（P0-2） ---------- */
+section('恢复事务（P0-2）');
+const userParams = {};
+for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[7] = (b[7] + 9) & 0xff; userParams[s.key] = encodeBase64(b); }
+const userDigest = paramsDigest(userParams, DIMS);
+{
+    /* 用户模型 A → 官方模型 B → 恢复 A */
+    const bridge = makeFakeWeights({ initialParams: userParams });
+    const storageOps = mkStorageFull(bridge);
+    const bundle = mkBundle(); const res = validateBundle(bundle, EXPECT);
+    const r1 = await applyOfficialBundle({ bridge, storageOps, bundle, decoded: res.decoded, dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA });
+    ok('A→B 安装成功', r1.ok === true, JSON.stringify(r1.errors));
+    ok('安装后备份 = 用户模型 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+    ok('安装后在线 = 官方 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    const backupAfterInstall = JSON.parse(JSON.stringify(storageOps.st.backup));
+    ok('恢复源校验通过', verifyRestoreSource(backupAfterInstall, DIMS, SCHEMA).length === 0, JSON.stringify(verifyRestoreSource(backupAfterInstall, DIMS, SCHEMA)));
+    const writesBefore = storageOps.st.writes;
+    const bundleLike = { params: backupAfterInstall.params, trained: 111, accuracy: 0.4, size: 0 };
+    const r2 = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded: buildTyped(backupAfterInstall.params), dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore' });
+    ok('恢复 A 成功', r2.ok === true, JSON.stringify(r2.errors));
+    ok('恢复后在线 = A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    ok('恢复不写备份（writeBackup 未被调用）', storageOps.st.writes === writesBefore, storageOps.st.writes);
+    ok('恢复返回 backupWritten=false', r2.backupWritten === false);
+    ok('恢复后原备份 A 依然存在（未被自我覆盖）', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+    /* 反复恢复：仍成功且备份不变 */
+    const r3 = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded: buildTyped(backupAfterInstall.params), dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore' });
+    ok('重复恢复仍成功', r3.ok === true, JSON.stringify(r3.errors));
+    ok('重复恢复后备份仍为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+    ok('重复恢复后在线仍为 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+}
+/* 恢复中途失败 → 原备份保留，当前模型回到恢复前 */
+{
+    const bridge = makeFakeWeights({ initialParams: officialParams, corruptFirstSave: true });
+    const storageOps = mkStorageFull(bridge);
+    storageOps.st.backup = buildBackupRecord({ params: userParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+    const before = JSON.stringify(storageOps.st.backup);
+    const bundleLike = { params: userParams, trained: 1, accuracy: 0, size: 0 };
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded: buildTyped(userParams), dims: DIMS, probe: null, runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore' });
+    ok('恢复落盘损坏 → 判定失败', r.ok === false, JSON.stringify(r.errors));
+    ok('恢复失败 → 已回滚', r.rolledBack === true, JSON.stringify(r.errors));
+    ok('恢复失败 → 当前模型回到 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    ok('恢复失败 → 原备份 A 未被修改', JSON.stringify(storageOps.st.backup) === before);
+    ok('恢复失败 → 未写入备份', storageOps.st.writes === 0);
+}
+/* 恢复源不兼容 → 拒绝且不动备份 */
+{
+    ok('旧结构版本备份 → 拒绝恢复', verifyRestoreSource(buildBackupRecord({ params: defaultParams, dims: DIMS, schemaVersion: 6 }), DIMS, SCHEMA).some(e => e.includes('不兼容')));
+    ok('维度不符备份 → 拒绝恢复', verifyRestoreSource(buildBackupRecord({ params: defaultParams, dims: [130, 128, 64, 6], schemaVersion: SCHEMA }), DIMS, SCHEMA).some(e => e.includes('维度')));
+    ok('参数缺失备份 → 拒绝恢复', verifyRestoreSource({ params: { w1: 'AA==' }, dims: DIMS, schemaVersion: SCHEMA }, DIMS, SCHEMA).length > 0);
+    ok('摘要不符备份 → 拒绝恢复', verifyRestoreSource(Object.assign(buildBackupRecord({ params: defaultParams, dims: DIMS, schemaVersion: SCHEMA }), { digest: '0'.repeat(64) }), DIMS, SCHEMA).some(e => e.includes('摘要')));
+}
+
+/* ---------- 12. 待生效判定（P0-3） ---------- */
+section('待生效判定（P0-3）');
+const contract = { schemaVersion: SCHEMA, featureDim: DIMS[0], dims: DIMS.slice(), dataEpoch: EPOCH };
+const baseDigest = paramsDigest(defaultParams, DIMS);
+const thirdParams = {};
+for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[9] = (b[9] + 5) & 0xff; thirdParams[s.key] = encodeBase64(b); }
+const thirdDigest = paramsDigest(thirdParams, DIMS);
+const rec0 = buildPendingRecord({ latest: { modelVersion: 'w7d5-t01' }, bundle: mkBundle(), baseModelDigest: baseDigest, userAuthorized: true, reason: '对局进行中', contract });
+const ev = (pending, currentDigest, officialRec, gate) => evaluatePending({ pending, contract, currentDigest, officialRec, gate: gate || { ok: true } }).action;
+ok('待生效记录含版本/摘要/授权状态', rec0.version === PENDING_RECORD_VERSION && rec0.baseModelDigest === baseDigest && rec0.targetDigest === officialDigest && rec0.userAuthorized === true && rec0.releaseSeq === 1);
+ok('基线一致且空闲 → apply', ev(rec0, baseDigest, null) === 'apply');
+ok('当前模型已变化 → reprompt（不静默覆盖）', ev(rec0, userDigest, null) === 'reprompt');
+ok('对局中 → wait', ev(rec0, baseDigest, null, { ok: false, reason: '对局进行中' }) === 'wait');
+ok('已安装同版本 → drop', ev(rec0, baseDigest, { releaseSeq: 1, modelVersion: 'w7d5-t01', sha256: officialDigest }) === 'drop');
+ok('被更新版本取代 → drop', ev(rec0, baseDigest, { releaseSeq: 2 }) === 'drop');
+ok('目标已生效 → drop', ev(rec0, officialDigest, null) === 'drop');
+ok('结构版本不符 → drop', ev(buildPendingRecord({ bundle: mkBundle(b => { b.schemaVersion = 6; }), baseModelDigest: baseDigest, contract }), baseDigest, null) === 'drop');
+ok('数据纪元过旧 → drop', ev(buildPendingRecord({ bundle: mkBundle(b => { b.dataEpoch = 4; }), baseModelDigest: baseDigest, contract }), baseDigest, null) === 'drop');
+ok('缺少基线摘要 → reprompt（保守）', ev(buildPendingRecord({ bundle: mkBundle(), baseModelDigest: null, contract }), baseDigest, null) === 'reprompt');
+ok('当前摘要不可读 → reprompt（保守）', ev(rec0, null, null) === 'reprompt');
+ok('旧格式 v1 记录 → drop', ev({ version: 1, bundle: mkBundle() }, baseDigest, null) === 'drop');
+ok('重启后摘要变化 → reprompt（同一套检查）', ev(rec0, thirdDigest, null) === 'reprompt');
+ok('用户已明确授权且模型未变 → apply', ev(rec0, baseDigest, null, { ok: true }) === 'apply');
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');
 process.exit(fail === 0 ? 0 : 1);

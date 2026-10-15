@@ -35,6 +35,9 @@ import {
     decodeBase64, paramSpec, paramsDigest, validateBundle,
 } from './weightBundle.js?v=41a';
 import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyWeights.js?v=41a';
+import {
+    buildPendingRecord, evaluatePending, verifyRestoreSource,
+} from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
 const CHECK_TS_KEY = 'djsc_update_check_ts';
@@ -421,7 +424,7 @@ export const downloadAndApply = async opt => {
             const choice = await styledDialog({
                 title: '检测到本地训练模型',
                 message: '你当前生效的模型是你自己训练得到的，不是官方权重。\n\n'
-                    + '· 「备份并切换」：先把当前模型完整备份到本地（可在控制台用 __DJSC.modelUpdate.restoreBackup() 还原），再切换为官方权重\n'
+                    + '· 「备份并切换」：先把当前模型参数完整备份到本地（仅含模型参数与元数据，不含 AdamW 动量/时间步；可在控制台用 __DJSC.modelUpdate.restoreBackup() 还原），再切换为官方权重\n'
                     + '· 训练样本、候选记录、历史统计不会被清空或改动\n'
                     + '· 「保留本地模型」：本次不安装，你的模型继续生效',
                 buttons: [
@@ -432,16 +435,24 @@ export const downloadAndApply = async opt => {
             if (choice !== 'apply') return { ok: false, err: 'user kept local model' };
         }
 
+        const preserveUserModel = !!(det.known && det.isUserModel);
+        const baseModelDigest = active ? paramsDigest(active, contract.dims) : null;
+
         const gate = await canApplyNow();
         if (!gate.ok) {
-            /* 延迟到下一局结束 / 下次启动生效，绝不在对局或训练中替换权重 */
-            const stored = writeJSON(PENDING_KEY, { latest: opt.latest, bundle, savedAt: Date.now(), reason: gate.reason });
+            /* 延迟到下一局结束 / 下次启动生效，绝不在对局或训练中替换权重。
+             * ★ P0-3：记录授权时的基线模型摘要，实际生效前必须重新核对当前模型是否已变化。 */
+            const pendingRec = buildPendingRecord({
+                latest: opt.latest, bundle, baseModelDigest, userAuthorized: true,
+                reason: gate.reason, savedAt: Date.now(), contract,
+            });
+            const stored = writeJSON(PENDING_KEY, pendingRec);
             prog.close();
             if (!stored) {
                 await styledDialog({ title: '无法保存待生效权重', message: '设备持久化存储不可用，本次更新未应用（现有模型不受影响）。' });
                 return { ok: false, err: 'storage unavailable for pending' };
             }
-            await styledDialog({ title: '已下载，稍后生效', message: '当前' + gate.reason + '。\n\n为避免中途替换模型，权重将在本局结束后或下次启动时自动生效。' });
+            await styledDialog({ title: '已下载，稍后生效', message: '当前' + gate.reason + '。\n\n为避免中途替换模型，权重将在本局结束后或下次启动时自动生效。\n\n（若在此期间你又训练出新的模型，生效前会再次询问，绝不静默覆盖）' });
             return { ok: true, deferred: true, reason: gate.reason };
         }
 
@@ -450,7 +461,9 @@ export const downloadAndApply = async opt => {
         if (!bridge) { prog.close(); await styledDialog({ title: '无法安装', message: '模型模块未就绪，本次更新未应用。' }); return { ok: false, err: 'bridge unavailable' }; }
         const r = await applyOfficialBundle({
             bridge, storageOps, bundle, decoded: res.decoded, dims: contract.dims,
-            probe: res.probe, runtimeEpoch: contract.dataEpoch,
+            probe: res.probe, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
+            mode: 'install', preserveUserModel,
+            confirmBeforeWrite: async () => (await canApplyNow()).ok,
             onStep: m => prog.update(m),
         });
         prog.close();
@@ -481,14 +494,38 @@ export const downloadAndApply = async opt => {
     }
 };
 
-/* 延迟应用（启动时 / 每局结束后调用）；任何失败都恢复旧模型 */
+/* 延迟应用（启动时 / 每局结束后调用）；任何失败都恢复旧模型。
+ * ★ P0-3：生效前重新核对"当前模型是否仍是授权时的模型"，绝不静默覆盖等待期间新产生的训练成果。 */
 export const tryApplyPending = async () => {
     const pending = readPending();
     if (!pending || !pending.bundle) return { ok: false, skipped: true };
-    const gate = await canApplyNow();
-    if (!gate.ok) return { ok: false, skipped: true, reason: gate.reason };
     const contract = await getContract();
     if (!contract) return { ok: false, skipped: true, reason: '契约不可用' };
+    const active = await activeParamsNow();
+    const currentDigest = active ? paramsDigest(active, contract.dims) : null;
+    const officialRec = readOfficialRecord();
+    const gate = await canApplyNow();
+    const decision = evaluatePending({ pending, contract, currentDigest, officialRec, gate });
+    if (decision.action === 'drop') {
+        removeKey(PENDING_KEY);
+        _log('待生效权重已安全跳过：' + decision.reason, true);
+        return { ok: false, skipped: true, reason: decision.reason };
+    }
+    if (decision.action === 'wait') return { ok: false, skipped: true, reason: decision.reason };
+    if (decision.action === 'reprompt') {
+        /* 当前模型与授权基线不一致 → 必须重新征得用户同意，不得静默覆盖 */
+        const choice = await styledDialog({
+            title: '待生效权重需要重新确认',
+            message: '你之前下载的模型权重已就绪，但这期间当前生效模型发生了变化：\n' + decision.reason + '。\n\n'
+                + '· 「保留当前模型」：放弃本次待生效权重，你当前的模型继续生效（推荐）\n'
+                + '· 「仍然安装」：用待生效的官方权重替换当前模型（更新前的模型会被备份保存）',
+            buttons: [
+                { label: '保留当前模型', value: 'keep', primary: true },
+                { label: '仍然安装', value: 'apply' },
+            ],
+        });
+        if (choice !== 'apply') { removeKey(PENDING_KEY); return { ok: false, err: 'user kept local model' }; }
+    }
     const res = validateBundle(pending.bundle, contract);
     if (!res.ok) {
         removeKey(PENDING_KEY);
@@ -497,30 +534,42 @@ export const tryApplyPending = async () => {
     }
     const bridge = await buildBridge();
     if (!bridge) return { ok: false, skipped: true, reason: '模型模块未就绪' };
+    const det = detectUserModel({ activeParams: active, defaultParams: defaultParams(), officialDigest: officialRec && officialRec.sha256, dims: contract.dims });
     const r = await applyOfficialBundle({
         bridge, storageOps, bundle: pending.bundle, decoded: res.decoded, dims: contract.dims,
-        probe: res.probe, runtimeEpoch: contract.dataEpoch,
+        probe: res.probe, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
+        mode: 'install', preserveUserModel: !!(det.known && det.isUserModel),
+        confirmBeforeWrite: async () => (await canApplyNow()).ok,
     });
-    removeKey(PENDING_KEY);
     if (r.ok) {
         writeOfficialRecord(pending.bundle, r.digest, r.size, contract);
+        removeKey(PENDING_KEY);
         await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion });
     } else {
+        removeKey(PENDING_KEY);
         await styledDialog({ title: '权重应用失败', message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
     }
     return r;
 };
 
-/* 还原更新前的模型（用户本地训练成果备份） */
+/* 还原更新前的模型（用户本地训练成果备份）
+ * ★ P0-2：恢复是独立事务（mode='restore'），绝不写入/覆盖原备份；失败时原备份保持不动。 */
 export const restoreBackup = async () => {
     const rec = storageOps.readBackup();
     if (!rec || !rec.params) { styledDialog({ title: '没有可还原的备份', message: '未找到更新前的模型备份。' }); return { ok: false, err: 'no backup' }; }
     const contract = await getContract();
     const bridge = await buildBridge();
     if (!contract || !bridge) { styledDialog({ title: '无法还原', message: '模型模块未就绪。' }); return { ok: false, err: 'not ready' }; }
+    /* ★ P0-2：恢复前验证备份的参数、结构、摘要与版本兼容性 */
+    const srcErrs = verifyRestoreSource(rec, contract.dims, contract.schemaVersion);
+    if (srcErrs.length) {
+        await styledDialog({ title: '备份不可用', message: '更新前的模型备份无法安全还原：\n' + srcErrs.join('\n') + '\n\n原备份已保留、未被修改。' });
+        return { ok: false, err: 'backup invalid', errors: srcErrs };
+    }
     const need = await styledDialog({
         title: '还原更新前的模型',
-        message: '将把当前模型替换为更新前的备份（' + new Date(rec.savedAt || Date.now()).toLocaleString() + '）。\n\n训练样本与统计不受影响。',
+        message: '将把当前模型替换为更新前的备份（' + new Date(rec.savedAt || Date.now()).toLocaleString() + '）。\n\n'
+            + '· 训练样本与统计不受影响\n· 还原后原备份仍会保留，可反复还原',
         buttons: [{ label: '确认还原', value: 'go', primary: true }, { label: '取消', value: 'no' }],
     });
     if (need !== 'go') return { ok: false, err: 'cancelled' };
@@ -536,13 +585,18 @@ export const restoreBackup = async () => {
         if (!bytes || bytes.byteLength !== needB) { styledDialog({ title: '备份已损坏', message: '备份参数 ' + s.key + ' 不完整，无法还原。' }); return { ok: false, err: 'backup corrupt' }; }
         decoded[s.key] = s.kind === 'int16' ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })() : Int8Array.from(bytes);
     }
-    const r = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null, runtimeEpoch: contract.dataEpoch });
+    const r = await applyOfficialBundle({
+        bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null,
+        runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
+        mode: 'restore', preserveUserModel: true,
+        confirmBeforeWrite: async () => (await canApplyNow()).ok,
+    });
     if (r.ok) {
+        /* 只有恢复成功后才清除官方记录；原备份保留（支持反复恢复，绝不自我覆盖） */
         removeKey(OFFICIAL_KEY);
-        removeKey(BACKUP_KEY);
-        await styledDialog({ title: '已还原', message: '已恢复更新前的模型（官方权重记录已清除）。' });
+        await styledDialog({ title: '已还原', message: '已恢复更新前的模型（官方权重记录已清除，原备份仍保留）。' });
     } else {
-        await styledDialog({ title: '还原失败', message: '已' + (r.rolledBack ? '回滚' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
+        await styledDialog({ title: '还原失败', message: '已' + (r.rolledBack ? '回滚到当前模型' : '尝试回滚') + '，原备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n') });
     }
     return r;
 };
