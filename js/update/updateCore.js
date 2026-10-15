@@ -213,6 +213,11 @@ export const evaluatePending = opt => {
     if (currentDigest && pending.targetDigest && String(currentDigest).toLowerCase() === pending.targetDigest) {
         return { action: 'drop', reason: '该权重已生效' };
     }
+    /* ★ P2：用户授权必须被强制校验——缺失 / 非布尔 true / 字符串 'true' 均不算授权，
+     *   绝不允许未经授权的待生效任务自动应用（需重新征询用户）。 */
+    if (pending.userAuthorized !== true) {
+        return { action: 'reprompt', reason: '该待生效任务缺少有效的用户授权，需重新确认后才能应用' };
+    }
     if (gate && gate.ok === false) return { action: 'wait', reason: gate.reason || '当前不可应用' };
     /* 关键：当前模型与授权基线不一致 → 不得静默覆盖，必须重新征得同意 */
     if (!pending.baseModelDigest) return { action: 'reprompt', reason: '无法确认授权时的模型基线' };
