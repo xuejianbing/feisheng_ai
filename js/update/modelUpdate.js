@@ -37,6 +37,7 @@ import {
 import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyWeights.js?v=41a';
 import {
     buildPendingRecord, evaluatePending, verifyRestoreSource,
+    createTransactionLock, evaluateApplyGate, buildOfficialRecord, verifyOfficialRecord, isOfficialRecordShape,
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
@@ -102,20 +103,46 @@ const activeParamsNow = async () => {
     return snapshotToParams(snap);
 };
 
-/* ---------- 对局状态：宁可延迟，绝不在对局/训练中替换权重 ---------- */
+/* 本地训练器解析：优先全局挂载（生产引擎），兜底动态导入同一实例。
+ * localTrainer 会原地改写共享主模型，是必须阻塞的独立训练状态源。 */
+let _ltFallback = null;
+const loadLocalTrainer = async () => {
+    try { const w = window.__DJSC; if (w && typeof w.isTraining === 'function') return { isTraining: w.isTraining }; } catch (e) {}
+    if (!_ltFallback) { try { _ltFallback = await import('../../score/model/train/localTrainer.js?v=41a'); } catch (e) { _ltFallback = null; } }
+    return _ltFallback;
+};
+
+/* ---------- 对局状态：宁可延迟，绝不在对局/训练中替换权重 ----------
+ * 事件可靠性：game:start / game:end 仅由插件广播在特定路径发布，
+ * 且 uninstallScoreEngine() 会 busClear() 清空全部订阅 —— 单靠事件总线不可靠。
+ * 因此采用三通道：① 宿主 game.on('gameOver')（与 engine/panel 同源的可靠局末）；
+ *              ② 事件总线（可重订阅、幂等，绝不重复订阅）；
+ *              ③ 待生效任务存在时的低频看门狗（兜底，任务消失即自停）。 */
 let _inGame = false, _inGameKnown = false, _busOk = false, _busTimer = null;
+let _busHandlers = null, _gameOverBound = false, _pendingWatcher = null, _disposed = false;
+const PENDING_WATCH_MS = 4000;
 const _readOver = () => { try { if (_status && _status.over === true) return true; } catch (e) {} return false; };
+
+const _onGameStart = () => { _inGame = true; _inGameKnown = true; };
+const _onGameEnd = () => {
+    _inGame = false; _inGameKnown = true;
+    /* ★ 局刚结束，此刻不在对局中 —— 延迟应用的默认时机 */
+    tryApplyPending().catch(_swallow);
+};
+
+/* 幂等订阅：先 off 再 on（bus.off 按引用删除）。
+ * 既能在被 busClear 清空后重新订阅，又保证同一处理器最多只订阅一次。 */
 const _ensureBus = () => {
-    if (_busOk) return true;
     try {
         const bus = window.__DJSC && window.__DJSC.eventBus;
         if (bus && typeof bus.on === 'function') {
-            bus.on('game:start', () => { _inGame = true; _inGameKnown = true; });
-            bus.on('game:end', () => {
-                _inGame = false; _inGameKnown = true;
-                /* ★ 下一局开始时应用：局刚结束，此刻不在对局中 —— 延迟应用的默认时机 */
-                tryApplyPending();
-            });
+            if (!_busHandlers) _busHandlers = { onStart: _onGameStart, onEnd: _onGameEnd };
+            if (typeof bus.off === 'function') {
+                try { bus.off('game:start', _busHandlers.onStart); } catch (e) {}
+                try { bus.off('game:end', _busHandlers.onEnd); } catch (e) {}
+            }
+            bus.on('game:start', _busHandlers.onStart);
+            bus.on('game:end', _busHandlers.onEnd);
             _busOk = true;
             return true;
         }
@@ -123,25 +150,56 @@ const _ensureBus = () => {
     return false;
 };
 
+/* 可靠兜底通道：直接订阅宿主 gameOver（不依赖事件总线）。
+ * 无法解除订阅（宿主未提供 off），故用 _disposed 守卫避免卸载后回调。 */
+const _bindGameOver = () => {
+    if (_gameOverBound) return true;
+    try {
+        if (game && typeof game.on === 'function') {
+            game.on('gameOver', function () { if (_disposed) return; _onGameEnd(); });
+            _gameOverBound = true;
+            return true;
+        }
+    } catch (e) { _swallow(e); }
+    return false;
+};
+
+const _startPendingWatch = () => {
+    if (_pendingWatcher || _disposed) return;
+    _pendingWatcher = setInterval(function () {
+        if (_disposed || !readPending()) { _stopPendingWatch(); return; }
+        tryApplyPending().catch(_swallow);
+    }, PENDING_WATCH_MS);
+};
+const _stopPendingWatch = () => { if (_pendingWatcher) { try { clearInterval(_pendingWatcher); } catch (e) {} _pendingWatcher = null; } };
+
+/* 状态闸门：模型状态机 + A/B 候选 + 真实训练器 + 对局状态，逐项检查。
+ * 未知/检查失败一律保守不放行（见 updateCore.evaluateApplyGate）。 */
 const canApplyNow = async () => {
     const ms = await loadModelState();
+    let modelState = null, modelStateKnown = false;
     if (ms && typeof ms.getState === 'function') {
-        let st = null;
-        try { st = ms.getState(); } catch (e) { st = null; }
-        if (st && st !== 'stable') return { ok: false, reason: '模型状态为 ' + st + '（训练或 A/B 试用进行中）' };
+        try { modelState = ms.getState(); modelStateKnown = true; } catch (e) { modelStateKnown = false; }
+    }
+    let hasCandidate = false;
+    if (ms && typeof ms.hotSwapStats === 'function') {
+        try { const s = ms.hotSwapStats(); hasCandidate = !!(s && s.hasCandidate); } catch (e) { _swallow(e); }
     }
     try {
         const hs = window.__DJSC && window.__DJSC.hotSwap;
-        if (hs && typeof hs.stats === 'function') {
-            const s = hs.stats();
-            if (s && s.hasCandidate) return { ok: false, reason: '存在未完成的 A/B 候选模型' };
-        }
+        if (hs && typeof hs.stats === 'function') { const s = hs.stats(); if (s && s.hasCandidate) hasCandidate = true; }
     } catch (e) { _swallow(e); }
-    if (_readOver()) return { ok: true };
-    if (_inGameKnown) return _inGame ? { ok: false, reason: '对局进行中' } : { ok: true };
-    /* 未知时保守判断：存在活动事件链即视为对局中 */
-    try { if (_status && _status.event) return { ok: false, reason: '对局进行中' }; } catch (e) {}
-    return { ok: true };
+    const lt = await loadLocalTrainer();
+    let isTraining = null, trainerKnown = false;
+    if (lt && typeof lt.isTraining === 'function') {
+        try { isTraining = lt.isTraining() === true; trainerKnown = true; } catch (e) { trainerKnown = false; }
+    }
+    let hasActiveEvent = false;
+    try { hasActiveEvent = !!(_status && _status.event); } catch (e) {}
+    return evaluateApplyGate({
+        modelState, modelStateKnown, isTraining, trainerKnown, hasCandidate,
+        over: _readOver(), inGame: _inGame, inGameKnown: _inGameKnown, hasActiveEvent,
+    });
 };
 
 /* ---------- 本地官方权重记录与完整性 ---------- */
@@ -363,18 +421,52 @@ const downloadBundle = async latest => {
 };
 
 /* ---------- 记录 / 应用 / 延迟 ---------- */
-const writeOfficialRecord = (bundle, digest, size, contract) => {
-    writeJSON(OFFICIAL_KEY, {
-        modelId: MODEL_ID,
-        modelVersion: bundle.modelVersion,
-        releaseSeq: normalizeReleaseSeq(bundle.releaseSeq),
-        schemaVersion: bundle.schemaVersion,
-        dataEpoch: contract.dataEpoch,
-        sha256: String(digest || bundle.sha256 || '').toLowerCase(),
-        size: Number(size) || Number(bundle.size) || 0,
-        appliedAt: Date.now(),
-        source: 'official-online',
+/* ★ P1-4：写入官方记录后必须读回核对；失败不报告完整成功。 */
+const writeOfficialRecordVerified = (bundle, digest, size, contract) => {
+    const want = buildOfficialRecord({ modelId: MODEL_ID, bundle, digest, size, contract });
+    if (!writeJSON(OFFICIAL_KEY, want)) return { ok: false, record: want, errors: ['官方权重记录写入失败（存储不可用或配额不足）'] };
+    const back = readOfficialRecord();
+    if (!back) return { ok: false, record: want, errors: ['官方权重记录读回失败或格式非法'] };
+    const errs = verifyOfficialRecord(back, want);
+    if (errs.length) return { ok: false, record: want, errors: errs };
+    return { ok: true, record: want, errors: [] };
+};
+/* 原样写回一条既有记录（用于回滚时恢复旧版本元数据） */
+const writeOfficialRecordRaw = rec => (rec ? writeJSON(OFFICIAL_KEY, rec) : removeKey(OFFICIAL_KEY));
+
+/* 备份记录 → 解码参数（供恢复与回滚复用） */
+const decodeBackupParams = (rec, dims) => {
+    if (!rec || !rec.params) return null;
+    const spec = paramSpec(dims);
+    const decoded = {};
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const bytes = decodeBase64(rec.params[s.key]);
+        const need = s.kind === 'int16' ? s.len * 2 : s.len;
+        if (!bytes || bytes.byteLength !== need) return null;
+        decoded[s.key] = s.kind === 'int16' ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })() : Int8Array.from(bytes);
+    }
+    return decoded;
+};
+
+/* ★ P1-4：权重已应用但版本记录未持久化 → 恢复旧权重与旧记录，保持一致状态。
+ * 复用备份（更新前模型）走独立恢复事务，绝不覆盖备份本身。 */
+const _rollbackToBackup = async (contract, prevRec) => {
+    const rec = storageOps.readBackup();
+    if (!rec || !rec.params) return { ok: false, err: 'no backup' };
+    const srcErrs = verifyRestoreSource(rec, contract.dims, contract.schemaVersion);
+    if (srcErrs.length) return { ok: false, err: 'backup invalid', errors: srcErrs };
+    const bridge = await buildBridge();
+    if (!bridge) return { ok: false, err: 'bridge unavailable' };
+    const decoded = decodeBackupParams(rec, contract.dims);
+    if (!decoded) return { ok: false, err: 'backup decode failed' };
+    const bundleLike = { params: rec.params, trained: (rec.meta && rec.meta.trained) || 0, accuracy: (rec.meta && rec.meta.accuracy) || 0, size: 0 };
+    const r = await applyOfficialBundle({
+        bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null,
+        runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion, mode: 'restore',
     });
+    if (r.ok) writeOfficialRecordRaw(prevRec);
+    return r;
 };
 
 const buildBridge = async () => {
@@ -396,20 +488,22 @@ const storageOps = {
     readBackup: () => readJSON(BACKUP_KEY),
 };
 
-/* 单次更新只允许一个任务：避免重复点击造成竞态 */
-let _busy = false;
+/* ★ P1-1：统一事务锁——下载安装 / 待生效应用 / 恢复备份 共用，
+ * 同一时刻只允许一个修改主模型的更新事务。 */
+const _tx = createTransactionLock();
+const _acquireTx = () => _tx.acquire();
+const _releaseTx = () => _tx.release();
 
 export const downloadAndApply = async opt => {
     opt = opt || {};
-    if (_busy) {
-        styledDialog({ title: '已有更新任务', message: '同一次更新只允许一个任务运行，请等待当前任务结束。' });
-        return { ok: false, err: 'busy' };
-    }
     if (!opt.latest) {
         styledDialog({ title: '无法安装', message: '请先「检查模型权重更新」获取最新版本信息后再安装。' });
         return { ok: false, err: 'no manifest entry' };
     }
-    _busy = true;
+    if (!_acquireTx()) {
+        styledDialog({ title: '已有更新任务', message: '同一时刻只允许一个模型更新任务运行，请等待当前任务结束。' });
+        return { ok: false, err: 'busy' };
+    }
     const prog = progressDialog('下载模型权重…');
     try {
         prog.update('下载并校验权重包…');
@@ -453,6 +547,7 @@ export const downloadAndApply = async opt => {
                 return { ok: false, err: 'storage unavailable for pending' };
             }
             await styledDialog({ title: '已下载，稍后生效', message: '当前' + gate.reason + '。\n\n为避免中途替换模型，权重将在本局结束后或下次启动时自动生效。\n\n（若在此期间你又训练出新的模型，生效前会再次询问，绝不静默覆盖）' });
+            _startPendingWatch();   /* ★ P1-3：待生效任务存在期间的兜底看门狗 */
             return { ok: true, deferred: true, reason: gate.reason };
         }
 
@@ -468,16 +563,29 @@ export const downloadAndApply = async opt => {
         });
         prog.close();
         if (r.ok) {
-            writeOfficialRecord(bundle, r.digest, r.size, contract);
+            /* ★ P1-4：权重与版本元数据同一事务——记录写入并读回核对成功后才算完成 */
+            const wr = writeOfficialRecordVerified(bundle, r.digest, r.size, contract);
+            if (wr.ok) {
+                removeKey(PENDING_KEY);
+                await styledDialog({
+                    title: '模型权重更新完成',
+                    message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
+                        + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
+                        + '· 版本记录已写入并读回核对通过\n'
+                        + '· 优化器状态已重置，后续本地训练从新权重继续\n'
+                        + '· 重启游戏后仍会加载该权重',
+                });
+                return { ok: true, applied: true, modelVersion: bundle.modelVersion };
+            }
+            /* 权重已应用但版本记录未持久化 → 回滚旧权重与旧记录，保持一致状态 */
+            const rb = await _rollbackToBackup(contract, rec);
             removeKey(PENDING_KEY);
             await styledDialog({
-                title: '模型权重更新完成',
-                message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
-                    + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
-                    + '· 优化器状态已重置，后续本地训练从新权重继续\n'
-                    + '· 重启游戏后仍会加载该权重',
+                title: '更新未完成',
+                message: '权重已下载校验通过，但版本记录未能持久化：\n' + (wr.errors || []).join('\n')
+                    + '\n\n已' + (rb.ok ? '回滚到更新前的模型与版本记录' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）') + '。',
             });
-            return { ok: true, applied: true, modelVersion: bundle.modelVersion };
+            return { ok: false, err: 'official record not persisted', errors: wr.errors, rolledBack: !!rb.ok };
         }
         await styledDialog({
             title: '安装未完成',
@@ -490,15 +598,25 @@ export const downloadAndApply = async opt => {
         await styledDialog({ title: '下载或安装失败', message: '原因：' + msg + '\n\n现有模型未受影响。' });
         return { ok: false, err: msg };
     } finally {
-        _busy = false;
+        _releaseTx();
     }
 };
 
 /* 延迟应用（启动时 / 每局结束后调用）；任何失败都恢复旧模型。
- * ★ P0-3：生效前重新核对"当前模型是否仍是授权时的模型"，绝不静默覆盖等待期间新产生的训练成果。 */
+ * ★ P0-3：生效前重新核对"当前模型是否仍是授权时的模型"，绝不静默覆盖等待期间新产生的训练成果。
+ * ★ P1-1：与下载安装 / 恢复备份共用同一事务锁，避免交叉覆盖。 */
 export const tryApplyPending = async () => {
     const pending = readPending();
     if (!pending || !pending.bundle) return { ok: false, skipped: true };
+    if (!_acquireTx()) return { ok: false, skipped: true, reason: 'busy' };
+    try {
+        return await _tryApplyPendingLocked(pending);
+    } finally {
+        _releaseTx();
+    }
+};
+
+const _tryApplyPendingLocked = async pending => {
     const contract = await getContract();
     if (!contract) return { ok: false, skipped: true, reason: '契约不可用' };
     const active = await activeParamsNow();
@@ -542,13 +660,27 @@ export const tryApplyPending = async () => {
         confirmBeforeWrite: async () => (await canApplyNow()).ok,
     });
     if (r.ok) {
-        writeOfficialRecord(pending.bundle, r.digest, r.size, contract);
+        /* ★ P1-4：版本记录写入并读回核对成功后才算完成；失败则回滚旧权重与旧记录 */
+        const wr = writeOfficialRecordVerified(pending.bundle, r.digest, r.size, contract);
+        if (wr.ok) {
+            removeKey(PENDING_KEY);
+            _stopPendingWatch();
+            await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion + '\n\n（版本记录已写入并读回核对通过）' });
+            return r;
+        }
+        const rb = await _rollbackToBackup(contract, officialRec);
         removeKey(PENDING_KEY);
-        await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion });
-    } else {
-        removeKey(PENDING_KEY);
-        await styledDialog({ title: '权重应用失败', message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
+        _stopPendingWatch();
+        await styledDialog({
+            title: '待生效权重未完成',
+            message: '权重已应用，但版本记录未能持久化：\n' + (wr.errors || []).join('\n')
+                + '\n\n已' + (rb.ok ? '回滚到更新前的模型与版本记录' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）') + '。',
+        });
+        return { ok: false, err: 'official record not persisted', errors: wr.errors, rolledBack: !!rb.ok };
     }
+    removeKey(PENDING_KEY);
+    _stopPendingWatch();
+    await styledDialog({ title: '权重应用失败', message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
     return r;
 };
 
@@ -557,6 +689,8 @@ export const tryApplyPending = async () => {
 export const restoreBackup = async () => {
     const rec = storageOps.readBackup();
     if (!rec || !rec.params) { styledDialog({ title: '没有可还原的备份', message: '未找到更新前的模型备份。' }); return { ok: false, err: 'no backup' }; }
+    if (!_acquireTx()) { styledDialog({ title: '已有更新任务', message: '同一时刻只允许一个模型更新任务运行，请稍后再试。' }); return { ok: false, err: 'busy' }; }
+    try {
     const contract = await getContract();
     const bridge = await buildBridge();
     if (!contract || !bridge) { styledDialog({ title: '无法还原', message: '模型模块未就绪。' }); return { ok: false, err: 'not ready' }; }
@@ -575,16 +709,9 @@ export const restoreBackup = async () => {
     if (need !== 'go') return { ok: false, err: 'cancelled' };
     const gate = await canApplyNow();
     if (!gate.ok) { styledDialog({ title: '暂时无法还原', message: '当前' + gate.reason + '，请稍后再试。' }); return { ok: false, err: gate.reason }; }
-    const spec = paramSpec(contract.dims);
     const bundleLike = { params: rec.params, trained: (rec.meta && rec.meta.trained) || 0, accuracy: (rec.meta && rec.meta.accuracy) || 0, size: 0 };
-    const decoded = {};
-    for (let i = 0; i < spec.length; i++) {
-        const s = spec[i];
-        const bytes = decodeBase64(rec.params[s.key]);
-        const needB = s.kind === 'int16' ? s.len * 2 : s.len;
-        if (!bytes || bytes.byteLength !== needB) { styledDialog({ title: '备份已损坏', message: '备份参数 ' + s.key + ' 不完整，无法还原。' }); return { ok: false, err: 'backup corrupt' }; }
-        decoded[s.key] = s.kind === 'int16' ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })() : Int8Array.from(bytes);
-    }
+    const decoded = decodeBackupParams(rec, contract.dims);
+    if (!decoded) { styledDialog({ title: '备份已损坏', message: '备份参数不完整，无法还原。' }); return { ok: false, err: 'backup corrupt' }; }
     const r = await applyOfficialBundle({
         bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null,
         runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
@@ -599,6 +726,7 @@ export const restoreBackup = async () => {
         await styledDialog({ title: '还原失败', message: '已' + (r.rolledBack ? '回滚到当前模型' : '尝试回滚') + '，原备份未被修改。\n\n原因：\n' + (r.errors || []).join('\n') });
     }
     return r;
+    } finally { _releaseTx(); }
 };
 
 export const modelUpdateStatus = () => ({
@@ -627,14 +755,17 @@ export const installModelUpdate = () => {
             hasBackup: hasBackup,
             readPending: readPending,
         };
-        /* 对局生命周期订阅（失败则重试若干次，保证"延迟应用"有可靠时机） */
+        /* 对局生命周期订阅：可靠通道 gameOver + 可重订阅的事件总线 */
+        _disposed = false;
+        _bindGameOver();
         if (!_ensureBus()) {
             let n = 0;
             _busTimer = setInterval(function () {
-                if (_ensureBus() || ++n > 20) { if (_busTimer) clearInterval(_busTimer); _busTimer = null; }
+                if (_disposed || _ensureBus() || ++n > 20) { if (_busTimer) clearInterval(_busTimer); _busTimer = null; }
             }, 1000);
         }
-        /* 启动时：先尝试应用待生效权重，再按 6 小时节流做一次静默检查 */
+        /* 启动时：先尝试应用待生效权重（若存在），再按 6 小时节流做一次静默检查 */
+        if (readPending()) _startPendingWatch();
         const ts = parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0;
         tryApplyPending().catch(_swallow).then(() => {
             if (Date.now() - ts > CHECK_INTERVAL_MS) checkModelUpdate({ manual: false }).catch(_swallow);
@@ -642,6 +773,21 @@ export const installModelUpdate = () => {
     } catch (e) {
         _log('装配失败：' + ((e && e.message) || e), true);
     }
+};
+
+/* 卸载：解除自身监听与定时器，绝不动其他模块的订阅 */
+export const uninstallModelUpdate = () => {
+    _disposed = true;
+    _stopPendingWatch();
+    if (_busTimer) { try { clearInterval(_busTimer); } catch (e) {} _busTimer = null; }
+    try {
+        const bus = window.__DJSC && window.__DJSC.eventBus;
+        if (bus && typeof bus.off === 'function' && _busHandlers) {
+            try { bus.off('game:start', _busHandlers.onStart); } catch (e) {}
+            try { bus.off('game:end', _busHandlers.onEnd); } catch (e) {}
+        }
+    } catch (e) { _swallow(e); }
+    _busOk = false;
 };
 
 export { MODEL_ID, MODEL_MANIFEST_URL };

@@ -36,6 +36,7 @@ import {
     BUNDLE_FORMAT, MODEL_ID, MODEL_PROTOCOL,
     paramSpec, PARAM_ORDER, decodeBase64, paramsSize, paramsDigest, validateBundle,
 } from '../js/update/weightBundle.js';
+import { evaluateExportCompatibility } from '../js/update/updateCore.js';
 
 const DEFAULT_DIMS = [134, 128, 64, 6];
 const DEFAULT_SCHEMA = 7;
@@ -106,12 +107,22 @@ for (const s of spec) {
 }
 info('输入权重齐备：10 项全部长度正确');
 
-/* ---------- 输入结构版本告警（不自动改写版本常量，只提示） ---------- */
-if (input.v !== undefined && input.v !== schemaVersion) {
-    info('⚠ 输入结构版本 v' + input.v + ' 与目标 schemaVersion ' + schemaVersion + ' 不一致；请确认这是同一网络结构的权重');
-}
-if (input.dv !== undefined && Number(input.dv) < dataEpoch) {
-    info('⚠ 输入数据纪元 dv=' + input.dv + ' < 目标纪元 ' + dataEpoch + '：客户端 loadWeights 会拒载 dv 过旧的存档，发布后不会生效');
+/* ---------- 兼容性硬校验（P1-5）：默认拒绝，绝不静默放行 ----------
+ * 判定逻辑与前端同源（js/update/updateCore.js 的 evaluateExportCompatibility），
+ * 便于自动化测试直接覆盖生产实现。 */
+const isFromDefault = !!args['from-default'];
+const allowEpochMigration = args['allow-epoch-migration'] === true || args['allow-epoch-migration'] === 'true';
+const migrationNote = (args['migration-note'] && args['migration-note'] !== true) ? String(args['migration-note']) : null;
+
+const compat = evaluateExportCompatibility({
+    inputV: input.v, inputDv: input.dv,
+    schemaVersion, dataEpoch,
+    isFromDefault, allowEpochMigration, migrationNote,
+});
+if (!compat.ok) die(compat.reason);
+const epochMigration = compat.epochMigration;
+if (epochMigration && epochMigration.from !== epochMigration.to) {
+    info('数据纪元迁移：dv=' + epochMigration.from + ' → ' + epochMigration.to + '（依据：' + epochMigration.reason + '）');
 }
 
 /* ---------- 必需元数据 ---------- */
@@ -139,6 +150,8 @@ const bundle = {
     dataEpoch,
     dtype: { weights: 'int8', biases: 'int16' },
     architecture: { activation: 'gelu', norm: 'layernorm', residual: true, critic: true },
+    /* 纪元迁移审计（无迁移时为 null）：记录输入 dv → 目标纪元及依据，便于事后追溯 */
+    epochMigration,
     params,
     trained: Number(input.trained || 0),
     accuracy: Number(input.accuracy || 0),

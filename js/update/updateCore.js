@@ -190,3 +190,111 @@ export const evaluatePending = opt => {
     }
     return { action: 'apply' };
 };
+
+/* ---------------- 事务锁（P1-1） ----------------
+ * 同一时刻只允许一个"修改主模型"的更新事务（下载安装 / 待生效应用 / 恢复备份）。
+ * 纯状态、无副作用，便于 Node 侧直接验证。 */
+export const createTransactionLock = () => {
+    let locked = false;
+    return {
+        acquire() { if (locked) return false; locked = true; return true; },
+        release() { locked = false; },
+        isLocked() { return locked; },
+    };
+};
+
+/* ---------------- 应用闸门（P1-2） ----------------
+ * 更新开始前与真正替换前都必须过这道闸门。
+ * 保守策略：无法确认模型状态 / 训练状态时一律不放过（不能默认允许覆盖）。
+ * 说明：专项模型（modeModelStore）使用独立存储与独立模型实例，不修改共享主模型，
+ *       故不在此阻塞；本地训练器（localTrainer）会原地改写共享主模型，必须阻塞。 */
+export const evaluateApplyGate = opt => {
+    const { modelState, modelStateKnown, isTraining, trainerKnown, hasCandidate,
+        inGame, inGameKnown, hasActiveEvent, over } = opt || {};
+    if (modelStateKnown === false) return { ok: false, reason: '无法确认模型状态，已保守跳过' };
+    if (modelState != null && modelState !== 'stable') return { ok: false, reason: '模型状态为 ' + modelState + '（训练或 A/B 试用进行中）' };
+    if (trainerKnown === false) return { ok: false, reason: '无法确认本地训练状态，已保守跳过' };
+    if (isTraining === true) return { ok: false, reason: '本地训练正在进行中' };
+    if (hasCandidate === true) return { ok: false, reason: '存在未完成的 A/B 候选模型' };
+    if (over === true) return { ok: true };
+    if (inGameKnown === true) return inGame ? { ok: false, reason: '对局进行中' } : { ok: true };
+    if (hasActiveEvent) return { ok: false, reason: '对局进行中' };
+    return { ok: true };
+};
+
+/* ---------------- 官方权重记录（P1-4） ----------------
+ * 权重与版本元数据视为同一事务：记录写入后必须读回核对，
+ * 失败时不得报告完整成功。 */
+export const buildOfficialRecord = opt => {
+    const { modelId, bundle, digest, size, contract, appliedAt } = opt || {};
+    return {
+        version: OFFICIAL_RECORD_VERSION,
+        modelId,
+        modelVersion: bundle.modelVersion,
+        releaseSeq: normalizeReleaseSeq(bundle.releaseSeq),
+        schemaVersion: bundle.schemaVersion,
+        dataEpoch: contract.dataEpoch,
+        sha256: String(digest || bundle.sha256 || '').toLowerCase(),
+        size: Number(size) || Number(bundle.size) || 0,
+        appliedAt: Number(appliedAt) || Date.now(),
+        source: 'official-online',
+    };
+};
+
+export const verifyOfficialRecord = (got, want) => {
+    const errors = [];
+    if (!got || typeof got !== 'object') return ['官方权重记录读回为空'];
+    if (got.modelId !== want.modelId) errors.push('记录 modelId 不符');
+    if (String(got.modelVersion) !== String(want.modelVersion)) errors.push('记录 modelVersion 不符');
+    if (normalizeReleaseSeq(got.releaseSeq) !== normalizeReleaseSeq(want.releaseSeq)) errors.push('记录 releaseSeq 不符');
+    if (String(got.sha256 || '').toLowerCase() !== String(want.sha256 || '').toLowerCase()) errors.push('记录 sha256 不符');
+    if (Number(got.size) !== Number(want.size)) errors.push('记录 size 不符');
+    if (Number(got.schemaVersion) !== Number(want.schemaVersion)) errors.push('记录 schemaVersion 不符');
+    return errors;
+};
+
+/* ---------------- 官方记录形状校验（供 asOfficialRecord 复用） ---------------- */
+export const isOfficialRecordShape = (obj, modelId) => {
+    if (!obj || typeof obj !== 'object') return false;
+    if (obj.modelId !== modelId || typeof obj.modelVersion !== 'string') return false;
+    if (!Number.isFinite(Number(obj.releaseSeq))) return false;
+    return true;
+};
+
+/* ---------------- 导出工具兼容性判定（P1-5） ----------------
+ * 工作台导出权重前的硬校验（纯逻辑，供 tools/export-weights.mjs 与测试共用同一实现）：
+ *  - 结构版本不一致 → 拒绝（本工具不提供结构迁移，禁止改元数据冒充新模型）；
+ *  - 数据纪元低于目标 → 默认拒绝；仅显式允许迁移且提供依据时才放行；
+ *  - 内置默认权重（isFromDefault）是当前结构版本的基线模型 → 按可验证基线放行。
+ * 返回 { ok, epochMigration|null, reason }。 */
+export const evaluateExportCompatibility = opt => {
+    const { inputV, inputDv, schemaVersion, dataEpoch, isFromDefault, allowEpochMigration, migrationNote } = opt || {};
+    if (inputV !== undefined && inputV !== null && Number(inputV) !== Number(schemaVersion)) {
+        return {
+            ok: false, epochMigration: null,
+            reason: '输入结构版本 v' + inputV + ' 与目标结构版本 v' + schemaVersion + ' 不一致：本工具不提供结构迁移，'
+                + '禁止仅改元数据冒充新模型；请用与目标结构一致的权重（--from-default 或当前工作台同结构导出）',
+        };
+    }
+    if (inputDv !== undefined && inputDv !== null && Number(inputDv) < Number(dataEpoch)) {
+        if (isFromDefault) {
+            return {
+                ok: true,
+                epochMigration: { from: Number(inputDv), to: Number(dataEpoch), reason: '内置默认权重为当前结构版本的基线模型（参数对当前结构有效），仅 dataEpoch 元数据陈旧' },
+                reason: '',
+            };
+        }
+        if (allowEpochMigration) {
+            if (!migrationNote || migrationNote === true || !String(migrationNote).trim()) {
+                return { ok: false, epochMigration: null, reason: '--allow-epoch-migration 必须同时提供 --migration-note <说明>（记录迁移依据，便于审计）' };
+            }
+            return { ok: true, epochMigration: { from: Number(inputDv), to: Number(dataEpoch), reason: String(migrationNote) }, reason: '' };
+        }
+        return {
+            ok: false, epochMigration: null,
+            reason: '输入数据纪元 dv=' + inputDv + ' < 目标纪元 ' + dataEpoch + '：客户端 loadWeights 会拒载 dv 过旧的存档，'
+                + '这类包发布出去不会生效；如确认参数对当前结构有效，请显式加 --allow-epoch-migration 并附 --migration-note <依据>',
+        };
+    }
+    return { ok: true, epochMigration: null, reason: '' };
+};
