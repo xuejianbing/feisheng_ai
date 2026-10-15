@@ -31,7 +31,7 @@ import {
     evaluateExportCompatibility, classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, combineRollbackStatus, readBodyLimited, MAX_ABSOLUTE_BYTES,
     generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, decodeBackupParams, backupRecordToBundleLike,
-    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION,
+    BACKUP_KIND_PARAMS, BACKUP_RECORD_VERSION, PENDING_RECORD_VERSION, reauthorizeRecord, rollbackStatusText,
 } from '../js/update/updateCore.js';
 import { styledDialog } from '../js/update/updateUi.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
@@ -1388,11 +1388,8 @@ section('崩溃 / 重启恢复（P0-1）');
     ok('27i 无 txId → none', classifyInterruptedTx({ phase: 'prepared' }).action === 'none');
 }
 
-/* ---------- 28. 重新授权期间的事务基线（P0-2） ---------- */
-section('重新授权期间的事务基线（P0-2）');
-{
-    /* 可外部改变模型的假 bridge（模拟训练晋升改写共享主模型） */
-    const makeMutableWeights = initialParams => {
+/* 可外部改变模型的假 bridge（模拟训练晋升改写共享主模型；P0-2 / P1-1 段共用） */
+const makeMutableWeights = initialParams => {
         const live = { ...toLive(initialParams), META: { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true } };
         live.adamT = 7;
         for (const [mk, wk] of OPT) live[mk] = new Float32Array(live[wk].length).fill(mk.charAt(0) === 'm' ? 0.25 : 0.5);
@@ -1421,6 +1418,10 @@ section('重新授权期间的事务基线（P0-2）');
             forward() { const o = new Float32Array(DIMS[3]); for (let k = 0; k < o.length; k++) o[k] = live.W1[k] + live.B1[k % 128]; return o; },
         };
     };
+
+/* ---------- 28. 重新授权期间的事务基线（P0-2） ---------- */
+section('重新授权期间的事务基线（P0-2）');
+{
     const A = userParams, B = thirdParams, C = mkBundle();
     const res = validateBundle(C, EXPECT);
 
@@ -1934,6 +1935,272 @@ section('事务日志故障矩阵（P0-2）');
         const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32, readRecord: () => null });
         ok('32i 重启后 → none/cleanup（不误判回滚）', plan.action === 'none' || (plan.action === 'cleanup' && plan.ok === true), JSON.stringify(plan));
     }
+}
+
+/* ---------- 33. 手动安装重新授权基线（P1-1） ---------- */
+section('手动安装重新授权基线（P1-1）');
+{
+    const contract12 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams, B = thirdParams, C = mkBundle();
+    const res33 = validateBundle(C, EXPECT);
+    /* 第四种模型（重新授权后"再次变化"用） */
+    const fourthParams = {};
+    for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[1] = (b[1] + 31) & 0xff; fourthParams[s.key] = encodeBase64(b); }
+    const fourthDigest = paramsDigest(fourthParams, DIMS);
+
+    /* 33a) 旧缺陷根因复现：授权记录不随重新授权更新 → 每次都拿 A 的旧摘要弹窗 */
+    {
+        const authStale = buildPendingRecord({ bundle: C, baseModelDigest: userDigest, userAuthorized: true, contract: contract12 });
+        const evStale = cur => evaluatePending({ pending: authStale, contract: contract12, currentDigest: cur, officialRec: null, gate: { ok: true } }).action;
+        ok('33a 旧摘要不更新 → 每次都 reprompt（反复弹窗的根因）',
+            evStale(thirdDigest) === 'reprompt' && evStale(thirdDigest) === 'reprompt' && evStale(thirdDigest) === 'reprompt');
+        /* 33b) 重绑基线（修复点）：同一模型不再弹窗 */
+        const ra = reauthorizeRecord(authStale, thirdDigest);
+        ok('33b 重绑基线后同一模型 → apply（不再弹窗）',
+            evaluatePending({ pending: ra, contract: contract12, currentDigest: thirdDigest, officialRec: null, gate: { ok: true } }).action === 'apply');
+        ok('33b 重绑保持显式授权并规范化摘要', ra.userAuthorized === true && ra.baseModelDigest === thirdDigest);
+        /* 33c) 重新授权后模型再次变化 → 仍然必须重新确认 */
+        ok('33c 重授权后模型再次变化 → reprompt（不静默覆盖）',
+            evaluatePending({ pending: ra, contract: contract12, currentDigest: fourthDigest, officialRec: null, gate: { ok: true } }).action === 'reprompt');
+        /* 33d) 无法读取基线 → 保守 reprompt（不接受 null 基线绕过核验） */
+        const raNull = reauthorizeRecord(authStale, null);
+        ok('33d 无法读取基线 → 仍 reprompt（不允许跳过摘要核验）',
+            evaluatePending({ pending: raNull, contract: contract12, currentDigest: thirdDigest, officialRec: null, gate: { ok: true } }).action === 'reprompt'
+            && evaluatePending({ pending: raNull, contract: contract12, currentDigest: null, officialRec: null, gate: { ok: true } }).action === 'reprompt');
+    }
+    /* 33e) 集成：A → 确认期间训练成 B → 用户重新授权 → 备份 B → 安装 C；只弹窗一次 */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        let auth = buildPendingRecord({ bundle: C, baseModelDigest: userDigest, userAuthorized: true, contract: contract12 });
+        let checkCalls = 0, reprompts = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res33.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-33e',
+            confirmBeforeWrite: async () => {
+                checkCalls++;
+                if (checkCalls === 1) bridge.setParams(B);   /* 确认期间训练晋升为 B */
+                const cur = snapshotToParams(bridge.snapshotModel());
+                const curDigest = cur ? paramsDigest(cur, DIMS) : null;
+                const d = evaluatePending({ pending: auth, contract: contract12, currentDigest: curDigest, officialRec: null, gate: { ok: true } });
+                if (d.action === 'apply') return { ok: true };
+                /* reprompt：模拟用户点「仍然安装」→ 重绑授权基线（P1-1 修复点） */
+                reprompts++;
+                auth = reauthorizeRecord(auth, curDigest);
+                return { ok: true, rebaseline: true };
+            },
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('33e 安装成功（重授权后不再反复弹窗）', r.ok === true, JSON.stringify(r.errors));
+        ok('33e 只弹窗一次', reprompts === 1);
+        ok('33e 事务确实重建过基线（两次复核）', checkCalls === 2);
+        ok('33e 长期备份 = B（重新授权时被覆盖的模型）', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
+        ok('33e 长期备份不是过期基线 A', paramsDigest(storageOps.st.backup.params, DIMS) !== userDigest);
+        ok('33e 当前模型 = C', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 33f) 重新授权后模型再次变化 → 必须再次重新确认；用户拒绝 → B/第四模型保持 */
+    {
+        const bridge = makeMutableWeights(A);
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: defaultParams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeX = JSON.stringify(storageOps.st.backup);
+        let auth = buildPendingRecord({ bundle: C, baseModelDigest: userDigest, userAuthorized: true, contract: contract12 });
+        let checkCalls = 0, reprompts = 0;
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: C, decoded: res33.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-33f',
+            confirmBeforeWrite: async () => {
+                checkCalls++;
+                if (checkCalls === 1) bridge.setParams(B);
+                if (checkCalls === 2) bridge.setParams(fourthParams);   /* 重授权后再次变化 */
+                const cur = snapshotToParams(bridge.snapshotModel());
+                const curDigest = cur ? paramsDigest(cur, DIMS) : null;
+                const d = evaluatePending({ pending: auth, contract: contract12, currentDigest: curDigest, officialRec: null, gate: { ok: true } });
+                if (d.action === 'apply') return { ok: true };
+                reprompts++;
+                if (reprompts === 1) { auth = reauthorizeRecord(auth, curDigest); return { ok: true, rebaseline: true }; }
+                return { ok: false, reason: '用户保留当前模型' };
+            },
+            commitRecord: async () => ({ ok: true, errors: [] }),
+        });
+        ok('33f 再次变化 → 第二次弹窗且用户拒绝 → 中止', r.ok === false && r.failedAt === 'gate', JSON.stringify(r.errors));
+        ok('33f 共弹窗两次（每次变化都重新确认）', reprompts === 2);
+        ok('33f 模型保持第四模型（未被官方权重覆盖）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === fourthDigest);
+        ok('33f 长期备份未被触碰', JSON.stringify(storageOps.st.backup) === beforeX);
+        ok('33f 中止后暂存与日志已清理', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 33g/33h) 重新授权后进入对局 / 训练仍在运行 → 写入前门禁拒绝安装 */
+    {
+        const runGateAbort = async gateReason => {
+            const bridge = makeMutableWeights(A);
+            const storageOps = mkStorageFull(bridge);
+            let auth = buildPendingRecord({ bundle: C, baseModelDigest: userDigest, userAuthorized: true, contract: contract12 });
+            let checkCalls = 0;
+            const r = await applyOfficialBundle({
+                bridge, storageOps, bundle: C, decoded: res33.decoded, dims: DIMS, probe: null,
+                runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-33g',
+                confirmBeforeWrite: async () => {
+                    checkCalls++;
+                    if (checkCalls === 1) bridge.setParams(B);
+                    if (checkCalls === 2) return { ok: false, reason: gateReason };   /* 最终门禁不通过 */
+                    const cur = snapshotToParams(bridge.snapshotModel());
+                    const curDigest = cur ? paramsDigest(cur, DIMS) : null;
+                    const d = evaluatePending({ pending: auth, contract: contract12, currentDigest: curDigest, officialRec: null, gate: { ok: true } });
+                    if (d.action === 'apply') return { ok: true };
+                    auth = reauthorizeRecord(auth, curDigest);
+                    return { ok: true, rebaseline: true };
+                },
+                commitRecord: async () => ({ ok: true, errors: [] }),
+            });
+            return { bridge, storageOps, r };
+        };
+        const g1 = await runGateAbort('对局进行中');
+        ok('33g 重新授权后进入对局 → 拒绝安装', g1.r.ok === false && g1.r.failedAt === 'gate', JSON.stringify(g1.r.errors));
+        ok('33g 模型保持 B 未被覆盖', paramsDigest(snapshotToParams(g1.bridge.snapshotModel()), DIMS) === thirdDigest);
+        ok('33g 暂存与日志已清理', g1.storageOps.st.staging === null && g1.storageOps.st.tx === null);
+        const g2 = await runGateAbort('本地训练正在进行中');
+        ok('33h 训练仍在运行 → 拒绝安装', g2.r.ok === false && g2.r.failedAt === 'gate');
+        ok('33h 模型保持 B 未被覆盖', paramsDigest(snapshotToParams(g2.bridge.snapshotModel()), DIMS) === thirdDigest);
+    }
+}
+
+/* ---------- 34. 回滚状态合成矩阵（P1-2：模型与记录任一失败都不得报 complete） ---------- */
+section('回滚状态合成矩阵（P1-2）');
+{
+    const contract34 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams;
+    const B = mkBundle();
+    const res34 = validateBundle(B, EXPECT);
+    const archiveHasA = bridge => { const raw = bridge.state.corrupt || bridge.state.archive; return !!raw && raw.includes(A.w1.slice(0, 20)); };
+    const mkRollbackFailBridge = () => {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const orig = bridge.restoreModel.bind(bridge);
+        let n = 0;
+        bridge.restoreModel = snap => { n++; if (n > 1) throw new Error('rollback exploded'); return orig(snap); };
+        return bridge;
+    };
+    const runInstallFail = async (opt, bridge) => {
+        const b = bridge || makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(b);
+        const r = await applyOfficialBundle({
+            bridge: b, storageOps, bundle: B, decoded: res34.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-34',
+            commitRecord: async () => ({ ok: false, errors: ['记录写入失败'] }),
+            revertRecord: async () => (opt && opt.revert) ? opt.revert() : { ok: true, errors: [] },
+        });
+        return { b, storageOps, r };
+    };
+    /* 34a) 模型回滚成功 + 记录回滚成功 → complete */
+    {
+        const { b, storageOps, r } = await runInstallFail({});
+        ok('34a 模型成功+记录成功 → complete', r.rollbackStatus === 'complete' && r.rolledBack === true && (r.rollbackErrors || []).length === 0, JSON.stringify(r));
+        ok('34a 模型回到 A', paramsDigest(snapshotToParams(b.snapshotModel()), DIMS) === userDigest && archiveHasA(b));
+        ok('34a 完整回滚 → 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+        ok('34a 文案与状态一致（complete）', rollbackStatusText(r).includes('已完整回滚'));
+    }
+    /* 34b) 模型回滚成功 + 记录回滚失败 → partial（修复前会误报 complete） */
+    {
+        const { b, storageOps, r } = await runInstallFail({ revert: () => ({ ok: false, errors: ['记录回滚失败'] }) });
+        ok('34b 模型成功+记录失败 → partial', r.rollbackStatus === 'partial', JSON.stringify(r));
+        ok('34b rolledBack=false（完整回滚未达成）', r.rolledBack === false);
+        ok('34b rollbackErrors 含记录回滚错误', (r.rollbackErrors || []).some(e => /记录回滚失败/.test(e)), JSON.stringify(r.rollbackErrors));
+        ok('34b 模型确实回到 A', paramsDigest(snapshotToParams(b.snapshotModel()), DIMS) === userDigest);
+        ok('34b 回滚不完整 → 保留暂存与 needsManual 日志', storageOps.st.staging !== null && storageOps.st.tx && storageOps.st.tx.needsManual === true);
+        ok('34b 文案为 partial（与返回值一致）', rollbackStatusText(r).includes('版本记录未能恢复'));
+    }
+    /* 34c) 模型回滚失败 + 记录回滚成功 → failed */
+    {
+        const { storageOps, r } = await runInstallFail({}, mkRollbackFailBridge());
+        ok('34c 模型失败+记录成功 → failed', r.rollbackStatus === 'failed' && r.rolledBack === false, JSON.stringify(r));
+        ok('34c 文案为 failed（与返回值一致）', rollbackStatusText(r).includes('回滚未能完成'));
+        ok('34c 回滚不完整 → 保留暂存与 needsManual 日志', storageOps.st.staging !== null && storageOps.st.tx && storageOps.st.tx.needsManual === true);
+    }
+    /* 34d) 模型回滚失败 + 记录回滚失败 → failed（两类错误都在 rollbackErrors） */
+    {
+        const { r } = await runInstallFail({ revert: () => ({ ok: false, errors: ['记录回滚失败'] }) }, mkRollbackFailBridge());
+        ok('34d 模型失败+记录失败 → failed', r.rollbackStatus === 'failed', JSON.stringify(r));
+        ok('34d 两类错误都被并入 rollbackErrors', (r.rollbackErrors || []).some(e => /还原快照/.test(e)) && (r.rollbackErrors || []).some(e => /记录回滚失败/.test(e)), JSON.stringify(r.rollbackErrors));
+    }
+    /* 34e) 手动备份恢复入口（mode=restore）：同样合成状态、回滚不完整保留人工标记 */
+    {
+        const bundleLike = { params: A, trained: 9, accuracy: 0.5, size: 0 };
+        const bridge = makeFakeWeights({ initialParams: officialParams });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        const beforeBackup = JSON.stringify(storageOps.st.backup);
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: bundleLike, decoded: buildTyped(A), dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore', txId: 'tx-34e',
+            commitRecord: async () => ({ ok: false, errors: ['记录删除失败'] }),
+            revertRecord: async () => ({ ok: false, errors: ['记录回滚失败'] }),
+        });
+        ok('34e 恢复入口：模型回滚成功+记录恢复失败 → partial', r.rollbackStatus === 'partial' && r.failedAt === 'record', JSON.stringify(r));
+        ok('34e 模型回到恢复前的 B', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('34e 原长期备份未被修改', JSON.stringify(storageOps.st.backup) === beforeBackup);
+        ok('34e restore 回滚不完整 → 保留 needsManual 人工标记（阻止继续安装）', storageOps.st.tx && storageOps.st.tx.needsManual === true, JSON.stringify(storageOps.st.tx));
+    }
+    /* 34f) 三个入口的返回结构与文案接口一致（防止只修一处） */
+    {
+        const { r: installR } = await runInstallFail({ revert: () => ({ ok: false, errors: ['记录回滚失败'] }) });
+        const restoreR = await mkRollbackSample();
+        ok('34f install/restore 返回均含 rollbackStatus/rolledBack/rollbackErrors',
+            ['rollbackStatus', 'rolledBack', 'rollbackErrors'].every(k => k in installR)
+            && ['rollbackStatus', 'rolledBack', 'rollbackErrors'].every(k => k in restoreR));
+    }
+    async function mkRollbackSample() {
+        const bridge = makeFakeWeights({ initialParams: officialParams });
+        const storageOps = mkStorageFull(bridge);
+        storageOps.st.backup = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        return applyOfficialBundle({
+            bridge, storageOps, bundle: { params: A, trained: 9, accuracy: 0.5, size: 0 }, decoded: buildTyped(A), dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, mode: 'restore', txId: 'tx-34f',
+            commitRecord: async () => ({ ok: false, errors: ['记录删除失败'] }),
+            revertRecord: async () => ({ ok: true, errors: [] }),
+        });
+    }
+}
+
+/* ---------- 35. 官方记录删除核验（P1-3：读回异常绝不冒充删除成功） ---------- */
+section('官方记录删除核验（P1-3）');
+{
+    const recB = buildOfficialRecord({ modelId: MODEL_ID, bundle: mkBundle(), digest: officialDigest, size: officialSize, contract: { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH } });
+    const mk = opt => Object.assign({
+        prevRec: null,
+        writeRecord: () => true,
+        readRecord: () => null,
+        removeRecord: () => true,
+        verify: verifyOfficialRecord,
+    }, opt || {});
+    let r;
+    r = restoreOfficialRecord(mk({}));
+    ok('35a 删除成功且读回为空 → ok', r.ok === true && r.errors.length === 0);
+    r = restoreOfficialRecord(mk({ readRecord: () => recB, removeRecord: () => false }));
+    ok('35b 删除返回 false 且记录仍在 → 失败', r.ok === false);
+    ok('35b 错误信息区分"删除操作失败"与"仍可读回"', r.errors.some(e => /删除操作返回失败/.test(e)) && r.errors.some(e => /仍可读回/.test(e)), JSON.stringify(r.errors));
+    r = restoreOfficialRecord(mk({ readRecord: () => recB, removeRecord: () => { throw new Error('quota'); } }));
+    ok('35c 删除抛异常且记录仍在 → 失败并记录异常', r.ok === false && r.errors.some(e => /删除操作抛出异常/.test(e)), JSON.stringify(r.errors));
+    r = restoreOfficialRecord(mk({ readRecord: () => { throw new Error('storage down'); }, removeRecord: () => true }));
+    ok('35d 删除成功但读回抛异常 → 绝不报删除成功', r.ok === false && r.errors.some(e => /读回抛出异常/.test(e)), JSON.stringify(r.errors));
+    r = restoreOfficialRecord({ prevRec: null, removeRecord: () => true, verify: verifyOfficialRecord });
+    ok('35e 缺少读取能力 → 不得报告删除成功', r.ok === false && r.errors.some(e => /缺少官方记录读回能力/.test(e)));
+    r = restoreOfficialRecord(mk({ readRecord: () => '', removeRecord: () => true }));
+    ok('35f 读回格式异常（空串）→ 视为仍存在', r.ok === false);
+    r = restoreOfficialRecord(mk({ readRecord: () => 0, removeRecord: () => true }));
+    ok('35f 读回格式异常（0）→ 视为仍存在', r.ok === false);
+    r = restoreOfficialRecord(mk({ removeRecord: () => { throw new Error('quota'); } }));
+    ok('35g 删除抛异常且读回为空 → 仍判未确认（保守）', r.ok === false && r.errors.some(e => /删除操作抛出异常/.test(e)), JSON.stringify(r.errors));
+    r = restoreOfficialRecord(mk({ removeRecord: undefined }));
+    ok('35h 无删除能力且记录不存在 → ok', r.ok === true);
+    r = restoreOfficialRecord(mk({ removeRecord: undefined, readRecord: () => recB }));
+    ok('35h 无删除能力且记录仍存在 → 失败', r.ok === false && r.errors.some(e => /缺少官方记录清除能力/.test(e)));
+    r = restoreOfficialRecord(mk({ removeRecord: undefined, readRecord: () => { throw new Error('x'); } }));
+    ok('35i 无删除能力且读取异常 → 失败（无法确认）', r.ok === false);
+    r = restoreOfficialRecord(mk({ readRecord: () => { throw new Error('getItem failed'); }, removeRecord: () => true }));
+    ok('35j 宿主存储访问抛异常（getItem 抛）→ 验证失败', r.ok === false);
+    r = restoreOfficialRecord(mk({ prevRec: recB, readRecord: () => recB }));
+    ok('35k 旧记录写回+读回核验通过 → ok（既有路径不受影响）', r.ok === true);
+    r = restoreOfficialRecord(mk({ prevRec: recB, readRecord: () => { throw new Error('x'); } }));
+    ok('35k 旧记录写回后读回异常 → 失败（同样不冒充成功）', r.ok === false);
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');

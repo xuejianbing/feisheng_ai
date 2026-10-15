@@ -22,7 +22,7 @@ import { encodeBase64, decodeBase64, paramSpec, paramsDigest } from './weightBun
 import {
     buildBackupRecord, verifyBackupRecord, BACKUP_KIND_PARAMS,
     generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, planTxRecovery, digestOfArchive,
-    decodeBackupParams, backupRecordToBundleLike, restoreOfficialRecord,
+    decodeBackupParams, backupRecordToBundleLike, restoreOfficialRecord, combineRollbackStatus,
 } from './updateCore.js?v=41a';
 
 /* 在线快照键 → 权重包参数键（对应 weights.js __snapshotModel 的契约） */
@@ -281,14 +281,20 @@ export const applyOfficialBundle = async ctx => {
         if (!_journalRemoveVerified(storageOps)) { cleanupPending = true; return; }
         discardStaging();
     };
-    /* 中止后清理：回滚不完整时保留事务数据（仍有恢复价值）并标记需人工处理 */
+    /* 中止后清理：回滚不完整时保留事务数据（仍有恢复价值）并标记需人工处理。
+     * 人工标记日志沿用事务信息（含 install 前的官方记录快照），不丢失恢复依据。 */
     const cleanupAfterAbort = rbOk => {
         if (rbOk) { cleanupTx(); return; }
         cleanupPending = true;
-        _journalWrite(storageOps, buildTxJournal({
-            txId: tx, phase: 'weights-written', needsManual: true,
-            reason: '上次事务回滚未完成，已保留暂存备份与事务日志供恢复', startedAt: Date.now(),
-        }));
+        try {
+            const mark = buildTxJournal({
+                txId: tx, phase: 'weights-written', needsManual: true,
+                baseDigest, targetDigest, schemaVersion, dataEpoch: runtimeEpoch,
+                startedAt: Date.now(), prevRecord: prevRecordInfo,
+                reason: '上次事务回滚未完成，已保留暂存备份与事务日志供恢复',
+            });
+            _journalWrite(storageOps, mark);
+        } catch (e) {}
     };
     const safeRevertRecord = async () => {
         if (typeof revertRecord !== 'function') return [];
@@ -393,6 +399,28 @@ export const applyOfficialBundle = async ctx => {
         return { errors: rErrors, notes };
     };
 
+    /* ★ P1-2：完整回滚 = 模型状态恢复成功 **且** 官方记录恢复成功。
+     *   任何一项失败都不得返回 complete；rolledBack / rollbackStatus / rollbackErrors
+     *   三者始终由同一判定合成（用户弹窗一律引用 rollbackStatus）。 */
+    const rollbackVerdict = (rb, recErrors) => {
+        const modelOk = !rb || rb.errors.length === 0;
+        const recErrs = recErrors || [];
+        return {
+            ok: modelOk && recErrs.length === 0,
+            status: combineRollbackStatus(modelOk, recErrs.length === 0),
+            errors: ((rb && rb.errors) || []).concat(recErrs),
+        };
+    };
+    /* 回滚后清理：仅"完整回滚"（模型 + 记录）才允许清除事务数据 */
+    const finishAbort = (rb, recErrors, failedAt, list, partial) => {
+        const v = rollbackVerdict(rb, recErrors);
+        cleanupAfterAbort(v.ok);
+        return fail(list, failedAt, {
+            partialWrite: !!partial, rolledBack: v.ok, rollbackStatus: v.status,
+            rollbackErrors: v.errors, notes: rb ? rb.notes : undefined,
+        });
+    };
+
     /* 4) 写入（可能部分修改后失败/抛异常 → 必须检测并回滚） */
     let wrote = false, writeThrew = null;
     try { wrote = bridge.restoreModel(applied) !== false; } catch (e) { writeThrew = e; wrote = false; }
@@ -402,13 +430,10 @@ export const applyOfficialBundle = async ctx => {
         if (diffs === null) {
             /* 无法确认是否发生部分修改 → 必须回滚并如实报告风险 */
             const rb = rollback();
-            cleanupAfterAbort(rb.errors.length === 0);
-            return fail(
+            return finishAbort(rb, null, 'write',
                 ['写入新权重失败且无法确认是否已部分修改（' + ((writeThrew && writeThrew.message) || '结构不兼容') + '）',
                     '已尝试回滚：' + (rb.errors.length ? rb.errors.join('；') : '完成')],
-                'write',
-                { partialWrite: true, rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors, notes: rb.notes },
-            );
+                true);
         }
         if (!diffs.length) {
             /* 确认未发生任何修改 → 无需回滚，如实说明 */
@@ -417,13 +442,10 @@ export const applyOfficialBundle = async ctx => {
         }
         /* 已发生部分修改 → 立即回滚 */
         const rb = rollback();
-        cleanupAfterAbort(rb.errors.length === 0);
-        return fail(
+        return finishAbort(rb, null, 'write',
             ['写入新权重失败（' + ((writeThrew && writeThrew.message) || '返回 false') + '）且已发生部分修改：' + diffs.join('、'),
                 rb.errors.length ? ('回滚未完全确认：' + rb.errors.join('；')) : '已回滚到原有模型'],
-            'write',
-            { partialWrite: true, rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors, notes: rb.notes },
-        );
+            true);
     }
     step('新权重已写入在线模型');
     if (!isRestore) {
@@ -431,13 +453,10 @@ export const applyOfficialBundle = async ctx => {
          *   没有可靠恢复信息 → 不允许继续，立即安全回滚并中止。 */
         if (!_journalWriteVerified(storageOps, journalFor('weights-written'))) {
             const rb = rollback();
-            cleanupAfterAbort(rb.errors.length === 0);
-            return fail(
+            return finishAbort(rb, null, 'journal',
                 ['事务恢复日志推进失败（weights-written），已在无可靠恢复信息的情况下安全回滚并中止']
                     .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : ['已回滚到原有模型']),
-                'journal',
-                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors, notes: rb.notes },
-            );
+                false);
         }
     }
 
@@ -469,9 +488,7 @@ export const applyOfficialBundle = async ctx => {
 
     if (errors.length) {
         const rb = rollback();
-        cleanupAfterAbort(rb.errors.length === 0);
-        return fail(errors.concat(rb.errors, rb.notes), 'verify',
-            { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors });
+        return finishAbort(rb, null, 'verify', errors.concat(rb.errors, rb.notes), false);
     }
 
     /* 9) 提交步骤一：官方版本记录（安装=写入并核验；恢复=清除并核验） */
@@ -482,14 +499,11 @@ export const applyOfficialBundle = async ctx => {
         if (!cr || cr.ok !== true) {
             const rb = rollback();
             const rv = await safeRevertRecord();
-            cleanupAfterAbort(rb.errors.length === 0 && rv.length === 0);
-            return fail(
+            return finishAbort(rb, rv, 'record',
                 ['版本记录提交失败：' + (((cr && cr.errors) || ['未知原因']).join('；'))]
                     .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : ['已回滚到更新前的模型'])
                     .concat(rv),
-                'record',
-                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors.concat(rv), notes: rb.notes },
-            );
+                false);
         }
         if (!isRestore) {
             /* ★ P0-2：阶段日志推进失败时按"当前实际状态"决策：
@@ -510,15 +524,12 @@ export const applyOfficialBundle = async ctx => {
         if (!rot.ok) {
             const rb = rollback();
             const rv = await safeRevertRecord();
-            cleanupAfterAbort(rb.errors.length === 0 && rv.length === 0);
-            return fail(
+            return finishAbort(rb, rv, 'backup-rotate',
                 ['长期备份轮换失败：' + rot.errors.join('；'),
                     '已优先恢复本次更新前的模型；原长期备份保持不变']
                     .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : [])
                     .concat(rv),
-                'backup-rotate',
-                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors.concat(rv), notes: rb.notes },
-            );
+                false);
         }
         backupRotated = true;
         if (!_journalWriteVerified(storageOps, journalFor('backup-rotated'))) {
