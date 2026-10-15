@@ -12,24 +12,35 @@
  *  - 判新旧一律比较模型权重版本（releaseSeq），不再拿扩展版本与服务器扩展版本混判；
  *  - 扩展版本只用于「兼容性」判断（新权重要求的扩展区间）。
  *
- * 分层：本文件是宿主接入层（网络 / 存储 / 弹窗），纯数据契约与版本口径在 weightBundle.js。
- * 存储隔离：只新增各 *_v1 键，绝不触碰活跃权重存档 djsc_weights_v3、
- *  A/B 状态机 djsc_model_state、训练样本 djsc_ai_db、专项模型 djsc_mode_models_v1、
- *  校准固化 djsc_weight_persist_v1。
+ * 分层：本文件是宿主接入层（网络 / 存储 / 弹窗 / 对局状态）；
+ *  纯数据契约与版本口径在 weightBundle.js，安全应用与回滚在 applyWeights.js。
+ *
+ * 存储隔离（只新增下列键，绝不触碰既有存档）：
+ *   djsc_official_weights_v1  已应用的官方权重记录
+ *   djsc_model_update_pending_v1 待生效（对局中/训练中延迟应用）
+ *   djsc_weights_backup_v1    应用官方权重前的活跃权重备份
+ *   沿用 djsc_update_check_ts 作为 6 小时节流（保持节流连续性）
+ * 绝不触碰：djsc_weights_v3（活跃权重存档，仅通过 weights.js 的公开接口读写）、
+ *   djsc_model_state（A/B 状态机）、djsc_ai_db / djsc_mode_models_v1（训练样本 / 专项模型）、
+ *   djsc_weight_persist_v1（校准固化）与校准器相关键。
  */
-import { styledDialog } from './updateUi.js?v=41a';
+import { styledDialog, progressDialog } from './updateUi.js?v=41a';
 import { VERSION } from '../config/version.js?v=41a';
 import { safeGet, safeSet, safeRemove } from '../../score/foundation/storage/storage.js?v=41a';
+import { game, _status } from '../../score/foundation/adapt/host.js?v=41a';
+import { DEFAULT_WEIGHTS } from '../../score/model/weights/defaultWeights.js?v=41a';
 import {
     MODEL_PROTOCOL, MODEL_ID, MODEL_MANIFEST_URL, BUILTIN_RELEASE_SEQ,
     normalizeReleaseSeq, isNewerRelease, satisfiesExtensionRange,
+    decodeBase64, paramSpec, paramsDigest, validateBundle,
 } from './weightBundle.js?v=41a';
+import { applyOfficialBundle, snapshotToParams, detectUserModel } from './applyWeights.js?v=41a';
 
 /* ---------- 存储键 ---------- */
-const CHECK_TS_KEY = 'djsc_update_check_ts';        /* ★ 沿用旧键：保留 6 小时节流连续性 */
-const OFFICIAL_KEY = 'djsc_official_weights_v1';    /* 官方权重记录（独立于活跃权重存档） */
-const PENDING_KEY = 'djsc_model_update_pending_v1'; /* 延迟应用：待生效的官方权重包 */
-const BACKUP_KEY = 'djsc_weights_backup_v1';        /* 应用官方权重前的活跃权重备份 */
+const CHECK_TS_KEY = 'djsc_update_check_ts';
+const OFFICIAL_KEY = 'djsc_official_weights_v1';
+const PENDING_KEY = 'djsc_model_update_pending_v1';
+const BACKUP_KEY = 'djsc_weights_backup_v1';
 
 const CHECK_INTERVAL_MS = 6 * 3600 * 1000;
 const FETCH_TIMEOUT_MS = 12000;
@@ -38,79 +49,185 @@ const RETRY_BACKOFF_MS = 800;
 const _swallow = e => { try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } catch (e2) {} };
 const _log = (msg, warn) => { try { const t = '[无名AI·模型权重] ' + msg; if (warn) console.warn(t); else console.log(t); } catch (e) {} };
 
-/* ---------- 存储读写（统一走中央存储抽象，异常绝不抛出） ---------- */
+/* ---------- 存储读写 ---------- */
 const readJSON = key => { try { const raw = safeGet(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } };
 const writeJSON = (key, val) => { try { return safeSet(key, JSON.stringify(val)) === true; } catch (e) { return false; } };
 const removeKey = key => { try { return safeRemove(key) === true; } catch (e) { return false; } };
 
-/* ---------- 本地模型权重版本（唯一判据：releaseSeq） ---------- */
+/* ---------- 模块解析：优先 window 挂载（生产引擎挂载点），兜底动态导入同一实例 ---------- */
+let _wFallback = null, _msFallback = null;
+const weightsModuleSync = () => {
+    try { const w = window.__DJSC && window.__DJSC.__weightsModule; if (w) return w; } catch (e) {}
+    return _wFallback;
+};
+const loadWeightsModule = async () => {
+    const live = weightsModuleSync();
+    if (live) return live;
+    if (!_wFallback) { try { _wFallback = await import('../../score/model/weights/weights.js?v=41a'); } catch (e) { _wFallback = null; } }
+    return _wFallback;
+};
+const loadModelState = async () => {
+    try { const m = window.__DJSC && window.__DJSC.modelState; if (m && typeof m.getState === 'function') return m; } catch (e) {}
+    try { if (!_msFallback) _msFallback = await import('../../score/model/net/modelState.js?v=41a'); } catch (e) { _msFallback = null; }
+    return _msFallback;
+};
+
+/* 运行时模型契约（唯一来源：weights.js 的 MODEL_SCHEMA / DATA_EPOCH） */
+const getContract = async () => {
+    const wm = await loadWeightsModule();
+    if (!wm || !wm.MODEL_SCHEMA || !Array.isArray(wm.MODEL_SCHEMA.dims)) return null;
+    return {
+        schemaVersion: wm.MODEL_SCHEMA.version,
+        featureDim: wm.MODEL_SCHEMA.featureDim,
+        dims: wm.MODEL_SCHEMA.dims.slice(),
+        dataEpoch: Number(wm.DATA_EPOCH),
+    };
+};
+
+/* 内置默认权重（作为"是否本地训练成果"的基线之一） */
+const defaultParams = () => ({
+    w1: DEFAULT_WEIGHTS.w1, b1: DEFAULT_WEIGHTS.b1, w2: DEFAULT_WEIGHTS.w2, b2: DEFAULT_WEIGHTS.b2,
+    w3: DEFAULT_WEIGHTS.w3, b3: DEFAULT_WEIGHTS.b3, w4: DEFAULT_WEIGHTS.w4, b4: DEFAULT_WEIGHTS.b4,
+    pr1: DEFAULT_WEIGHTS.pr1, pr2: DEFAULT_WEIGHTS.pr2,
+});
+
+const activeParamsNow = async () => {
+    const wm = await loadWeightsModule();
+    if (!wm || typeof wm.__snapshotModel !== 'function') return null;
+    let snap = null;
+    try { snap = wm.__snapshotModel(); } catch (e) { snap = null; }
+    return snapshotToParams(snap);
+};
+
+/* ---------- 对局状态：宁可延迟，绝不在对局/训练中替换权重 ---------- */
+let _inGame = false, _inGameKnown = false, _busOk = false, _busTimer = null;
+const _readOver = () => { try { if (_status && _status.over === true) return true; } catch (e) {} return false; };
+const _ensureBus = () => {
+    if (_busOk) return true;
+    try {
+        const bus = window.__DJSC && window.__DJSC.eventBus;
+        if (bus && typeof bus.on === 'function') {
+            bus.on('game:start', () => { _inGame = true; _inGameKnown = true; });
+            bus.on('game:end', () => {
+                _inGame = false; _inGameKnown = true;
+                /* ★ 下一局开始时应用：局刚结束，此刻不在对局中 —— 延迟应用的默认时机 */
+                tryApplyPending();
+            });
+            _busOk = true;
+            return true;
+        }
+    } catch (e) { _swallow(e); }
+    return false;
+};
+
+const canApplyNow = async () => {
+    const ms = await loadModelState();
+    if (ms && typeof ms.getState === 'function') {
+        let st = null;
+        try { st = ms.getState(); } catch (e) { st = null; }
+        if (st && st !== 'stable') return { ok: false, reason: '模型状态为 ' + st + '（训练或 A/B 试用进行中）' };
+    }
+    try {
+        const hs = window.__DJSC && window.__DJSC.hotSwap;
+        if (hs && typeof hs.stats === 'function') {
+            const s = hs.stats();
+            if (s && s.hasCandidate) return { ok: false, reason: '存在未完成的 A/B 候选模型' };
+        }
+    } catch (e) { _swallow(e); }
+    if (_readOver()) return { ok: true };
+    if (_inGameKnown) return _inGame ? { ok: false, reason: '对局进行中' } : { ok: true };
+    /* 未知时保守判断：存在活动事件链即视为对局中 */
+    try { if (_status && _status.event) return { ok: false, reason: '对局进行中' }; } catch (e) {}
+    return { ok: true };
+};
+
+/* ---------- 本地官方权重记录与完整性 ---------- */
 const asOfficialRecord = obj => {
     if (!obj || typeof obj !== 'object') return null;
     if (obj.modelId !== MODEL_ID || typeof obj.modelVersion !== 'string') return null;
     if (!Number.isFinite(Number(obj.releaseSeq))) return null;
     return obj;
 };
-
 export const readOfficialRecord = () => asOfficialRecord(readJSON(OFFICIAL_KEY));
+export const readPending = () => readJSON(PENDING_KEY);
+export const hasBackup = () => !!readJSON(BACKUP_KEY);
 
-/* 当前生效的模型权重版本：有官方记录则以官方为准，否则是开箱内置默认权重 */
 export const localModelRelease = () => {
     const rec = readOfficialRecord();
     if (rec) return { releaseSeq: normalizeReleaseSeq(rec.releaseSeq), modelVersion: rec.modelVersion, source: 'official' };
     return { releaseSeq: BUILTIN_RELEASE_SEQ, modelVersion: 'builtin-default', source: 'builtin' };
 };
 
-export const readPending = () => readJSON(PENDING_KEY);
-export const hasBackup = () => !!readJSON(BACKUP_KEY);
+/* ★ 完整性核验：官方记录存在时，读回存档逐项核对（不依赖在线内存），
+ *   用于识别「版本相同但文件损坏」→ 允许重新获取；同时区分「已被本地训练覆盖」（正常）。 */
+export const verifyOfficialIntegrity = async () => {
+    const rec = readOfficialRecord();
+    if (!rec) return { state: 'none' };
+    const contract = await getContract();
+    if (!contract) return { state: 'unknown', reason: '运行时契约不可用' };
+    const wm = weightsModuleSync();
+    const raw = (wm && typeof wm.__readArchive === 'function') ? wm.__readArchive() : null;
+    if (!raw) return { state: 'broken', reason: '官方权重记录存在，但权重存档缺失（运行时已回退内置默认模型）' };
+    let obj = null;
+    try { obj = JSON.parse(raw); } catch (e) { return { state: 'broken', reason: '权重存档无法解析' }; }
+    if (!obj || obj.v !== contract.schemaVersion) return { state: 'broken', reason: '权重存档网络结构版本不符' };
+    if (Number(obj.dv || 0) < contract.dataEpoch) return { state: 'broken', reason: '权重存档数据纪元 ' + obj.dv + ' 过旧（会被拒载）' };
+    const spec = paramSpec(contract.dims);
+    const params = {};
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const bytes = decodeBase64(obj[s.key]);
+        const need = s.kind === 'int16' ? s.len * 2 : s.len;
+        if (!bytes || bytes.byteLength !== need) return { state: 'broken', reason: '存档参数 ' + s.key + ' 缺失或长度不符' };
+        params[s.key] = obj[s.key];
+    }
+    const digest = paramsDigest(params, contract.dims);
+    if (!digest) return { state: 'broken', reason: '存档参数无法计算摘要' };
+    if (digest !== String(rec.sha256 || '').toLowerCase()) {
+        return { state: 'superseded', reason: '当前生效模型已不是该官方权重（例如本地训练成果已生效）', digest };
+    }
+    return { state: 'ok', digest };
+};
 
-export const modelUpdateStatus = () => ({
-    extensionVersion: VERSION,
-    local: localModelRelease(),
-    official: readOfficialRecord(),
-    hasPending: !!readPending(),
-    hasBackup: hasBackup(),
-    lastCheckTs: parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0,
-    intervalHours: Math.round(CHECK_INTERVAL_MS / 3600000),
-});
-
-/* ---------- 网络：超时 + 有限次重试 ---------- */
-const fetchJson = async (url, opt) => {
+/* ---------- 网络 ---------- */
+const _fetchOnce = async (url, timeoutMs, asText) => {
+    if (typeof fetch !== 'function') throw new Error('当前环境不支持网络请求');
+    const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, timeoutMs) : null;
+    let res;
+    try { res = await fetch(url, ctl ? { signal: ctl.signal } : undefined); }
+    finally { if (timer) clearTimeout(timer); }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return asText ? await res.text() : await res.json();
+};
+const _fetchWithRetry = async (url, opt) => {
     opt = opt || {};
-    const timeoutMs = opt.timeoutMs || FETCH_TIMEOUT_MS;
     const retries = Number.isFinite(opt.retries) ? opt.retries : 0;
+    const timeoutMs = opt.timeoutMs || FETCH_TIMEOUT_MS;
     let lastErr = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
         if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_BACKOFF_MS * attempt));
-        try {
-            if (typeof fetch !== 'function') throw new Error('当前环境不支持网络请求');
-            const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
-            const timer = ctl ? setTimeout(() => { try { ctl.abort(); } catch (e) {} }, timeoutMs) : null;
-            let res;
-            try { res = await fetch(url, ctl ? { signal: ctl.signal } : undefined); }
-            finally { if (timer) clearTimeout(timer); }
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return await res.json();
-        } catch (e) { lastErr = e; }
+        try { return await _fetchOnce(url, timeoutMs, !!opt.asText); } catch (e) { lastErr = e; }
     }
     throw lastErr || new Error('请求失败');
 };
 
 const _touchCheckTs = () => { try { safeSet(CHECK_TS_KEY, String(Date.now())); } catch (e) { _swallow(e); } };
 
-/* ---------- 结果反馈：失败绝不伪装成更新成功 ---------- */
 const _rangeText = range => {
-    if (!range) return '不限';
+    if (!range || (range.min == null && (range.max == null || range.max === ''))) return '不限';
     const min = range.min != null ? ('≥' + range.min) : '';
     const max = (range.max != null && range.max !== '') ? ('≤' + range.max) : '';
-    return (min + (min && max ? ' 且 ' : '') + max) || '不限';
+    return min + (min && max ? ' 且 ' : '') + max;
 };
 
+/* ---------- 结果反馈：失败绝不伪装成更新成功 ---------- */
 const _report = (result, manual) => {
     const latest = result.latest || null;
     _log('检查 ' + result.state + ' | 本地权重 ' + result.local.modelVersion + ' | 远程 ' + (latest ? latest.modelVersion : '—') + (result.message ? (' | ' + result.message) : ''), result.state === 'unreachable');
-    /* 自动检查保持安静：只有「最新 / 不可用 / 协议未启用」不打扰用户 */
     if (!manual) {
-        if (result.state === 'latest' || result.state === 'unreachable' || result.state === 'unsupported') return;
+        /* 自动检查保持安静：只有需要用户处理时才提示 */
+        if (result.state === 'latest' || result.state === 'unreachable' || result.state === 'unsupported' || result.state === 'superseded') return;
     }
     switch (result.state) {
         case 'latest':
@@ -120,22 +237,24 @@ const _report = (result, manual) => {
             });
             break;
         case 'unreachable':
-            styledDialog({
-                title: '检查失败',
-                message: '模型权重服务器暂时不可用。\n原因：' + (result.message || '未知') + '\n\n可稍后重试；此期间扩展与现有模型均照常使用。',
-            });
+            styledDialog({ title: '检查失败', message: '模型权重服务器暂时不可用。\n原因：' + (result.message || '未知') + '\n\n可稍后重试；此期间扩展与现有模型均照常使用。' });
             break;
         case 'unsupported':
-            styledDialog({
-                title: '暂无模型权重更新',
-                message: '服务器尚未提供独立的模型权重更新（协议未启用）。\n\n扩展程序本身的更新请按原有整包方式获取。',
-            });
+            styledDialog({ title: '暂无模型权重更新', message: '服务器尚未提供独立的模型权重更新（协议未启用）。\n\n扩展程序本身的更新请按原有整包方式获取。' });
             break;
         case 'invalid':
+            styledDialog({ title: '模型权重元数据异常', message: '服务器返回的权重元数据不完整或异常：\n' + (result.message || '未知') + '\n\n已忽略本次结果，现有模型不受影响。' });
+            break;
+        case 'broken':
             styledDialog({
-                title: '模型权重元数据异常',
-                message: '服务器返回的权重元数据不完整或异常：\n' + (result.message || '未知') + '\n\n已忽略本次结果，现有模型不受影响。',
-            });
+                title: '本地官方权重异常',
+                message: '检测到本地官方权重记录与权重存档不一致：\n' + (result.integrity && result.integrity.reason || '内容异常')
+                    + '\n\n可重新下载同一版本权重修复；也可继续使用当前回退模型。',
+                buttons: [
+                    { label: '重新下载修复', value: 'fix', primary: true },
+                    { label: '暂不处理', value: 'no' },
+                ],
+            }).then(v => { if (v === 'fix') downloadAndApply({ latest: result.latest }); });
             break;
         case 'needsExtensionUpdate':
             styledDialog({
@@ -146,15 +265,24 @@ const _report = (result, manual) => {
             });
             break;
         case 'available':
-            /* ★ 阶段二：检查与状态区分已就绪；下载安装通道在后续步骤接入此处 */
             styledDialog({
                 title: '发现新模型权重',
                 message: '当前模型权重：' + result.local.modelVersion
                     + '\n最新模型权重：' + (latest ? latest.modelVersion : '?')
+                    + (latest && latest.requiresExtension ? ('\n要求扩展版本：' + _rangeText(latest.requiresExtension)) : '')
                     + (latest && latest.publishedAt ? ('\n发布时间：' + latest.publishedAt) : '')
                     + (latest && latest.notes ? ('\n\n更新说明：\n' + latest.notes) : '')
-                    + '\n\n下载与安全安装通道尚未接入本版本，请稍后重试或等待扩展更新。',
-            });
+                    + '\n\n· 只更新 AI 模型参数数据，不改动扩展文件'
+                    + '\n· 不影响训练样本、候选记录与历史统计'
+                    + (result.hasUserModel ? '\n· ⚠ 检测到本地训练模型，安装前会单独询问是否保留' : ''),
+                buttons: [
+                    { label: '下载并安装', value: 'go', primary: true },
+                    { label: '暂不更新', value: 'no' },
+                ],
+            }).then(v => { if (v === 'go') downloadAndApply({ latest }); });
+            break;
+        case 'superseded':
+            _log('本地权重已被本地训练成果覆盖，官方记录视为已被替换（非异常）');
             break;
         default:
             _log('未知状态：' + result.state, true);
@@ -168,19 +296,38 @@ export const checkModelUpdate = async opt => {
     const local = localModelRelease();
     _touchCheckTs();
 
-    let manifest = null;
+    /* 1) 先做本地完整性核验：损坏时必须能重新获取（与"是最新"区分开） */
+    const integrity = await verifyOfficialIntegrity().catch(() => ({ state: 'unknown' }));
+
+    /* 2) 拉清单 */
+    let manifest = null, fetchErr = null;
     try {
-        manifest = await fetchJson(MODEL_MANIFEST_URL, { retries: manual ? 1 : 0 });
-    } catch (e) {
-        const result = { state: 'unreachable', local, message: String((e && e.message) || e) };
+        manifest = await _fetchWithRetry(MODEL_MANIFEST_URL, { retries: manual ? 1 : 0 });
+    } catch (e) { fetchErr = e; }
+
+    const hasUserModel = await (async () => {
+        try {
+            const active = await activeParamsNow();
+            const contract = await getContract();
+            const rec = readOfficialRecord();
+            return !!(contract && detectUserModel({ activeParams: active, defaultParams: defaultParams(), officialDigest: rec && rec.sha256, dims: contract.dims }).isUserModel);
+        } catch (e) { return false; }
+    })();
+
+    if (!manifest) {
+        if (integrity.state === 'broken') {
+            const result = { state: 'broken', local, integrity, hasUserModel, message: '服务器不可用，暂时无法重新下载修复' };
+            _report(result, true);
+            return result;
+        }
+        const result = { state: 'unreachable', local, message: String((fetchErr && fetchErr.message) || fetchErr) };
         _report(result, manual);
         return result;
     }
 
-    /* 协议未启用 / 清单结构不符 → 安全降级：不报错、不提供更新、扩展照常使用 */
-    if (!manifest || typeof manifest !== 'object' || manifest.protocol !== MODEL_PROTOCOL
+    if (typeof manifest !== 'object' || manifest.protocol !== MODEL_PROTOCOL
         || manifest.modelId !== MODEL_ID || !manifest.latest || typeof manifest.latest !== 'object') {
-        const result = { state: 'unsupported', local, message: '协议未启用或清单格式不符' };
+        const result = { state: 'unsupported', local, integrity, hasUserModel, message: '协议未启用或清单格式不符' };
         _report(result, manual);
         return result;
     }
@@ -188,46 +335,284 @@ export const checkModelUpdate = async opt => {
     const latest = manifest.latest;
     if (typeof latest.modelVersion !== 'string' || !Number.isFinite(Number(latest.releaseSeq))
         || typeof latest.url !== 'string' || !latest.url) {
-        const result = { state: 'invalid', local, latest, message: '缺少 modelVersion / releaseSeq / url' };
+        const result = { state: 'invalid', local, latest, integrity, hasUserModel, message: '缺少 modelVersion / releaseSeq / url' };
         _report(result, manual);
         return result;
     }
 
-    /* 兼容性：新权重要求的扩展区间，与「新旧」无关 */
     if (!satisfiesExtensionRange(VERSION, latest.requiresExtension)) {
-        const result = { state: 'needsExtensionUpdate', local, latest };
+        const result = { state: 'needsExtensionUpdate', local, latest, integrity, hasUserModel };
+        _report(result, true);
+        return result;
+    }
+
+    /* 损坏且服务器已提供同版本包 → 优先修复提示 */
+    if (integrity.state === 'broken' && normalizeReleaseSeq(latest.releaseSeq) <= local.releaseSeq) {
+        const result = { state: 'broken', local, latest, integrity, hasUserModel };
         _report(result, true);
         return result;
     }
 
     if (isNewerRelease(latest.releaseSeq, local.releaseSeq)) {
-        const result = { state: 'available', local, latest };
+        const result = { state: 'available', local, latest, integrity, hasUserModel };
         _report(result, true);
         return result;
     }
 
-    const result = { state: 'latest', local, latest };
+    const result = { state: 'latest', local, latest, integrity, hasUserModel };
     _report(result, manual);
     return result;
 };
 
-/* ---------- 装配：检查入口 + 启动自动检查（6 小时节流） ---------- */
+/* ---------- 下载 + 校验（未通过全部检查不允许应用） ---------- */
+const _absolutize = url => {
+    try { return new URL(url, MODEL_MANIFEST_URL).href; } catch (e) { return url; }
+};
+
+const downloadBundle = async latest => {
+    const contract = await getContract();
+    if (!contract) throw new Error('无法读取运行时模型契约（模型模块未就绪）');
+    const url = _absolutize(latest.url);
+    const raw = await _fetchWithRetry(url, { retries: 1, asText: true });
+    if (typeof raw !== 'string' || !raw.length) throw new Error('权重包为空');
+    let bundle = null;
+    try { bundle = JSON.parse(raw); } catch (e) { throw new Error('权重包不是合法 JSON'); }
+    const res = validateBundle(bundle, contract);
+    if (!res.ok) throw new Error('权重包校验未通过：' + res.errors.join('；'));
+    /* 清单与内容交叉核对：避免"下载期间文件被覆盖"导致元数据与内容不一致 */
+    if (String(bundle.sha256 || '').toLowerCase() !== String(latest.sha256 || '').toLowerCase()) throw new Error('权重包摘要与清单不一致（文件可能已被替换）');
+    if (Number(bundle.size) !== Number(latest.size)) throw new Error('权重包体积与清单不一致');
+    if (normalizeReleaseSeq(bundle.releaseSeq) !== normalizeReleaseSeq(latest.releaseSeq)) throw new Error('权重包版本序号与清单不一致');
+    if (bundle.modelVersion !== latest.modelVersion) throw new Error('权重包版本标识与清单不一致');
+    return { bundle, res, contract };
+};
+
+/* ---------- 记录 / 应用 / 延迟 ---------- */
+const writeOfficialRecord = (bundle, digest, size, contract) => {
+    writeJSON(OFFICIAL_KEY, {
+        modelId: MODEL_ID,
+        modelVersion: bundle.modelVersion,
+        releaseSeq: normalizeReleaseSeq(bundle.releaseSeq),
+        schemaVersion: bundle.schemaVersion,
+        dataEpoch: contract.dataEpoch,
+        sha256: String(digest || bundle.sha256 || '').toLowerCase(),
+        size: Number(size) || Number(bundle.size) || 0,
+        appliedAt: Date.now(),
+        source: 'official-online',
+    });
+};
+
+const buildBridge = async () => {
+    const wm = await loadWeightsModule();
+    if (!wm) return null;
+    return {
+        snapshotModel: wm.__snapshotModel,
+        restoreModel: wm.__restoreModel,
+        saveWeights: wm.saveWeights,
+        getMeta: wm.getMeta,
+        forward: wm.forward,
+        setAccuracy: wm.setAccuracy,
+    };
+};
+
+const storageOps = {
+    readArchive: () => { const wm = weightsModuleSync(); if (wm && typeof wm.__readArchive === 'function') { try { return wm.__readArchive(); } catch (e) {} } return null; },
+    writeBackup: rec => writeJSON(BACKUP_KEY, rec),
+    readBackup: () => readJSON(BACKUP_KEY),
+};
+
+/* 单次更新只允许一个任务：避免重复点击造成竞态 */
+let _busy = false;
+
+export const downloadAndApply = async opt => {
+    opt = opt || {};
+    if (_busy) {
+        styledDialog({ title: '已有更新任务', message: '同一次更新只允许一个任务运行，请等待当前任务结束。' });
+        return { ok: false, err: 'busy' };
+    }
+    if (!opt.latest) {
+        styledDialog({ title: '无法安装', message: '请先「检查模型权重更新」获取最新版本信息后再安装。' });
+        return { ok: false, err: 'no manifest entry' };
+    }
+    _busy = true;
+    const prog = progressDialog('下载模型权重…');
+    try {
+        prog.update('下载并校验权重包…');
+        const { bundle, res, contract } = await downloadBundle(opt.latest);
+
+        /* ★ 保护玩家本地训练成果：检测到本地训练模型时，绝不静默覆盖 */
+        const active = await activeParamsNow();
+        const rec = readOfficialRecord();
+        const det = detectUserModel({ activeParams: active, defaultParams: defaultParams(), officialDigest: rec && rec.sha256, dims: contract.dims });
+        if (det.known && det.isUserModel) {
+            prog.close();
+            const choice = await styledDialog({
+                title: '检测到本地训练模型',
+                message: '你当前生效的模型是你自己训练得到的，不是官方权重。\n\n'
+                    + '· 「备份并切换」：先把当前模型完整备份到本地（可在控制台用 __DJSC.modelUpdate.restoreBackup() 还原），再切换为官方权重\n'
+                    + '· 训练样本、候选记录、历史统计不会被清空或改动\n'
+                    + '· 「保留本地模型」：本次不安装，你的模型继续生效',
+                buttons: [
+                    { label: '备份并切换为官方权重', value: 'apply', primary: true },
+                    { label: '保留本地模型', value: 'keep' },
+                ],
+            });
+            if (choice !== 'apply') return { ok: false, err: 'user kept local model' };
+        }
+
+        const gate = await canApplyNow();
+        if (!gate.ok) {
+            /* 延迟到下一局结束 / 下次启动生效，绝不在对局或训练中替换权重 */
+            const stored = writeJSON(PENDING_KEY, { latest: opt.latest, bundle, savedAt: Date.now(), reason: gate.reason });
+            prog.close();
+            if (!stored) {
+                await styledDialog({ title: '无法保存待生效权重', message: '设备持久化存储不可用，本次更新未应用（现有模型不受影响）。' });
+                return { ok: false, err: 'storage unavailable for pending' };
+            }
+            await styledDialog({ title: '已下载，稍后生效', message: '当前' + gate.reason + '。\n\n为避免中途替换模型，权重将在本局结束后或下次启动时自动生效。' });
+            return { ok: true, deferred: true, reason: gate.reason };
+        }
+
+        prog.update('写入并校验新权重…');
+        const bridge = await buildBridge();
+        if (!bridge) { prog.close(); await styledDialog({ title: '无法安装', message: '模型模块未就绪，本次更新未应用。' }); return { ok: false, err: 'bridge unavailable' }; }
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle, decoded: res.decoded, dims: contract.dims,
+            probe: res.probe, runtimeEpoch: contract.dataEpoch,
+            onStep: m => prog.update(m),
+        });
+        prog.close();
+        if (r.ok) {
+            writeOfficialRecord(bundle, r.digest, r.size, contract);
+            removeKey(PENDING_KEY);
+            await styledDialog({
+                title: '模型权重更新完成',
+                message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
+                    + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
+                    + '· 优化器状态已重置，后续本地训练从新权重继续\n'
+                    + '· 重启游戏后仍会加载该权重',
+            });
+            return { ok: true, applied: true, modelVersion: bundle.modelVersion };
+        }
+        await styledDialog({
+            title: '安装未完成',
+            message: '新权重未通过校验，已' + (r.rolledBack ? '完整回滚到更新前的模型' : '尝试回滚（未能完全确认，请重启游戏后检查模型状态）') + '。\n\n原因：\n' + (r.errors || []).join('\n'),
+        });
+        return { ok: false, errors: r.errors, rolledBack: r.rolledBack };
+    } catch (e) {
+        prog.close();
+        const msg = String((e && e.message) || e);
+        await styledDialog({ title: '下载或安装失败', message: '原因：' + msg + '\n\n现有模型未受影响。' });
+        return { ok: false, err: msg };
+    } finally {
+        _busy = false;
+    }
+};
+
+/* 延迟应用（启动时 / 每局结束后调用）；任何失败都恢复旧模型 */
+export const tryApplyPending = async () => {
+    const pending = readPending();
+    if (!pending || !pending.bundle) return { ok: false, skipped: true };
+    const gate = await canApplyNow();
+    if (!gate.ok) return { ok: false, skipped: true, reason: gate.reason };
+    const contract = await getContract();
+    if (!contract) return { ok: false, skipped: true, reason: '契约不可用' };
+    const res = validateBundle(pending.bundle, contract);
+    if (!res.ok) {
+        removeKey(PENDING_KEY);
+        _log('待生效权重校验失败，已放弃：' + res.errors.join('；'), true);
+        return { ok: false, errors: res.errors };
+    }
+    const bridge = await buildBridge();
+    if (!bridge) return { ok: false, skipped: true, reason: '模型模块未就绪' };
+    const r = await applyOfficialBundle({
+        bridge, storageOps, bundle: pending.bundle, decoded: res.decoded, dims: contract.dims,
+        probe: res.probe, runtimeEpoch: contract.dataEpoch,
+    });
+    removeKey(PENDING_KEY);
+    if (r.ok) {
+        writeOfficialRecord(pending.bundle, r.digest, r.size, contract);
+        await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion });
+    } else {
+        await styledDialog({ title: '权重应用失败', message: '已' + (r.rolledBack ? '回滚到更新前的模型' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
+    }
+    return r;
+};
+
+/* 还原更新前的模型（用户本地训练成果备份） */
+export const restoreBackup = async () => {
+    const rec = storageOps.readBackup();
+    if (!rec || !rec.params) { styledDialog({ title: '没有可还原的备份', message: '未找到更新前的模型备份。' }); return { ok: false, err: 'no backup' }; }
+    const contract = await getContract();
+    const bridge = await buildBridge();
+    if (!contract || !bridge) { styledDialog({ title: '无法还原', message: '模型模块未就绪。' }); return { ok: false, err: 'not ready' }; }
+    const need = await styledDialog({
+        title: '还原更新前的模型',
+        message: '将把当前模型替换为更新前的备份（' + new Date(rec.savedAt || Date.now()).toLocaleString() + '）。\n\n训练样本与统计不受影响。',
+        buttons: [{ label: '确认还原', value: 'go', primary: true }, { label: '取消', value: 'no' }],
+    });
+    if (need !== 'go') return { ok: false, err: 'cancelled' };
+    const gate = await canApplyNow();
+    if (!gate.ok) { styledDialog({ title: '暂时无法还原', message: '当前' + gate.reason + '，请稍后再试。' }); return { ok: false, err: gate.reason }; }
+    const spec = paramSpec(contract.dims);
+    const bundleLike = { params: rec.params, trained: (rec.meta && rec.meta.trained) || 0, accuracy: (rec.meta && rec.meta.accuracy) || 0, size: 0 };
+    const decoded = {};
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const bytes = decodeBase64(rec.params[s.key]);
+        const needB = s.kind === 'int16' ? s.len * 2 : s.len;
+        if (!bytes || bytes.byteLength !== needB) { styledDialog({ title: '备份已损坏', message: '备份参数 ' + s.key + ' 不完整，无法还原。' }); return { ok: false, err: 'backup corrupt' }; }
+        decoded[s.key] = s.kind === 'int16' ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })() : Int8Array.from(bytes);
+    }
+    const r = await applyOfficialBundle({ bridge, storageOps, bundle: bundleLike, decoded, dims: contract.dims, probe: null, runtimeEpoch: contract.dataEpoch });
+    if (r.ok) {
+        removeKey(OFFICIAL_KEY);
+        removeKey(BACKUP_KEY);
+        await styledDialog({ title: '已还原', message: '已恢复更新前的模型（官方权重记录已清除）。' });
+    } else {
+        await styledDialog({ title: '还原失败', message: '已' + (r.rolledBack ? '回滚' : '尝试回滚') + '。\n\n原因：\n' + (r.errors || []).join('\n') });
+    }
+    return r;
+};
+
+export const modelUpdateStatus = () => ({
+    extensionVersion: VERSION,
+    local: localModelRelease(),
+    official: readOfficialRecord(),
+    hasPending: !!readPending(),
+    hasBackup: hasBackup(),
+    lastCheckTs: parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0,
+    intervalHours: Math.round(CHECK_INTERVAL_MS / 3600000),
+});
+
+/* ---------- 装配 ---------- */
 export const installModelUpdate = () => {
     try {
         window.__DJSC = window.__DJSC || {};
-        /* ★ 保留历史入口：控制台 __DJSC.updateCheck() 继续可用，用途改为模型权重检查 */
         window.__DJSC.updateCheck = function () { return checkModelUpdate({ manual: true }); };
         window.__DJSC.modelUpdate = {
             check: function () { return checkModelUpdate({ manual: true }); },
+            downloadAndApply,
+            restoreBackup,
             status: modelUpdateStatus,
             localRelease: localModelRelease,
             officialRecord: readOfficialRecord,
+            integrity: verifyOfficialIntegrity,
             hasBackup: hasBackup,
             readPending: readPending,
         };
-        /* 启动自动检查：失败也记时，防止每次启动轰炸服务器 */
+        /* 对局生命周期订阅（失败则重试若干次，保证"延迟应用"有可靠时机） */
+        if (!_ensureBus()) {
+            let n = 0;
+            _busTimer = setInterval(function () {
+                if (_ensureBus() || ++n > 20) { if (_busTimer) clearInterval(_busTimer); _busTimer = null; }
+            }, 1000);
+        }
+        /* 启动时：先尝试应用待生效权重，再按 6 小时节流做一次静默检查 */
         const ts = parseInt(safeGet(CHECK_TS_KEY) || '0', 10) || 0;
-        if (Date.now() - ts > CHECK_INTERVAL_MS) checkModelUpdate({ manual: false }).catch(_swallow);
+        tryApplyPending().catch(_swallow).then(() => {
+            if (Date.now() - ts > CHECK_INTERVAL_MS) checkModelUpdate({ manual: false }).catch(_swallow);
+        });
     } catch (e) {
         _log('装配失败：' + ((e && e.message) || e), true);
     }
