@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>无名AI 更新弹窗 · 设备矩阵实测台（模拟本体 CSS 干扰）</title>
+<style>
+body { margin: 0; background: #17191c; color: #ddd; font-family: "Microsoft YaHei", sans-serif; padding: 18px; }
+h1 { font-size: 18px; color: #f3e8ae; margin: 0 0 4px; }
+p.note { font-size: 13px; color: #9aa4ad; margin: 0 0 14px; }
+#summary { font-size: 14px; margin: 0 0 14px; padding: 8px 12px; border-radius: 8px; background: #20242a; display: inline-block; }
+#grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.card { background: #20242a; border: 1px solid #3a4048; border-radius: 10px; padding: 10px; }
+.card h2 { font-size: 13px; margin: 0 0 6px; color: #cfe3f3; font-weight: normal; }
+.card .meta { font-size: 12px; margin: 0 0 8px; }
+.card .ok { color: #8fd18a; } .card .bad { color: #f08a8a; }
+.frame-wrap { width: 100%; overflow: hidden; border-radius: 6px; }
+iframe { border: 1px solid #444; background: #000; display: block; }
+.card ul { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: #f0b6b6; max-height: 140px; overflow: auto; }
+.card.solo { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 999; margin: 0; border-radius: 0; overflow: auto; }
+.card.solo iframe { border: none; }
+button.solo-btn { font-size: 12px; margin-left: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>无名AI 更新弹窗 · 设备矩阵实测（本体全局 CSS 干扰复现）</h1>
+<p class="note">每个方格 = 一个 iframe，内含本体全局规则（div 绝对定位 / body transform:scale）。点击「放大」可在本窗口内单独查看该设备尺寸。</p>
+<div id="summary">运行中…</div>
+<div id="grid"></div>
+<script>
+/* 设备矩阵：横屏手机优先（含 Android），覆盖本体缩放的两个方向 */
+const MATRIX = [
+    { w: 915, h: 412, zoom: 1,    note: 'Android 横屏（Pixel 7 级）' },
+    { w: 915, h: 412, zoom: 0.75, note: 'Android 横屏 + 本体缩小缩放' },
+    { w: 800, h: 360, zoom: 1,    note: 'Android 横屏（旧机型小屏）' },
+    { w: 812, h: 375, zoom: 1.25, note: 'iOS 横屏 + 本体放大缩放' },
+    { w: 640, h: 360, zoom: 1,    note: '小屏横屏' },
+    { w: 360, h: 780, zoom: 1,    note: '竖屏（回归参照）' },
+];
+
+window.__labState = { done: false, results: [], allOk: false };
+
+const waitFrameReady = async win => {
+    for (let i = 0; i < 100; i++) {
+        if (win.__uiReady && typeof win.__runSuite === 'function') return true;
+        await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
+};
+
+const runCard = async (cfg, card, wrap) => {
+    const iframe = document.createElement('iframe');
+    iframe.width = cfg.w;
+    iframe.height = cfg.h;
+    iframe.src = 'ui-harness.html';
+    wrap.appendChild(iframe);
+    const ready = await waitFrameReady(iframe.contentWindow);
+    if (!ready) return { cfg, ok: false, error: 'harness 未就绪', results: [] };
+    try {
+        const res = await iframe.contentWindow.__runSuite(cfg.zoom);
+        return { cfg, ok: res.allOk, results: res.results };
+    } catch (e) {
+        return { cfg, ok: false, error: String((e && e.message) || e), results: [] };
+    }
+};
+
+const buildCards = () => MATRIX.map(cfg => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const h2 = document.createElement('h2');
+    h2.textContent = cfg.w + '×' + cfg.h + ' @ zoom ' + cfg.zoom + ' · ' + cfg.note;
+    const meta = document.createElement('p');
+    meta.className = 'meta';
+    meta.textContent = '等待…';
+    const wrap = document.createElement('div');
+    wrap.className = 'frame-wrap';
+    wrap.style.width = cfg.w + 'px';
+    const soloBtn = document.createElement('button');
+    soloBtn.className = 'solo-btn';
+    soloBtn.textContent = '放大';
+    soloBtn.onclick = () => card.classList.toggle('solo');
+    h2.appendChild(soloBtn);
+    card.appendChild(h2); card.appendChild(meta); card.appendChild(wrap);
+    document.getElementById('grid').appendChild(card);
+    return { cfg, card, meta, wrap };
+});
+
+(async () => {
+    const cards = buildCards();
+    let allOk = true;
+    for (const c of cards) {
+        const out = await runCard(c.cfg, c.card, c.wrap);
+        const fails = (out.results || []).filter(r => !r.ok);
+        const total = (out.results || []).length;
+        c.meta.className = 'meta ' + (out.ok ? 'ok' : 'bad');
+        c.meta.textContent = out.ok ? ('✓ 全部通过（' + total + ' 项断言）') : (out.error ? ('✗ ' + out.error) : ('✗ ' + fails.length + '/' + total + ' 项失败'));
+        if (fails.length) {
+            const ul = document.createElement('ul');
+            fails.forEach(f => { const li = document.createElement('li'); li.textContent = f.name + ' — ' + JSON.stringify(f.detail); ul.appendChild(li); });
+            c.card.appendChild(ul);
+        }
+        window.__labState.results.push({ cfg: c.cfg, ok: out.ok, total, fails: fails.map(f => f.name) });
+    }
+    allOk = window.__labState.results.every(r => r.ok);
+    window.__labState.allOk = allOk;
+    window.__labState.done = true;
+    document.getElementById('summary').textContent = (allOk ? '✓ 全部组合通过' : '✗ 存在失败组合')
+        + '（共 ' + window.__labState.results.length + ' 组设备×缩放）';
+    document.getElementById('summary').style.background = allOk ? '#1d3320' : '#3a1f1f';
+})();
+</script>
+</body>
+</html>
