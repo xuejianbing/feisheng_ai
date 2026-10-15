@@ -71,6 +71,35 @@ export const normalizeReleaseSeq = v => {
 export const isNewerRelease = (remoteSeq, localSeq) =>
     normalizeReleaseSeq(remoteSeq) > normalizeReleaseSeq(localSeq);
 
+/* ---------------- 清单 → 客户端状态（纯判定，便于测试与复用） ----------------
+ * 判定顺序即优先级：协议 → 字段完整性 → 扩展兼容性 → 本地损坏修复 → 是否有更新。
+ * integrityState: 本地官方权重完整性（来自读回存档核对），'broken' 表示版本相同但内容损坏。
+ * 返回 { state, latest, message }；state 取值：
+ *   unsupported / invalid / needsExtensionUpdate / broken / available / latest */
+export const classifyManifestState = opt => {
+    const { manifest, localSeq, extensionVersion, integrityState } = opt || {};
+    const latest = manifest && typeof manifest === 'object' ? manifest.latest : null;
+
+    if (!manifest || typeof manifest !== 'object' || manifest.protocol !== MODEL_PROTOCOL
+        || manifest.modelId !== MODEL_ID || !latest || typeof latest !== 'object') {
+        /* 服务器未启用协议（例如返回了别的 JSON）→ 安全降级 */
+        return { state: 'unsupported', latest: null, message: '协议未启用或清单格式不符' };
+    }
+    if (typeof latest.modelVersion !== 'string' || !Number.isFinite(Number(latest.releaseSeq))
+        || typeof latest.url !== 'string' || !latest.url) {
+        return { state: 'invalid', latest, message: '缺少 modelVersion / releaseSeq / url' };
+    }
+    if (!satisfiesExtensionRange(extensionVersion, latest.requiresExtension)) {
+        return { state: 'needsExtensionUpdate', latest };
+    }
+    /* 版本相同但内容损坏 → 允许重新获取修复（与"已是最新"区分开） */
+    if (integrityState === 'broken' && normalizeReleaseSeq(latest.releaseSeq) <= normalizeReleaseSeq(localSeq)) {
+        return { state: 'broken', latest };
+    }
+    if (isNewerRelease(latest.releaseSeq, localSeq)) return { state: 'available', latest };
+    return { state: 'latest', latest };
+};
+
 /* ---------------- 参数契约：网络层 / Critic 头 / 残差投影，一个都不能少 ----------------
  * 长度由 dims 派生（[I,H1,H2,O]），避免与 MODEL_SCHEMA 手写维度漂移；
  * kind 决定字节宽度与取值范围（Int8 权重 / Int16 偏置）。
