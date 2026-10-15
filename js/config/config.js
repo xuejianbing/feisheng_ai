@@ -645,6 +645,27 @@ export let config = {
 		/* ===== 模型训练与更新 ===== */
 		modelBd: { clear: true, name: '<div style="color: #7fe3a0; text-align:center; padding: 4px;">▸ 模型训练与更新</div>' },
 
+		/* ★ 模型权重在线更新：只更新 AI 模型参数数据，不下载/解压/覆盖扩展文件（实现见 js/update/）。
+		 * 判新旧比较的是「模型权重版本」，与扩展版本无关；扩展版本只用于兼容性判断。 */
+		checkModelUpdate: {
+			name: '<button class="djsc-menu-config-btn" style="background: linear-gradient(135deg, #9ad8ff, #1e90ff); width: 100%; padding: 15px; font-size: 16px; margin: 8px 0;">🔄 检查模型权重更新</button>',
+			intro: '比较本地与服务器的「模型权重版本」；只更新模型参数数据，不改动扩展文件、不影响本地训练样本。',
+			onclick: function () {
+				try {
+					if (window.__DJSC && window.__DJSC.modelUpdate && window.__DJSC.modelUpdate.check) {
+						window.__DJSC.modelUpdate.check().catch(function () {});
+					} else if (window.__DJSC && window.__DJSC.updateCheck) {
+						window.__DJSC.updateCheck();
+					} else {
+						alert('模型权重更新模块未就绪');
+					}
+				} catch (e) {
+					alert('检查失败：' + e.message);
+				}
+				return false;
+			}
+		},
+
 		useTrainedModel: {
 			name: '🤖 启用训练模型（默认开启，新手开箱即用，日志显示 M 标签）',
 		},
