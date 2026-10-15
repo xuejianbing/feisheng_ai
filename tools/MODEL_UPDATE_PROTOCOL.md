@@ -137,7 +137,15 @@ node tools/export-weights.mjs --verify dist/main-actor-critic-w7d5-20261015-01-x
   `{ v, dv, w1, b1, w2, b2, w3, b3, w4, b4, pr1, pr2, trained, accuracy }`。
   也可用 `--from-default` 直接以扩展内置默认权重作为发布内容（首期可用它打通链路）。
 - 上传：把 `dist/<权重包>.json` 放到 `/update/model/`，把 `manifest.json` 放到 `/update/model/manifest.json`。
-- `--epoch` 默认 5（当前运行时 `DATA_EPOCH`）；若训练数据的纪元更低，脚本会告警——发布出去也不会生效。
+- **兼容性硬校验（默认拒绝，绝不静默放行）**：
+  - 输入结构版本 `v` ≠ 目标 `schemaVersion` → **直接拒绝**（本工具不提供结构迁移，禁止仅改元数据冒充新模型）。
+  - 输入数据纪元 `dv` < 目标 `--epoch` → **默认拒绝**；确需发布时显式加
+    `--allow-epoch-migration --migration-note "<依据>"`，迁移依据会写入权重包 `epochMigration` 字段供审计。
+  - `--from-default` 例外：内置默认权重即当前结构版本的基线模型（仅 `dv` 元数据陈旧），按可验证基线放行。
+  - 任何拒绝都以退出码 1 结束且不产出文件。
+- `--epoch` 默认 5（当前运行时 `DATA_EPOCH`）。权重包必须携带与运行时一致的
+  `dtype`（int8 权重 / int16 偏置）与 `architecture`（gelu / layernorm / residual / critic），
+  客户端 `validateBundle` 会强制校验，同维度但语义不符的权重一律拒绝安装。
 
 ## 七、客户端行为（供服务端了解影响）
 
@@ -187,13 +195,26 @@ node tools/export-weights.mjs --verify dist/main-actor-critic-w7d5-20261015-01-x
 | 场景 | 结论 |
 |---|---|
 | 全新离线安装、无网络 | `loadWeights()` 无存档 → 载入内置默认权重（`_decodeDefault` 只校验 `v===VERSION`，与数据纪元无关）→ 开箱可用 |
-| 安装包默认模型 vs 同次权重元数据 | 一致性由协议约束：权重包 `schemaVersion` 必须等于运行时 `MODEL_SCHEMA.version`（7）、`dims` 必须为 `[134,128,64,6]`、`dataEpoch >= DATA_EPOCH`（当前 5），三者由 `validateBundle` 强制校验 |
+| 安装包默认模型 vs 同次权重元数据 | 一致性由协议约束：权重包 `schemaVersion` 必须等于运行时 `MODEL_SCHEMA.version`（7）、`dims` 必须为 `[134,128,64,6]`、`dtype`/`architecture` 必须与 `MODEL_SCHEMA` 一致、`dataEpoch >= DATA_EPOCH`（当前 5），均由 `validateBundle` 强制校验 |
 | 旧用户升级安装包后 | 本地训练成果（`djsc_weights_v3`）与训练样本 / 候选 / 专项模型数据**均不因整包更新而改动**；官方权重记录与备份键独立存在，继续按规则生效 |
-| 结构不兼容的新权重 | 客户端拒绝在线替换（`schemaVersion` / `dims` 不符即 `invalid`），只提示领取新安装包 |
+| 结构不兼容的新权重 | 客户端拒绝在线替换（`schemaVersion` / `dims` / `architecture` 不符即 `invalid`），只提示领取新安装包 |
 
 > ⚠ 已知既有不一致（**未修改**，遵循"不得为了通过校验随意修改版本常量"）：
 > 内置默认权重 `DEFAULT_WEIGHTS.dv = 4`，而运行时 `DATA_EPOCH = 5`。
 > 内置默认权重走 `_decodeDefault()`（只校验结构版本，不校验数据纪元），因此离线可用不受影响；
-> 但**若用 `--from-default` 导出官方权重包，必须显式 `--epoch 5`**，否则客户端会以「数据纪元过旧」拒绝。
-> 导出脚本已内置该默认值与告警。
+> `--from-default` 导出时，导出脚本将内置默认权重按"当前结构版本的基线模型"处理并统一写入
+> 目标纪元（可验证处理），无需人工指定 `--epoch`。历史训练产物的 `dv` 若低于目标纪元，
+> 导出脚本**默认拒绝**，须显式 `--allow-epoch-migration --migration-note` 并留下审计依据。
+
+### 9.4 安全与一致性保证（P0/P1/P2 修复后）
+
+| 保证 | 实现 |
+|---|---|
+| 备份失败绝不替换模型 | 安装前强制"写入备份 + 读回逐项核对（参数/摘要/结构版本）"，任一步失败即中止且不谎报 |
+| 恢复不覆盖原备份 | 恢复走独立事务（`mode='restore'`），不写 `BACKUP_KEY`；失败保留原备份，支持反复恢复 |
+| 待生效不静默覆盖新训练 | 待生效记录含授权基线摘要；生效前比对当前摘要，不一致则重新征询用户 |
+| 单一更新事务 | 下载安装 / 待生效应用 / 恢复备份共用事务锁，同一时刻仅一个 |
+| 版本记录事务一致 | 官方记录写入后读回核对；失败则回滚旧权重与旧记录 |
+| 下载安全 | 超时覆盖正文读取；体积上限由网络维度派生，异常大响应提前拒绝 |
+| 弹窗降级安全 | DOM 不可用时，破坏性操作默认取消（返回安全值），只读提示才安全降级 |
 

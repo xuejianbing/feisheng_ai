@@ -67,7 +67,11 @@ if (dims.length !== 4 || dims.some(v => !Number.isInteger(v) || v <= 0)) die('--
 const schemaVersion = args.schema !== undefined ? parseInt(args.schema, 10) : DEFAULT_SCHEMA;
 const dataEpoch = args.epoch !== undefined ? parseInt(args.epoch, 10) : DEFAULT_EPOCH;
 const spec = paramSpec(dims);
-const expect = { schemaVersion, featureDim: dims[0], dims: dims.slice(), dataEpoch };
+const expect = {
+    schemaVersion, featureDim: dims[0], dims: dims.slice(), dataEpoch,
+    dtype: { weights: 'int8', biases: 'int16' },
+    architecture: { activation: 'gelu', norm: 'layernorm', residual: true, critic: true },
+};
 
 /* ---------- 模式三：离线校验 ---------- */
 if (args.verify) {

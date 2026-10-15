@@ -30,8 +30,11 @@ export const UI = {
     font: 'xinwei, KaiTi, serif',
 };
 
-/* 统一风格对话框：opts={title, message, buttons:[{label,value,primary}], modal}
- * 返回 Promise<value>；DOM 不可用时自动退回原生 alert 语义。 */
+/* 统一风格对话框：opts={title, message, buttons:[{label,value,primary}], modal, dangerous, defaultValue}
+ * 返回 Promise<value>；DOM 不可用时自动退回原生 alert 语义。
+ * ★ P2-4：dangerous=true 的破坏性操作（覆盖权重/删除记录/恢复备份等），
+ *   在无法呈现交互界面时一律返回"取消"值，绝不把普通提示当成用户已确认；
+ *   只读提示可安全降级（返回首个按钮值）。 */
 export const styledDialog = opts => {
     opts = opts || {};
     return new Promise(resolve => {
@@ -76,6 +79,13 @@ export const styledDialog = opts => {
         } catch (eNoDom) {
             /* DOM 不可用：退回原生弹窗，保证更新流程不断 */
             try { alert((opts.title ? opts.title + '\n\n' : '') + (opts.message || '')); } catch (e2) {}
+            if (opts.defaultValue !== undefined) { finish(opts.defaultValue); return; }
+            if (opts.dangerous) {
+                /* 危险操作：无法呈现交互界面 → 默认取消（取非主按钮值，无则 null） */
+                const safe = buttons.filter(b => !b.primary);
+                finish(safe.length ? safe[safe.length - 1].value : null);
+                return;
+            }
             finish(buttons[0] && buttons[0].value);
         }
     });

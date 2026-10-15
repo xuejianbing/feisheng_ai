@@ -298,3 +298,101 @@ export const evaluateExportCompatibility = opt => {
     }
     return { ok: true, epochMigration: null, reason: '' };
 };
+
+/* ---------------- 存档完整性分类（P2-1） ----------------
+ * 摘要不同 ≠ 用户训练：必须结合"存档结构有效性 + 来源记录 + 训练证据"判断。
+ * 返回 { state, reason, digest }；state 取值：
+ *   none 无官方记录 | unknown 契约不可用 | ok 一致
+ *   broken   存档结构无效/缺失/回退默认（损坏或丢失，可重新获取修复）
+ *   superseded 结构有效但确为本地训练成果（正常，非异常）
+ *   mismatch 结构有效但无法判定是训练还是外部改写（保守，绝不自动覆盖） */
+export const classifyIntegrityArchive = opt => {
+    const { raw, contract, officialRec, hasTrainingEvidence, defaultDigest } = opt || {};
+    if (!officialRec) return { state: 'none' };
+    if (!contract) return { state: 'unknown', reason: '运行时契约不可用' };
+    if (!raw) return { state: 'broken', reason: '官方权重记录存在，但权重存档缺失（运行时已回退内置默认模型）' };
+    let obj = null;
+    try { obj = JSON.parse(raw); } catch (e) { return { state: 'broken', reason: '权重存档无法解析（可能已损坏）' }; }
+    if (!obj || typeof obj !== 'object') return { state: 'broken', reason: '权重存档为空' };
+    if (obj.v !== contract.schemaVersion) return { state: 'broken', reason: '权重存档网络结构版本不符' };
+    if (Number(obj.dv || 0) < contract.dataEpoch) return { state: 'broken', reason: '权重存档数据纪元 ' + obj.dv + ' 过旧（会被拒载）' };
+    const spec = paramSpec(contract.dims);
+    const params = {};
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const bytes = decodeBase64(obj[s.key]);
+        const need = s.kind === 'int16' ? s.len * 2 : s.len;
+        if (!bytes || bytes.byteLength !== need) return { state: 'broken', reason: '存档参数 ' + s.key + ' 缺失或长度不符' };
+        const typed = bytesToTyped(bytes, s);
+        if (!typed) return { state: 'broken', reason: '存档参数 ' + s.key + ' 类型不符' };
+        for (let k = 0; k < typed.length; k++) {
+            if (!Number.isFinite(typed[k])) return { state: 'broken', reason: '存档参数 ' + s.key + ' 含非法数值（疑似损坏）' };
+        }
+        params[s.key] = obj[s.key];
+    }
+    const digest = paramsDigest(params, contract.dims);
+    if (!digest) return { state: 'broken', reason: '存档参数无法计算摘要' };
+    const officialDigest = String(officialRec.sha256 || '').toLowerCase();
+    if (digest !== officialDigest) {
+        /* 与内置默认一致 → 官方权重已丢失/未生效（属损坏，可重新获取） */
+        if (defaultDigest && digest === String(defaultDigest).toLowerCase()) {
+            return { state: 'broken', reason: '当前权重已回退为内置默认模型（官方权重丢失或未生效）', digest };
+        }
+        if (hasTrainingEvidence) {
+            return { state: 'superseded', reason: '当前生效模型已不是该官方权重（本地训练成果已生效）', digest };
+        }
+        return {
+            state: 'mismatch', digest,
+            reason: '权重存档结构有效，但内容与官方记录不一致：可能是你的本地训练成果，也可能是存档被外部改写或损坏（无法自动判定）',
+        };
+    }
+    return { state: 'ok', digest };
+};
+
+/* ---------------- 下载体积上限（P2-3） ----------------
+ * 由网络维度派生：参数原始字节 × base64 膨胀(4/3) × 余量 + 元数据开销，
+ * 并对未来更大模型留出充裕空间（不会把合法模型误拒）。 */
+export const computeMaxBundleBytes = dims => {
+    const spec = paramSpec(dims);
+    let total = 0;
+    for (let i = 0; i < spec.length; i++) total += (spec[i].kind === 'int16' ? spec[i].len * 2 : spec[i].len);
+    return Math.max(512 * 1024, Math.ceil(total * 4 / 3) * 24 + 64 * 1024);
+};
+/* 清单体积上限（清单只含元数据，远小于权重包） */
+export const MAX_MANIFEST_BYTES = 256 * 1024;
+
+/* ---------------- 网络收口（P2-2 / P2-3） ----------------
+ * 超时必须覆盖"完整下载过程"（含响应正文读取），而非仅到拿到响应为止；
+ * 同时做体积预检（Content-Length 与实际正文长度），防止异常大响应撑爆内存。
+ * fetch / AbortController / sleep 全部注入，便于在 Node 侧用假对象覆盖超时、
+ * 正文中断、体积异常等故障路径。 */
+export const fetchTextWithLimits = async opt => {
+    const { url, fetchImpl, AbortControllerImpl, timeoutMs, retries, maxBytes, sleep, backoffMs } = opt || {};
+    if (typeof fetchImpl !== 'function') throw new Error('当前环境不支持网络请求');
+    const total = Number.isFinite(retries) ? retries : 0;
+    let lastErr = null;
+    for (let attempt = 0; attempt <= total; attempt++) {
+        if (attempt > 0 && typeof sleep === 'function') await sleep((Number(backoffMs) || 800) * attempt);
+        const ctl = (typeof AbortControllerImpl === 'function') ? new AbortControllerImpl() : null;
+        let timedOut = false;
+        const timer = ctl ? setTimeout(() => { timedOut = true; try { ctl.abort(); } catch (e) {} }, Number(timeoutMs) || 12000) : null;
+        try {
+            const res = await fetchImpl(url, ctl ? { signal: ctl.signal } : undefined);
+            if (res && res.ok === false) throw new Error('HTTP ' + res.status);
+            if (res && res.headers && typeof res.headers.get === 'function') {
+                const cl = Number(res.headers.get('content-length'));
+                if (Number.isFinite(cl) && cl > Number(maxBytes)) throw new Error('响应体积超限（Content-Length ' + cl + ' > ' + maxBytes + '）');
+            }
+            if (!res || typeof res.text !== 'function') throw new Error('响应不可读');
+            const text = await res.text();   /* ← 正文读取同样处于超时保护内 */
+            if (typeof text !== 'string') throw new Error('响应正文读取失败');
+            if (Number.isFinite(Number(maxBytes)) && text.length > Number(maxBytes)) throw new Error('响应体积超限（' + text.length + ' > ' + maxBytes + '）');
+            return text;
+        } catch (e) {
+            lastErr = timedOut ? new Error('请求超时（' + timeoutMs + 'ms，含正文读取）') : e;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+    throw lastErr || new Error('请求失败');
+};
