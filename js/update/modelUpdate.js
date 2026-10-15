@@ -533,23 +533,33 @@ const _txRollbackText = r => {
 
 /* ---------- 崩溃恢复（P0-1） ----------
  * 恢复逻辑在 applyWeights.recoverInterruptedTransaction（依赖注入，可在 Node 侧直接测试），
- * 这里只注入宿主侧依赖。阶段语义见 updateCore.classifyInterruptedTx。
+ * 这里注入宿主侧依赖：存储 + 模型 bridge + **官方记录读写能力**
+ * （恢复需要核对/修复官方记录实际内容，而不是只看日志阶段）。
  * 返回 { action, reason }；action='manual' 时调用方必须阻止继续安装。 */
+let _txManualBlocked = false;
 export const recoverInterruptedTransaction = async () => {
     const plan = await recoverTx({
         storageOps,
         getBridge: buildBridge,
         contract: await getContract(),
+        readRecord: () => readOfficialRecord(),
+        writeRecord: rec => writeJSON(OFFICIAL_KEY, rec),
+        removeRecord: () => removeKey(OFFICIAL_KEY),
+        verifyRecord: verifyOfficialRecord,
         onStep: m => _log(m, true),
     });
-    if (plan && plan.action === 'manual') {
-        _log('检测到未完成且无法自动恢复的安装事务：' + plan.reason + '（已保留恢复数据，暂停自动安装）', true);
+    if (plan && (plan.action === 'manual' || plan.manual === true)) {
+        _txManualBlocked = true;
+        _log('检测到未完成且无法自动恢复的安装事务：' + (plan.reason || '') + '（已保留恢复数据，暂停自动安装）', true);
+    } else if (plan) {
+        _txManualBlocked = false;
     }
     return plan;
 };
 
-/* 是否因未完成事务而暂停安装 */
+/* 是否因未完成事务而暂停安装（人工处理标记有内存缓存 + 持久日志双保险） */
 const _txBlocked = () => {
+    if (_txManualBlocked) return true;
     const plan = classifyInterruptedTx(storageOps.readTx());
     return plan.action === 'manual';
 };
@@ -698,6 +708,8 @@ export const downloadAndApply = async opt => {
             bridge, storageOps, bundle, decoded: res.decoded, dims: contract.dims,
             probe: res.probe, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion,
             mode: 'install', preserveUserModel, txId,
+            /* ★ P0-1：把安装前的官方记录纳入事务恢复信息（崩溃恢复"回滚模型+恢复旧记录"的依据） */
+            prevOfficialRecord: rec,
             confirmBeforeWrite: finalCheck,
             commitRecord: async info => writeOfficialRecordVerified(bundle, info.digest, info.size, contract),
             revertRecord: async () => _restoreOfficialRecord(rec),
@@ -832,6 +844,8 @@ const _tryApplyPendingLocked = async pending => {
             authorized = Object.assign({}, authorized, { baseModelDigest: curDigest, userAuthorized: true });
             return { ok: true, rebaseline: true };
         },
+        /* ★ P0-1：安装前的官方记录纳入事务恢复信息 */
+        prevOfficialRecord: officialRec,
         commitRecord: async info => writeOfficialRecordVerified(pending.bundle, info.digest, info.size, contract),
         revertRecord: async () => _restoreOfficialRecord(officialRec),
     });

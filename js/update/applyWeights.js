@@ -21,8 +21,8 @@
 import { encodeBase64, decodeBase64, paramSpec, paramsDigest } from './weightBundle.js?v=41a';
 import {
     buildBackupRecord, verifyBackupRecord, BACKUP_KIND_PARAMS,
-    generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx,
-    decodeBackupParams, backupRecordToBundleLike,
+    generateTxId, buildTxJournal, classifyInterruptedTx, verifyStagingForTx, planTxRecovery, digestOfArchive,
+    decodeBackupParams, backupRecordToBundleLike, restoreOfficialRecord,
 } from './updateCore.js?v=41a';
 
 /* 在线快照键 → 权重包参数键（对应 weights.js __snapshotModel 的契约） */
@@ -215,25 +215,52 @@ const MAX_REBASE = 2;
 const _journalWrite = (storageOps, journal) => {
     try { return !!(storageOps && typeof storageOps.writeTx === 'function' && storageOps.writeTx(journal) !== false); } catch (e) { return false; }
 };
+const _journalRead = storageOps => {
+    try { return (storageOps && typeof storageOps.readTx === 'function') ? storageOps.readTx() : null; } catch (e) { return null; }
+};
 const _journalClear = storageOps => {
     try { if (storageOps && typeof storageOps.removeTx === 'function') storageOps.removeTx(); } catch (e) {}
+};
+/* ★ P0-2：写事务日志必须"写入 + 读回核验"才算成功——
+ * 单键写入也可能失败/被吞，读回的阶段与事务标识必须与写入内容一致；
+ * 读回抛异常、返回空、内容不符 → 一律视为失败（保守，不进入权重替换）。 */
+const _journalWriteVerified = (storageOps, journal) => {
+    if (!_journalWrite(storageOps, journal)) return false;
+    const back = _journalRead(storageOps);
+    if (!back || typeof back !== 'object') return false;
+    return String(back.txId || '') === String(journal.txId || '') && String(back.phase || '') === String(journal.phase || '');
+};
+/* 删除事务日志同样要读回核验消失（删除失败/读回异常 → 未清理） */
+const _journalRemoveVerified = storageOps => {
+    try {
+        if (!storageOps || typeof storageOps.removeTx !== 'function') return false;
+        if (storageOps.removeTx() === false) return false;
+        return !_journalRead(storageOps);
+    } catch (e) { return false; }
 };
 
 export const applyOfficialBundle = async ctx => {
     const { bridge, storageOps, bundle, decoded, dims, probe, runtimeEpoch, schemaVersion, onStep,
         mode = 'install', preserveUserModel = false, confirmBeforeWrite = null,
-        commitRecord = null, revertRecord = null, txId = null } = ctx || {};
+        commitRecord = null, revertRecord = null, txId = null, prevOfficialRecord } = ctx || {};
     const isRestore = mode === 'restore';
     const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
     const errors = [];
     const tx = txId ? String(txId) : generateTxId();
+    /* ★ P0-1：安装前的官方记录快照是可信恢复信息的一部分（null = 已知"安装前无记录"；
+     *   调用方未提供该键 → 日志缺省该字段，崩溃恢复将保守拒绝"回滚+恢复记录"）。 */
+    const prevRecordInfo = (ctx && Object.prototype.hasOwnProperty.call(ctx, 'prevOfficialRecord'))
+        ? (prevOfficialRecord && typeof prevOfficialRecord === 'object' ? Object.assign({}, prevOfficialRecord) : null)
+        : undefined;
 
     /* 如实反馈的状态位，绝不谎报 */
     let backupWritten = false, backupRotated = false, partialWrite = false, journalWritten = false;
+    let journalDegraded = false, cleanupPending = false;
     const fail = (list, failedAt, extra) => Object.assign({
         ok: false, rolledBack: false, errors: Array.isArray(list) ? list : [list],
         digest: null, size: 0, mode: isRestore ? 'restore' : 'install', txId: tx,
         backupWritten, backupRotated, partialWrite, journalWritten,
+        journalDegraded, cleanupPending,
         rollbackStatus: 'none', failedAt: failedAt || 'precheck',
     }, extra || {});
 
@@ -245,17 +272,23 @@ export const applyOfficialBundle = async ctx => {
         if (isRestore) return;
         try { if (storageOps && typeof storageOps.removeStagingBackup === 'function') storageOps.removeStagingBackup(); } catch (e) {}
     };
-    const journalClear = () => { if (isRestore) return; _journalClear(storageOps); };
-    const cleanupTx = () => { discardStaging(); journalClear(); };
+    /* ★ P0-2：清理顺序必须是「先删日志（读回核验）、再删暂存备份」——
+     *   日志里可能仍标记着非终态阶段；若先删暂存而日志残留，下次启动会把
+     *   "完整事务的清理残留"误判为需要回滚。日志删除失败时保留暂存，
+     *   使下次启动仍能沿 settle 路径（补轮换/清理）安全收尾。 */
+    const cleanupTx = () => {
+        if (isRestore) return;
+        if (!_journalRemoveVerified(storageOps)) { cleanupPending = true; return; }
+        discardStaging();
+    };
     /* 中止后清理：回滚不完整时保留事务数据（仍有恢复价值）并标记需人工处理 */
     const cleanupAfterAbort = rbOk => {
         if (rbOk) { cleanupTx(); return; }
-        if (!isRestore) {
-            _journalWrite(storageOps, buildTxJournal({
-                txId: tx, phase: 'weights-written', needsManual: true,
-                reason: '上次事务回滚未完成，已保留暂存备份与事务日志供恢复', startedAt: Date.now(),
-            }));
-        }
+        cleanupPending = true;
+        _journalWrite(storageOps, buildTxJournal({
+            txId: tx, phase: 'weights-written', needsManual: true,
+            reason: '上次事务回滚未完成，已保留暂存备份与事务日志供恢复', startedAt: Date.now(),
+        }));
     };
     const safeRevertRecord = async () => {
         if (typeof revertRecord !== 'function') return [];
@@ -313,16 +346,24 @@ export const applyOfficialBundle = async ctx => {
         break;
     }
 
-    /* 事务日志：基线已就绪（暂存备份已写入并读回校验）；恢复模式不写日志 */
+    /* 事务日志：基线已就绪（暂存备份已写入并读回校验）；恢复模式不写日志。
+     * ★ P0-2：prepared 日志必须**写入并读回核验成功**，才能进入权重替换阶段；
+     *   写失败/抛异常/读回失败/内容不符 → 拒绝继续（模型未被任何操作触碰）。 */
     const baseDigest = snapshotParams ? paramsDigest(snapshotParams, dims) : null;
+    const targetDigest = String(bundle.sha256 || '').toLowerCase();
+    const journalFor = phase => buildTxJournal({
+        txId: tx, phase, baseDigest, targetDigest,
+        modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
+        schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(), prevRecord: prevRecordInfo,
+    });
     if (!isRestore) {
-        journalWritten = _journalWrite(storageOps, buildTxJournal({
-            txId: tx, phase: 'prepared', baseDigest,
-            targetDigest: String(bundle.sha256 || '').toLowerCase(),
-            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
-            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
-        }));
-        if (!journalWritten) step('提示：事务日志写入失败，崩溃恢复能力受限（备份与校验仍然有效）');
+        journalWritten = _journalWriteVerified(storageOps, journalFor('prepared'));
+        if (!journalWritten) {
+            _journalRemoveVerified(storageOps);   /* 清掉可能残留的半写日志（模型未动，无恢复价值） */
+            discardStaging();
+            step('事务恢复日志写入失败，已中止');
+            return fail('事务恢复日志写入失败或读回核验未通过（存储不可用/配额不足），无法保证崩溃恢复能力，已中止（未做任何改动）', 'journal');
+        }
     }
 
     /* 回滚：errors = 未能确认回滚；notes = 已回滚但需如实告知的限制（不算失败）
@@ -386,12 +427,18 @@ export const applyOfficialBundle = async ctx => {
     }
     step('新权重已写入在线模型');
     if (!isRestore) {
-        _journalWrite(storageOps, buildTxJournal({
-            txId: tx, phase: 'weights-written', baseDigest,
-            targetDigest: String(bundle.sha256 || '').toLowerCase(),
-            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
-            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
-        }));
+        /* ★ P0-2：阶段推进失败时——模型内存已被改写（尚未落盘），
+         *   没有可靠恢复信息 → 不允许继续，立即安全回滚并中止。 */
+        if (!_journalWriteVerified(storageOps, journalFor('weights-written'))) {
+            const rb = rollback();
+            cleanupAfterAbort(rb.errors.length === 0);
+            return fail(
+                ['事务恢复日志推进失败（weights-written），已在无可靠恢复信息的情况下安全回滚并中止']
+                    .concat(rb.errors.length ? ['回滚未完全确认：' + rb.errors.join('；')] : ['已回滚到原有模型']),
+                'journal',
+                { rolledBack: rb.errors.length === 0, rollbackStatus: rb.errors.length ? 'failed' : 'complete', rollbackErrors: rb.errors, notes: rb.notes },
+            );
+        }
     }
 
     /* 5) 落盘（返回值不可信，仅作提示） */
@@ -445,12 +492,14 @@ export const applyOfficialBundle = async ctx => {
             );
         }
         if (!isRestore) {
-            _journalWrite(storageOps, buildTxJournal({
-                txId: tx, phase: 'record-committed', baseDigest,
-                targetDigest: String(bundle.sha256 || '').toLowerCase(),
-                modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
-                schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
-            }));
+            /* ★ P0-2：阶段日志推进失败时按"当前实际状态"决策：
+             *   权重与官方记录都已写入并**读回核验**（两两一致），日志标记只是落后；
+             *   崩溃恢复是状态驱动的（会从实际权重/记录内容判定继续提交），
+             *   因此这里允许继续完成提交，但必须如实标记 journalDegraded。 */
+            if (!_journalWriteVerified(storageOps, journalFor('record-committed'))) {
+                journalDegraded = true;
+                step('提示：事务日志标记落后（record-committed 写入失败），权重与记录均已提交，继续完成提交');
+            }
         }
         step('版本记录已提交并核验');
     }
@@ -472,80 +521,173 @@ export const applyOfficialBundle = async ctx => {
             );
         }
         backupRotated = true;
-        _journalWrite(storageOps, buildTxJournal({
-            txId: tx, phase: 'backup-rotated', baseDigest,
-            targetDigest: String(bundle.sha256 || '').toLowerCase(),
-            modelVersion: bundle.modelVersion, releaseSeq: bundle.releaseSeq,
-            schemaVersion, dataEpoch: runtimeEpoch, startedAt: Date.now(),
-        }));
+        if (!_journalWriteVerified(storageOps, journalFor('backup-rotated'))) {
+            /* 轮换已读回核验成功；日志落后不影响状态驱动恢复（record-committed 已持久化），
+             * 清理顺序会先删日志、删除失败则保留暂存备份供下次启动安全收尾。 */
+            journalDegraded = true;
+            step('提示：事务日志标记落后（backup-rotated 写入失败），长期备份已轮换，继续完成收尾');
+        }
         step('已轮换长期备份为更新前的模型');
     }
 
     /* 11) 权重、官方记录、可用恢复点全部核验通过 → 才清理临时事务数据 */
     cleanupTx();
+    if (cleanupPending) step('提示：事务数据清理未完成（提交已全部完成），将在下次启动时补清理');
     step(isRestore ? '已安全恢复历史备份' : '官方权重已安全应用');
     return {
         ok: true, rolledBack: false, errors: [], digest: paramsDigest(bundle.params, dims),
         size: Number(bundle.size) || 0, mode: isRestore ? 'restore' : 'install', txId: tx,
         backupWritten, backupRotated, journalWritten, partialWrite: false, rollbackStatus: 'none', failedAt: null,
+        journalDegraded, cleanupPending,
     };
 };
 
 /* ---------- 崩溃 / 重启后的未完成事务恢复（P0-1） ----------
- * 依据单键事务日志的阶段，执行最小可行的安全恢复。**绝不**在没有可靠恢复数据时
- * 清除唯一可用的恢复点；无法自动恢复时保留全部数据并返回 action='manual'，
- * 由调用方阻止继续安装并提示人工处理。
- * 依赖注入（storageOps / getBridge / contract），因此可在 Node 侧直接测试生产实现。 */
+ * ★ 恢复决策不再只依据日志阶段（提交与日志推进不是原子操作）：
+ *   先收集"实际状态"——持久化模型摘要、运行时模型摘要、官方记录实际内容、
+ *   长期恢复点摘要、本事务暂存备份（txId + 基线摘要）——再交给 planTxRecovery
+ *   做确定性判定；执行完成后读回核验（模型/记录/事务日志）。
+ * 绝不删除仍具恢复价值的数据；无法自动恢复时标记 needsManual 并阻止继续安装。
+ * 依赖注入（storageOps / getBridge / contract / 记录读写），可在 Node 侧直接测试生产实现。 */
 export const recoverInterruptedTransaction = async ctx => {
-    const { storageOps, getBridge, contract, onStep } = ctx || {};
+    const { storageOps, getBridge, contract, onStep,
+        readRecord = null, writeRecord = null, removeRecord = null, verifyRecord = null } = ctx || {};
     const step = m => { try { if (onStep) onStep(m); } catch (e) {} };
     const readTx = () => { try { return (storageOps && typeof storageOps.readTx === 'function') ? storageOps.readTx() : null; } catch (e) { return null; } };
-    const clearTx = () => { try { if (storageOps && typeof storageOps.removeTx === 'function') storageOps.removeTx(); } catch (e) {} };
+    const clearTxVerified = () => _journalRemoveVerified(storageOps);
     const clearStaging = () => { try { if (storageOps && typeof storageOps.removeStagingBackup === 'function') storageOps.removeStagingBackup(); } catch (e) {} };
+    const markManual = reason => {
+        try {
+            if (storageOps && typeof storageOps.writeTx === 'function') {
+                storageOps.writeTx(Object.assign({}, journal, { needsManual: true, reason: '恢复未完成：' + reason }));
+            }
+        } catch (e) {}
+    };
 
     const journal = readTx();
-    const plan = classifyInterruptedTx(journal);
-    if (plan.action === 'none') return plan;
-    if (plan.action === 'manual') {
-        step('检测到无法自动恢复的未完成事务，已保留恢复数据并暂停自动安装：' + plan.reason);
-        return plan;
+    const plan0 = classifyInterruptedTx(journal);
+    if (plan0.action === 'none') return plan0;
+    if (plan0.action === 'manual') {
+        step('检测到无法自动恢复的未完成事务，已保留恢复数据并暂停自动安装：' + plan0.reason);
+        return plan0;
     }
-    if (plan.action === 'cleanup') {
-        /* prepared：权重未改动；backup-rotated：提交已完成 → 仅清理事务数据 */
-        clearStaging(); clearTx();
-        step('已清理未完成事务的临时数据（' + plan.reason + '）');
-        return { action: plan.action, ok: true };
+    if (!contract) return { action: 'manual', ok: false, manual: true, reason: '运行时契约不可用，无法安全恢复未完成事务' };
+
+    const failManual = (actionName, reason) => {
+        markManual(reason);
+        step('未完成事务恢复受限，已保留数据并暂停自动安装：' + reason);
+        return { action: actionName || 'manual', ok: false, manual: true, reason };
+    };
+    /* 仅"事务数据清理"未完成：提交/恢复本身已成功——不得标记 needsManual（会永久阻塞），
+     * 保留日志与原阶段，下次启动沿同一判定安全重试（幂等收尾）。 */
+    const cleanupPendingResult = (actionName, reason) => {
+        step('事务数据清理未完成（将在下次启动重试）：' + reason);
+        return { action: actionName, ok: false, reason: '事务数据清理未完成（将在下次启动重试）' };
+    };
+
+    /* ===== 收集实际状态（绝不只看日志阶段） ===== */
+    const dims = contract.dims;
+    const persistedDigest = (() => {
+        try {
+            const raw = (storageOps && typeof storageOps.readArchive === 'function') ? storageOps.readArchive() : null;
+            return digestOfArchive(raw, dims);
+        } catch (e) { return null; }
+    })();
+    let bridge = null;
+    if (typeof getBridge === 'function') { try { bridge = await getBridge(); } catch (e) { bridge = null; } }
+    let liveDigest = null;
+    if (bridge) {
+        try {
+            const p = snapshotToParams(bridge.snapshotModel());
+            liveDigest = p ? paramsDigest(p, dims) : null;
+        } catch (e) { liveDigest = null; }
     }
-    if (!contract) return { action: 'manual', reason: '运行时契约不可用，无法安全恢复未完成事务' };
+    let officialState = 'unavailable';
+    if (typeof readRecord === 'function') {
+        try {
+            const rec = readRecord();
+            if (!rec) officialState = 'absent';
+            else officialState = (String(rec.sha256 || '').toLowerCase() === String(journal.targetDigest || '').toLowerCase()) ? 'target' : 'other';
+        } catch (e) { officialState = 'unreadable'; }
+    }
     let staging = null;
     try { staging = (storageOps && typeof storageOps.readStagingBackup === 'function') ? storageOps.readStagingBackup() : null; } catch (e) { staging = null; }
-    const srcErrs = verifyStagingForTx(staging, journal, contract.dims);
-    if (srcErrs.length) {
-        step('未完成事务的暂存备份不可用，已保留数据并暂停自动安装：' + srcErrs.join('；'));
-        return { action: 'manual', reason: '暂存备份与事务日志不匹配：' + srcErrs.join('；') };
+    const stagingErrs = staging ? verifyStagingForTx(staging, journal, dims) : [];
+    const stagingOk = !!staging && stagingErrs.length === 0;
+    let backupDigest = null;
+    try {
+        const b = (storageOps && typeof storageOps.readBackup === 'function') ? storageOps.readBackup() : null;
+        if (b && b.params) backupDigest = paramsDigest(b.params, dims);
+    } catch (e) { backupDigest = null; }
+
+    const decision = planTxRecovery(journal, { persistedDigest, liveDigest, officialState, backupDigest, stagingOk });
+    step('未完成事务判定：' + decision.action + '（' + decision.reason + '）');
+
+    if (decision.action === 'manual') return failManual('manual', decision.reason);
+
+    if (decision.action === 'cleanup') {
+        if (!clearTxVerified()) return cleanupPendingResult('cleanup', decision.reason);
+        clearStaging();
+        step('已清理未完成事务的临时数据（' + decision.reason + '）');
+        return { action: 'cleanup', ok: true };
     }
-    if (plan.action === 'finish-rotation') {
-        /* 权重与官方记录已提交（一致指向新权重），只需把长期恢复点补做轮换 */
-        const rot = writeBackupVerified(storageOps, 'writeBackup', 'readBackup', staging, contract.dims);
-        if (rot.ok) { clearStaging(); clearTx(); step('已补做长期备份轮换并清理事务数据'); return { action: 'finish-rotation', ok: true }; }
-        step('补做长期备份轮换失败，已保留数据：' + rot.errors.join('；'));
-        return { action: 'finish-rotation', ok: false, reason: rot.errors.join('；') };
+
+    if (decision.action === 'finish-rotation') {
+        const rot = writeBackupVerified(storageOps, 'writeBackup', 'readBackup', staging, dims);
+        if (!rot.ok) return failManual('finish-rotation', '补做长期备份轮换失败：' + rot.errors.join('；'));
+        /* 完成后读回核验：官方记录必须仍指向目标权重 */
+        let recNow = null;
+        try { recNow = readRecord(); } catch (e) { return failManual('finish-rotation', '官方记录复核读取抛出异常'); }
+        if (!recNow || String(recNow.sha256 || '').toLowerCase() !== String(journal.targetDigest || '').toLowerCase()) {
+            return failManual('finish-rotation', '官方记录复核未通过（sha256 不符或缺失）');
+        }
+        if (!clearTxVerified()) return cleanupPendingResult('finish-rotation', decision.reason);
+        clearStaging();
+        step('已补做长期备份轮换并清理事务数据（权重与官方记录已提交）');
+        return { action: 'finish-rotation', ok: true };
     }
-    /* restore：权重可能已写入但记录未提交 → 用**本事务的暂存备份**回滚 */
-    const bridge = (typeof getBridge === 'function') ? await getBridge() : null;
-    if (!bridge) return { action: 'manual', reason: '模型模块未就绪，无法安全恢复未完成事务' };
-    const decoded = decodeBackupParams(staging, contract.dims);
-    if (!decoded) return { action: 'manual', reason: '暂存备份参数无法解码' };
-    const r = await applyOfficialBundle({
-        bridge, storageOps, bundle: backupRecordToBundleLike(staging), decoded, dims: contract.dims,
-        probe: null, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion, mode: 'restore',
-    });
-    if (r.ok) {
-        clearStaging(); clearTx();
-        step('已按事务日志回滚未完成的安装事务（恢复到更新前模型）');
+
+    if (decision.action === 'restore') {
+        if (!bridge) return failManual('manual', '模型模块未就绪，无法安全恢复未完成事务');
+        if (!stagingOk) return failManual('manual', '暂存备份与事务日志不匹配：' + (stagingErrs.join('；') || '缺少暂存备份'));
+        const decoded = decodeBackupParams(staging, dims);
+        if (!decoded) return failManual('manual', '暂存备份参数无法解码');
+        const r = await applyOfficialBundle({
+            bridge, storageOps, bundle: backupRecordToBundleLike(staging), decoded, dims,
+            probe: null, runtimeEpoch: contract.dataEpoch, schemaVersion: contract.schemaVersion, mode: 'restore', txId: journal.txId,
+        });
+        if (!r.ok) return failManual('restore', '按事务日志回滚失败：' + (r.errors || []).join('；'));
+        /* 回滚 A 必须同时恢复 A 对应的旧官方记录（日志快照为可信来源） */
+        const recFix = restoreOfficialRecord({
+            prevRec: journal.prevRecord,
+            writeRecord, readRecord, removeRecord, verify: verifyRecord || (() => []),
+        });
+        if (!recFix.ok) return failManual('restore', '模型已回滚但官方记录恢复失败：' + recFix.errors.join('；'));
+        /* 恢复完成后读回核验模型摘要 */
+        try {
+            const p2 = snapshotToParams(bridge.snapshotModel());
+            const h2 = p2 ? paramsDigest(p2, dims) : null;
+            if (!h2 || h2 !== String(journal.baseDigest || '').toLowerCase()) {
+                return failManual('restore', '恢复后模型摘要复核未通过');
+            }
+        } catch (e) { return failManual('restore', '恢复后模型摘要无法复核'); }
+        if (!clearTxVerified()) return cleanupPendingResult('restore', decision.reason);
+        clearStaging();
+        step('已按事务日志回滚未完成的安装事务（模型与官方记录均已恢复到更新前）');
         return { action: 'restore', ok: true };
     }
-    try { if (storageOps && typeof storageOps.writeTx === 'function') storageOps.writeTx(Object.assign({}, journal, { needsManual: true, reason: '按事务日志回滚失败：' + (r.errors || []).join('；') })); } catch (e) {}
-    step('按事务日志回滚失败，已保留数据并暂停自动安装：' + (r.errors || []).join('；'));
-    return { action: 'restore', ok: false, reason: (r.errors || []).join('；') };
+
+    if (decision.action === 'fix-record') {
+        const recFix = restoreOfficialRecord({
+            prevRec: journal.prevRecord,
+            writeRecord, readRecord, removeRecord, verify: verifyRecord || (() => []),
+        });
+        if (!recFix.ok) return failManual('fix-record', '官方记录恢复到安装前状态失败：' + recFix.errors.join('；'));
+        if (!clearTxVerified()) return cleanupPendingResult('fix-record', decision.reason);
+        clearStaging();
+        step('已把官方记录恢复到安装前状态并清理事务数据');
+        return { action: 'fix-record', ok: true };
+    }
+
+    return failManual('manual', '未知恢复动作：' + decision.action);
 };

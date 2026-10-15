@@ -374,8 +374,8 @@ export const TX_PHASES = ['prepared', 'weights-written', 'record-committed', 'ba
 export const generateTxId = () => 'tx-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 
 export const buildTxJournal = opt => {
-    const { txId, phase, baseDigest, targetDigest, modelVersion, releaseSeq, schemaVersion, dataEpoch, startedAt, needsManual, reason } = opt || {};
-    return {
+    const { txId, phase, baseDigest, targetDigest, modelVersion, releaseSeq, schemaVersion, dataEpoch, startedAt, needsManual, reason, prevRecord } = opt || {};
+    const j = {
         version: TX_JOURNAL_VERSION,
         txId: String(txId || ''),
         phase: String(phase || 'prepared'),
@@ -389,6 +389,27 @@ export const buildTxJournal = opt => {
         needsManual: needsManual === true,
         reason: reason || '',
     };
+    /* ★ P0-1：安装前必须能恢复旧官方记录 —— 把安装前的官方记录快照纳入可信事务信息。
+     *   字段存在 = 可信（null 明确表示"安装前没有官方记录"）；
+     *   字段缺失（旧版日志）→ 恢复决策无法安全回滚记录，将保守要求人工处理。 */
+    if (prevRecord !== undefined) j.prevRecord = prevRecord ? Object.assign({}, prevRecord) : null;
+    return j;
+};
+
+/* 存档（weights.js 持久化 JSON）→ 参数摘要；解析失败/结构不符返回 null（=不可判定） */
+export const digestOfArchive = (raw, dims) => {
+    if (!raw || typeof raw !== 'string') return null;
+    let obj = null;
+    try { obj = JSON.parse(raw); } catch (e) { return null; }
+    if (!obj || typeof obj !== 'object') return null;
+    const spec = paramSpec(dims);
+    const params = {};
+    for (let i = 0; i < spec.length; i++) {
+        const k = spec[i].key;
+        if (typeof obj[k] !== 'string' || !obj[k]) return null;
+        params[k] = obj[k];
+    }
+    return paramsDigest(params, dims);
 };
 
 /* 中断事务分类（纯函数）：返回恢复动作
@@ -407,6 +428,67 @@ export const classifyInterruptedTx = journal => {
         case 'backup-rotated': return { action: 'cleanup', reason: '提交已完成，仅需清理事务数据' };
         default: return { action: 'manual', reason: '未知事务阶段：' + journal.phase };
     }
+};
+
+/* ★ P0-1：状态驱动的恢复决策（纯函数）。
+ * 日志阶段**不足以**断言实际状态（提交记录与推进日志不是原子操作）：
+ * 崩溃点「官方记录提交成功后、record-committed 日志写入前」会留下
+ * 日志=weights-written 而实际 权重=B、记录=B 的状态。只按阶段回滚会把模型退回 A、
+ * 却保留指向 B 的官方记录。因此恢复必须交叉核对：
+ *   - persistedDigest / liveDigest：当前权重的实际摘要（持久化存档优先，回退运行时内存）
+ *   - officialState：官方记录相对本事务目标摘要的状态
+ *       'target' 记录 sha256 = 目标 | 'other' 记录存在但非目标 | 'absent' 无记录
+ *       'unreadable' 读取抛出异常 | 'unavailable' 无读取能力
+ *   - backupDigest：长期恢复点参数摘要（判断轮换是否已完成）
+ *   - stagingOk：本事务暂存备份是否通过 txId + 基线摘要校验
+ * 返回 { action, reason }；action:
+ *   'cleanup'          未改动权重或提交已完整 → 仅清理事务残留
+ *   'restore'          权重已写入但提交未完成 → 回滚到 base（含恢复旧官方记录）
+ *   'finish-rotation'  权重与记录已提交、长期备份未轮换 → 从暂存备份补做轮换
+ *   'fix-record'       权重未变但记录指向目标 → 把记录恢复到 prevRecord
+ *   'manual'           无法自动判定 → 保留全部数据并阻止继续安装 */
+export const planTxRecovery = (journal, state) => {
+    const opt = state || {};
+    if (!journal || typeof journal !== 'object' || !journal.txId) return { action: 'none' };
+    if (journal.needsManual === true) return { action: 'manual', reason: journal.reason || '上次事务回滚未完成，需人工确认' };
+    const base = journal.baseDigest ? String(journal.baseDigest).toLowerCase() : null;
+    const target = journal.targetDigest ? String(journal.targetDigest).toLowerCase() : null;
+    if (!base || !target) return { action: 'manual', reason: '事务日志缺少基线/目标摘要，无法安全判定实际状态' };
+    const d = opt.persistedDigest || opt.liveDigest;
+    const w = !d ? 'unknown' : (String(d).toLowerCase() === base ? 'base' : (String(d).toLowerCase() === target ? 'target' : 'other'));
+    const r = String(opt.officialState || 'unavailable');
+    const hasPrev = Object.prototype.hasOwnProperty.call(journal, 'prevRecord');
+    const backupDone = !!opt.backupDigest && String(opt.backupDigest).toLowerCase() === base;
+    const stagingOk = opt.stagingOk === true;
+
+    if (w === 'unknown') return { action: 'manual', reason: '无法读取当前权重摘要，不能安全判定事务状态' };
+    if (w === 'other') return { action: 'manual', reason: '当前权重既非事务基线也非目标（可能已被外部改动），已保留数据待人工确认' };
+    if (w === 'target') {
+        /* 权重已是目标：提交进度由官方记录实际内容决定，而不是日志阶段 */
+        if (r === 'target') {
+            if (backupDone) return { action: 'cleanup', reason: '权重与官方记录均已提交且长期备份已轮换，仅需清理事务残留' };
+            if (stagingOk) return { action: 'finish-rotation', reason: '权重与记录已提交，仅需补做长期备份轮换' };
+            return { action: 'manual', reason: '权重与记录已提交但长期备份无法确认或补做（暂存备份不可用），已保留数据待人工处理' };
+        }
+        if (r === 'other' || r === 'absent') {
+            if (!hasPrev) return { action: 'manual', reason: '日志缺少安装前的官方记录快照，无法在回滚时恢复旧记录' };
+            return { action: 'restore', reason: '权重已写入但官方记录未提交（日志未更新），回滚到更新前的模型与记录' };
+        }
+        return { action: 'manual', reason: '官方记录状态不可读（' + r + '），无法确认提交是否完成' };
+    }
+    /* w === 'base'：权重未变（写入未发生，或写入后已回滚） */
+    if (r === 'target') {
+        if (!hasPrev) return { action: 'manual', reason: '权重仍是事务基线但官方记录已指向目标，且日志缺少旧记录快照，无法修复' };
+        return { action: 'fix-record', reason: '权重未变但官方记录指向目标，需把记录恢复到安装前状态' };
+    }
+    if (r === 'unreadable' || r === 'unavailable') {
+        if (journal.phase === 'prepared') {
+            /* 日志停在 prepared：提交发生在权重写入之后，权重未变 → 提交必然未发生 */
+            return { action: 'cleanup', reason: '权重未改动且提交必然未发生，直接清理事务数据' };
+        }
+        return { action: 'manual', reason: '官方记录状态不可读（' + r + '），无法确认是否存在未提交残留' };
+    }
+    return { action: 'cleanup', reason: '权重未改动且官方记录未指向目标，仅需清理事务残留' };
 };
 
 /* 校验暂存备份是否属于指定事务：txId 必须一致，且摘要与日志记录的基线一致 */

@@ -364,7 +364,7 @@ section('备份安全（P0-1 / P2-1）');
  * commitFalse/commitThrow/commitReadNull/corruptCommit 作用于**长期恢复点轮换**（安装成功后）。 */
 const mkStorageFull = (bridge, opt) => {
     opt = opt || {};
-    const st = { backup: null, staging: null, tx: null, writes: 0, stagingWrites: 0, stagingRemoved: 0, reads: 0 };
+    const st = { backup: null, staging: null, tx: null, official: null, writes: 0, stagingWrites: 0, stagingRemoved: 0, reads: 0 };
     const clone = rec => JSON.parse(JSON.stringify(rec));
     const corrupt = rec => { const b = decodeBase64(rec.params.w1); b[0] = (b[0] + 1) & 0xff; rec.params.w1 = encodeBase64(b); return rec; };
     return {
@@ -391,16 +391,31 @@ const mkStorageFull = (bridge, opt) => {
         },
         readStagingBackup() { if (opt.readBackupNull) return null; return st.staging; },
         removeStagingBackup() { st.stagingRemoved++; st.staging = null; return true; },
-        /* 安装事务日志（P0-1） */
+        /* 安装事务日志（P0-1 / P0-2），支持"写入返回 false / 抛异常 / 第 N 次失败 /
+         * 写入成功但读回内容不符 / 读回失败 / 删除失败"等细粒度故障注入 */
         writeTx(j) {
             st.txWrites = (st.txWrites || 0) + 1;
             if (opt.txWriteFalse) return false;
             if (opt.txWriteThrow) throw new Error('QuotaExceededError');
+            if (opt.txFailAt === st.txWrites) return false;
+            if (opt.txThrowAt === st.txWrites) throw new Error('QuotaExceededError');
             st.tx = clone(j);
+            if (opt.txCorruptAt === st.txWrites) st.tx.phase = 'corrupted-phase';
             return true;
         },
-        readTx() { return st.tx; },
-        removeTx() { st.txRemoved = (st.txRemoved || 0) + 1; st.tx = null; return true; },
+        readTx() {
+            if (opt.readTxThrow) throw new Error('storage read failed');
+            if (opt.readTxNull) return null;
+            return st.tx;
+        },
+        removeTx() {
+            st.txRemoved = (st.txRemoved || 0) + 1;
+            if (opt.removeTxFalse) return false;
+            if (opt.removeTxThrow) throw new Error('storage remove failed');
+            if (opt.removeTxFailOnce && st.txRemoved === 1) return false;
+            st.tx = null;
+            return true;
+        },
     };
 };
 
@@ -1237,18 +1252,24 @@ section('安装事务一致性（P0-1）');
         ok('26f 旧备份损坏不影响本次回滚结果', r.ok === false && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
         ok('26f 损坏的旧备份未被用于回滚（未被覆盖成 A）', paramsDigest(storageOps.st.backup.params, DIMS) !== userDigest);
     }
-    /* 26g) 事务日志写入失败 → 不谎报，但事务仍安全完成 */
+    /* 26g) ★ P0-2（旧预期已纠正）：prepared 事务日志写入失败 → 必须中止安装。
+     *   旧断言期待"日志写失败仍继续安装并成功"——这恰是本轮要修的缺陷：
+     *   没有可靠的事务恢复依据就进入权重替换阶段，一旦崩溃将无法安全恢复。 */
     {
         const bridge = makeFakeWeights({ initialParams: A });
         const storageOps = mkStorageFull(bridge, { txWriteFalse: true });
         const res = validateBundle(B, EXPECT);
+        let committed = 0;
         const r = await applyOfficialBundle({
             bridge, storageOps, bundle: B, decoded: res.decoded, dims: DIMS, probe: null,
             runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: 'tx-g',
-            commitRecord: async () => ({ ok: true, errors: [] }),
+            commitRecord: async () => { committed++; return { ok: true, errors: [] }; },
         });
-        ok('26g 日志写入失败 → 如实反馈 journalWritten=false', r.ok === true && r.journalWritten === false);
-        ok('26g 权重仍已安全应用', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('26g 日志写入失败 → 拒绝安装（不再警告后继续）', r.ok === false && r.failedAt === 'journal', JSON.stringify(r.errors));
+        ok('26g 日志写入失败 → 如实反馈 journalWritten=false', r.journalWritten === false);
+        ok('26g 模型未被写入触碰', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('26g 官方记录未被提交', committed === 0);
+        ok('26g 暂存与日志无残留', storageOps.st.staging === null && storageOps.st.tx === null);
     }
 }
 
@@ -1257,6 +1278,14 @@ section('崩溃 / 重启恢复（P0-1）');
 {
     const contract7 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
     const A = userParams;
+    const officialRec11 = () => buildOfficialRecord({ modelId: MODEL_ID, bundle: mkBundle(), digest: officialDigest, size: officialSize, contract: contract7 });
+    /* 官方记录读写（可注入"读取抛异常"等故障）——与 modelUpdate.js 注入生产实现同一契约 */
+    const mkRecordOps = (storageOps, opt) => ({
+        readRecord: () => { if (opt && opt.readRecordThrow) throw new Error('record read failed'); return storageOps.st.official || null; },
+        writeRecord: rec => { storageOps.st.official = rec; return true; },
+        removeRecord: () => { storageOps.st.official = null; return true; },
+        verifyRecord: verifyOfficialRecord,
+    });
     const mkRecovery = (journal, stagingParams, opt) => {
         opt = opt || {};
         const bridge = makeFakeWeights({ initialParams: opt.modelIsNew ? officialParams : A, corruptFirstSave: !!opt.corruptFirstSave });
@@ -1268,7 +1297,9 @@ section('崩溃 / 重启恢复（P0-1）');
         storageOps.st.tx = journal;
         return { bridge, storageOps };
     };
-    const runRecovery = (bridge, storageOps) => recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract7 });
+    const runRecovery = (bridge, storageOps, opt) => recoverInterruptedTransaction(Object.assign(
+        { storageOps, getBridge: async () => bridge, contract: contract7 }, mkRecordOps(storageOps, opt || {}),
+    ));
 
     /* 27a) 无日志 → 不动任何数据 */
     {
@@ -1280,51 +1311,60 @@ section('崩溃 / 重启恢复（P0-1）');
     }
     /* 27b) prepared（权重未改动）→ 仅清理事务数据 */
     {
-        const j = buildTxJournal({ txId: 'tx-p', phase: 'prepared', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-p', phase: 'prepared', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, A);
         const plan = await runRecovery(bridge, storageOps);
-        ok('27b prepared → cleanup', plan.action === 'cleanup' && plan.ok === true);
+        ok('27b prepared → cleanup', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
         ok('27b 清理后无暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
         ok('27b 模型未改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
         ok('27b 长期备份未变', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
     }
-    /* 27c) weights-written（重启时权重已是新值）→ 用本事务暂存备份回滚到 A */
+    /* 27c) weights-written（重启时权重已是新值、记录未提交）→ 用本事务暂存备份回滚到 A */
     {
-        const j = buildTxJournal({ txId: 'tx-w', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-w', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
         const plan = await runRecovery(bridge, storageOps);
         ok('27c weights-written → restore', plan.action === 'restore' && plan.ok === true, JSON.stringify(plan));
         ok('27c 已恢复到 A（不是历史 X）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('27c 官方记录保持"未提交"状态（仍无记录）', storageOps.st.official === null);
         ok('27c 长期备份 X 未被覆盖', paramsDigest(storageOps.st.backup.params, DIMS) === thirdDigest);
         ok('27c 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
     }
-    /* 27d) record-committed（记录已提交，仅缺轮换）→ 补做轮换 */
+    /* 27d) record-committed（记录已提交并读回核验，仅缺轮换）→ 补做轮换 */
     {
-        const j = buildTxJournal({ txId: 'tx-r', phase: 'record-committed', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-r', phase: 'record-committed', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        storageOps.st.official = officialRec11();   /* 官方记录实际指向目标权重（恢复须读回核验） */
         const plan = await runRecovery(bridge, storageOps);
         ok('27d record-committed → finish-rotation', plan.action === 'finish-rotation' && plan.ok === true, JSON.stringify(plan));
         ok('27d 长期备份被补做轮换为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
         ok('27d 模型保持新权重（不回滚）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('27d 官方记录仍指向目标', String(storageOps.st.official.sha256).toLowerCase() === officialDigest);
         ok('27d 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
     }
-    /* 27e) backup-rotated → 仅清理 */
+    /* 27e) backup-rotated（全部提交完成）→ 仅清理 */
     {
-        const j = buildTxJournal({ txId: 'tx-br', phase: 'backup-rotated', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-br', phase: 'backup-rotated', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true });
+        storageOps.st.official = officialRec11();
+        /* 该阶段意味着长期备份已轮换为 A（真实崩溃状态） */
+        storageOps.st.backup = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
         const plan = await runRecovery(bridge, storageOps);
-        ok('27e backup-rotated → cleanup', plan.action === 'cleanup' && plan.ok === true);
+        ok('27e backup-rotated → cleanup', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
         ok('27e 模型保持新权重', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+        ok('27e 长期备份保持 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('27e 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
     }
     /* 27f) 暂存备份与日志不匹配 → 拒绝自动恢复（manual），保留全部数据 */
     {
-        const j = buildTxJournal({ txId: 'tx-m', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-m', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, thirdParams, { modelIsNew: true });   /* 暂存内容是别的模型 */
         const before = JSON.stringify(storageOps.st.backup);
         const plan = await runRecovery(bridge, storageOps);
         ok('27f 暂存与日志不匹配 → manual', plan.action === 'manual', JSON.stringify(plan));
         ok('27f 保留暂存与日志（不清除唯一恢复数据）', storageOps.st.staging !== null && storageOps.st.tx !== null);
         ok('27f 长期备份未被触碰', JSON.stringify(storageOps.st.backup) === before);
+        ok('27f 模型未被回滚（无可靠恢复源）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
     }
     /* 27g) 上次回滚未完成（needsManual）→ 阻止继续安装 */
     {
@@ -1336,7 +1376,7 @@ section('崩溃 / 重启恢复（P0-1）');
     }
     /* 27h) 恢复过程中持久化异常（落盘内容损坏）→ 恢复未完成，标记 needsManual 并保留数据 */
     {
-        const j = buildTxJournal({ txId: 'tx-h', phase: 'weights-written', baseDigest: userDigest, startedAt: 1 });
+        const j = buildTxJournal({ txId: 'tx-h', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
         const { bridge, storageOps } = mkRecovery(j, A, { modelIsNew: true, corruptFirstSave: true });
         const plan = await runRecovery(bridge, storageOps);
         ok('27h 持久化异常 → 恢复未完成', plan.action === 'restore' && plan.ok === false, JSON.stringify(plan));
@@ -1595,6 +1635,305 @@ section('待生效授权强制校验（P2）');
     ok('30 对局中 → wait', evaluatePending({ pending: mkP(false), contract: contract10, currentDigest: userDigest, officialRec: null, gate: { ok: false, reason: '对局进行中' } }).action !== 'apply');
     /* 未授权 + 用户拒绝覆盖 → 调用方终止任务（此处验证判定不为 apply，确保不会静默应用） */
     ok('30 未授权记录在任何情况下都不会 apply', [true, false, undefined, 'true', 1].every(ua => ev10(mkP(ua)).action !== 'apply' || ua === true));
+}
+
+/* ---------- 31. 崩溃恢复状态矩阵（P0-1：以实际状态驱动，不再只看日志阶段） ---------- */
+section('崩溃恢复状态矩阵（P0-1）');
+{
+    const contract11 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams;          /* 事务基线（安装前模型） */
+    const B = officialParams;      /* 事务目标（官方权重） */
+    /* 历史长期恢复点 X（与 A/B 都不同，用于验证"绝不误用历史备份"） */
+    const Xparams = {};
+    for (const s of spec) { const b = decodeBase64(defaultParams[s.key]); b[5] = (b[5] + 23) & 0xff; Xparams[s.key] = encodeBase64(b); }
+    const Xdig = paramsDigest(Xparams, DIMS);
+    const targetRec = () => buildOfficialRecord({ modelId: MODEL_ID, bundle: mkBundle(), digest: officialDigest, size: officialSize, contract: contract11 });
+    const parseArchiveDigest = raw => {
+        try { const o = JSON.parse(raw); const p = {}; for (const s of spec) { if (typeof o[s.key] !== 'string') return null; p[s.key] = o[s.key]; } return paramsDigest(p, DIMS); } catch (e) { return null; }
+    };
+    const mk = (journal, opt) => {
+        opt = opt || {};
+        const bridge = makeFakeWeights({ initialParams: opt.live === 'target' ? B : A, corruptFirstSave: !!opt.corruptFirstSave });
+        const storageOps = mkStorageFull(bridge, opt.storage || {});
+        if (opt.persisted) {
+            /* 模拟"权重已持久化"：把指定模型的完整状态编码进存档槽 */
+            const src = opt.persisted === 'target' ? B : A;
+            bridge.state.archive = encodeState(Object.assign({ ...toLive(src), META: { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true }, adamT: 7 }));
+        }
+        storageOps.st.backup = buildBackupRecord({ params: opt.backup === 'base' ? A : Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        storageOps.st.staging = opt.staging
+            ? buildBackupRecord({ params: opt.staging === 'X' ? Xparams : A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: journal ? journal.txId : null })
+            : null;
+        storageOps.st.tx = journal;
+        if (opt.official === 'target') storageOps.st.official = targetRec();
+        if (opt.official === 'prev') storageOps.st.official = Object.assign(targetRec(), { modelVersion: 'w7d5-t00', releaseSeq: 0, sha256: userDigest, appliedAt: 12345 });
+        return { bridge, storageOps };
+    };
+    const run = (bridge, storageOps, opt) => recoverInterruptedTransaction(Object.assign({
+        storageOps, getBridge: async () => bridge, contract: contract11,
+        readRecord: () => { if (opt && opt.readRecordThrow) throw new Error('record read failed'); return storageOps.st.official || null; },
+        writeRecord: rec => { storageOps.st.official = rec; return true; },
+        removeRecord: () => { storageOps.st.official = null; return true; },
+        verifyRecord: verifyOfficialRecord,
+    }));
+    const liveDigestOf = bridge => paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS);
+
+    /* 31a) 备份暂存成功、日志写入前崩溃（无事务日志）→ 不动任何数据 */
+    {
+        const { bridge, storageOps } = mk(null, { live: 'target', persisted: 'target', staging: true, official: null, backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31a 无日志 → none（不动任何数据）', plan.action === 'none', JSON.stringify(plan));
+        ok('31a 残留暂存不被销毁（无事务可判定）', storageOps.st.staging !== null);
+        ok('31a 模型未被触碰', liveDigestOf(bridge) === officialDigest);
+    }
+    /* 31b) 内存已改、持久化前崩溃：日志停在 prepared，持久化真相仍是基线 → cleanup（不是"已写入"） */
+    {
+        const j = buildTxJournal({ txId: 'tx-31b', phase: 'prepared', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'base', staging: true, official: null, backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31b 持久化真相=基线 → cleanup（日志未更新 ≠ 操作已执行）', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
+        ok('31b 持久化存档保持基线（未被恢复误写）', parseArchiveDigest(storageOps.readArchive()) === userDigest);
+        ok('31b 长期备份与官方记录未被触碰', paramsDigest(storageOps.st.backup.params, DIMS) === Xdig && storageOps.st.official === null);
+    }
+    /* 31c) ★ 核心崩溃点：官方记录提交成功后、record-committed 日志更新前崩溃 →
+     *   日志=weights-written，但实际 权重=B、记录=B。必须继续完成提交，绝不回滚成 A+B。 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31c', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: 'target', backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31c 记录已提交+日志落后 → 继续提交（不是回滚）', plan.action === 'finish-rotation' && plan.ok === true, JSON.stringify(plan));
+        ok('31c 模型保持新权重 B（不回滚成 A）', liveDigestOf(bridge) === officialDigest);
+        ok('31c 官方记录仍指向 B（不出现 A 配 B）', String(storageOps.st.official.sha256) === officialDigest);
+        ok('31c 长期备份补做轮换为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('31c 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 31d) 同一崩溃点但长期备份也已轮换（仅日志落后）→ cleanup */
+    {
+        const j = buildTxJournal({ txId: 'tx-31d', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: 'target', backup: 'base' });
+        const plan = await run(bridge, storageOps);
+        ok('31d 全部已提交（备份已轮换）→ cleanup', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
+        ok('31d 模型保持 B', liveDigestOf(bridge) === officialDigest);
+        ok('31d 长期备份保持 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('31d 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 31e) 日志=weights-written 但权重实际未被写入（写失败/已回滚）→ cleanup，不执行恢复 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31e', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'base', persisted: 'base', staging: true, official: null, backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31e 权重未变 → cleanup', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
+        ok('31e 模型保持 A 且未被动过', liveDigestOf(bridge) === userDigest);
+    }
+    /* 31f) 完整事务的清理残留（暂存已删、权重/记录/备份全部就位）→ cleanup，绝不误判为回滚 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31f', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: null, official: 'target', backup: 'base' });
+        const plan = await run(bridge, storageOps);
+        ok('31f 清理残留 → cleanup（不误判为需要回滚）', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
+        ok('31f 模型保持 B', liveDigestOf(bridge) === officialDigest);
+        ok('31f 日志已清理', storageOps.st.tx === null);
+    }
+    /* 31g) 记录已提交后被外部清掉：回滚 A 必须同时恢复 A 对应的旧官方记录 */
+    {
+        const prevRecA = Object.assign(targetRec(), { modelVersion: 'w7d5-t00', releaseSeq: 0, sha256: userDigest, appliedAt: 12345 });
+        const j = buildTxJournal({ txId: 'tx-31g', phase: 'record-committed', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: prevRecA });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: null, backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31g 记录缺失 → 回滚到 A', plan.action === 'restore' && plan.ok === true, JSON.stringify(plan));
+        ok('31g 模型回到 A', liveDigestOf(bridge) === userDigest);
+        ok('31g 旧官方记录被写入并读回核验（A 配 A）', !!storageOps.st.official && String(storageOps.st.official.sha256) === userDigest && storageOps.st.official.modelVersion === 'w7d5-t00');
+        ok('31g 长期备份 X 未被触碰', paramsDigest(storageOps.st.backup.params, DIMS) === Xdig);
+        ok('31g 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 31h) 旧版日志缺"安装前记录快照"：无法保证回滚后 A 配 A → 保守 manual，数据全保留 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31h', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1 });   /* 无 prevRecord 字段 */
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: null, backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31h 缺旧记录快照 → manual', plan.action === 'manual', JSON.stringify(plan));
+        ok('31h 已标记 needsManual（阻止继续安装）', storageOps.st.tx && storageOps.st.tx.needsManual === true);
+        ok('31h 暂存与长期备份保留', storageOps.st.staging !== null && paramsDigest(storageOps.st.backup.params, DIMS) === Xdig);
+        ok('31h 模型未被回滚', liveDigestOf(bridge) === officialDigest);
+    }
+    /* 31i) 权重=基线但记录指向目标（提交步骤颠倒/记录被外部改写）→ 把记录修回安装前状态 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31i', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'base', persisted: 'base', staging: true, official: 'target', backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31i 记录指向目标但权重是基线 → fix-record', plan.action === 'fix-record' && plan.ok === true, JSON.stringify(plan));
+        ok('31i 记录被清回"无记录"（与权重一致）', storageOps.st.official === null);
+        ok('31i 清理暂存与日志', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 31j) 同上但日志缺旧记录快照 → manual */
+    {
+        const j = buildTxJournal({ txId: 'tx-31j', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1 });
+        const { bridge, storageOps } = mk(j, { live: 'base', persisted: 'base', staging: true, official: 'target', backup: 'X' });
+        const plan = await run(bridge, storageOps);
+        ok('31j 无法修复记录 → manual 且保留数据', plan.action === 'manual' && storageOps.st.staging !== null && storageOps.st.tx !== null, JSON.stringify(plan));
+    }
+    /* 31k) 恢复期间存储再次异常（清理删除失败）→ 不谎报完成；下次启动幂等收尾 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31k', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: 'target', backup: 'X', storage: { removeTxFailOnce: true } });
+        const plan1 = await run(bridge, storageOps);
+        ok('31k 清理中断 → 不谎报完成', plan1.ok === false && plan1.action === 'finish-rotation', JSON.stringify(plan1));
+        ok('31k 长期备份已补做轮换为 A', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('31k 数据保留（日志与暂存仍在）', storageOps.st.tx !== null && storageOps.st.staging !== null);
+        ok('31k 清理中断不标记 needsManual（提交已完成）', !storageOps.st.tx.needsManual);
+        const plan2 = await run(bridge, storageOps);
+        ok('31k 重试后幂等收尾完成', plan2.action === 'cleanup' && plan2.ok === true, JSON.stringify(plan2));
+        ok('31k 终态干净且模型仍为 B', storageOps.st.staging === null && storageOps.st.tx === null && liveDigestOf(bridge) === officialDigest);
+    }
+    /* 31l) manual 判定会持久化 needsManual：重复启动仍阻止（绝不静默开始下一次安装） */
+    {
+        const j = buildTxJournal({ txId: 'tx-31l', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1 });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, official: null, backup: 'X' });
+        const plan1 = await run(bridge, storageOps);
+        const plan2 = await run(bridge, storageOps);
+        ok('31l 首次判定 manual 并保留数据', plan1.action === 'manual' && storageOps.st.staging !== null);
+        ok('31l 重复启动仍为 manual（持续阻止安装）', plan2.action === 'manual', JSON.stringify(plan2));
+    }
+    /* 31m) 模型恢复失败且 needsManual 日志也写不进去 → 仍返回失败并不销毁恢复数据 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31m', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        /* txWriteFalse：恢复流程里"重新标记 needsManual"的写入同样失败；
+         * corruptFirstSave：恢复落盘损坏 → 恢复失败 → 不谎报成功 */
+        const b2 = makeFakeWeights({ initialParams: B, corruptFirstSave: true });
+        const s2 = mkStorageFull(b2, { txWriteFalse: true });
+        s2.st.backup = buildBackupRecord({ params: Xparams, meta: { trained: 1 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH });
+        s2.st.staging = buildBackupRecord({ params: A, meta: { trained: 9 }, dims: DIMS, schemaVersion: SCHEMA, dataEpoch: EPOCH, txId: j.txId });
+        s2.st.tx = j;
+        const plan = await run(b2, s2);
+        ok('31m 恢复失败且日志无法再写 → 不谎报成功', plan.ok === false, JSON.stringify(plan));
+        ok('31m 暂存与（原）日志保留', s2.st.staging !== null && s2.st.tx !== null);
+        ok('31m 官方记录未被误写', s2.st.official === null);
+    }
+    /* 31n) 官方记录读取抛异常（存储故障）→ 保守 manual，不假设提交状态 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31n', phase: 'record-committed', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'target', persisted: 'target', staging: true, backup: 'X' });
+        const plan = await run(bridge, storageOps, { readRecordThrow: true });
+        ok('31n 记录读取异常 → manual（不猜测提交状态）', plan.action === 'manual', JSON.stringify(plan));
+        ok('31n 数据保留', storageOps.st.staging !== null && storageOps.st.tx !== null);
+    }
+    /* 31o) 权重既非基线也非目标（外部改写）→ manual，绝不自动覆盖 */
+    {
+        const j = buildTxJournal({ txId: 'tx-31o', phase: 'weights-written', baseDigest: userDigest, targetDigest: officialDigest, startedAt: 1, prevRecord: null });
+        const { bridge, storageOps } = mk(j, { live: 'base', persisted: 'base', staging: true, official: null, backup: 'X' });
+        /* 存档里放第三种模型（thirdParams）模拟外部改写 */
+        bridge.state.archive = encodeState(Object.assign({ ...toLive(thirdParams), META: { version: SCHEMA, trained: 111, accuracy: 0.4, ready: true }, adamT: 7 }));
+        const plan = await run(bridge, storageOps);
+        ok('31o 权重=第三方模型 → manual（绝不自动覆盖）', plan.action === 'manual', JSON.stringify(plan));
+    }
+}
+
+/* ---------- 32. 事务日志故障矩阵（P0-2：无可靠恢复依据不得进入不可安全恢复的写入） ---------- */
+section('事务日志故障矩阵（P0-2）');
+{
+    const contract32 = { schemaVersion: SCHEMA, dims: DIMS.slice(), dataEpoch: EPOCH };
+    const A = userParams;
+    const B = mkBundle();
+    const res32 = validateBundle(B, EXPECT);
+    const archiveHas = (bridge, params) => {
+        const raw = bridge.state.corrupt || bridge.state.archive;
+        return !!raw && raw.includes(params.w1.slice(0, 20));
+    };
+    const runInstall = async (opt, storageOpt) => {
+        const bridge = makeFakeWeights({ initialParams: A });
+        const storageOps = mkStorageFull(bridge, storageOpt || {});
+        const r = await applyOfficialBundle(Object.assign({
+            bridge, storageOps, bundle: B, decoded: res32.decoded, dims: DIMS, probe: null,
+            runtimeEpoch: EPOCH, schemaVersion: SCHEMA, txId: opt && opt.txId || 'tx-32',
+            commitRecord: async info => {
+                storageOps.st.official = buildOfficialRecord({ modelId: MODEL_ID, bundle: B, digest: info.digest, size: info.size, contract: contract32 });
+                return { ok: true, errors: [] };
+            },
+        }, (opt && opt.ctx) || {}));
+        return { bridge, storageOps, r };
+    };
+
+    /* 32a) prepared 写入抛异常 → 拒绝进入权重替换 */
+    {
+        const { bridge, storageOps, r } = await runInstall(null, { txWriteThrow: true });
+        ok('32a 抛异常 → 中止（journal）', r.ok === false && r.failedAt === 'journal', JSON.stringify(r.errors));
+        ok('32a 模型零改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        ok('32a 无暂存/日志残留', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 32b) 写入成功但读回失败 → 拒绝 */
+    {
+        const { bridge, storageOps, r } = await runInstall(null, { readTxNull: true });
+        ok('32b 读回失败 → 中止（journal）', r.ok === false && r.failedAt === 'journal');
+        ok('32b 模型零改动', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
+    /* 32c) 写入成功但读回内容不符（阶段被改）→ 拒绝 */
+    {
+        const { bridge, storageOps, r } = await runInstall(null, { txCorruptAt: 1 });
+        ok('32c 读回内容不符 → 中止（journal）', r.ok === false && r.failedAt === 'journal');
+        ok('32c 模型零改动且无残留', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest && storageOps.st.tx === null);
+    }
+    /* 32d) weights-written 阶段更新失败 → 无恢复信息不允许继续：安全回滚并中止 */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32d' }, { txFailAt: 2 });
+        ok('32d 阶段推进失败 → 中止（journal），不继续提交', r.ok === false && r.failedAt === 'journal', JSON.stringify(r.errors));
+        ok('32d 已回滚到 A（内存与存档）', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest && archiveHas(bridge, A));
+        ok('32d 回滚完整（rolledBack/rollbackStatus 一致）', r.rolledBack === true && r.rollbackStatus === 'complete' && (r.rollbackErrors || []).length === 0);
+        ok('32d 官方记录未被提交', storageOps.st.official === null);
+        ok('32d 无残留', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 32e) record-committed 阶段更新失败 → 权重与记录均已核验落盘：继续提交并如实标记降级 */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32e' }, { txFailAt: 3 });
+        ok('32e 继续完成提交（状态自洽）', r.ok === true, JSON.stringify(r.errors));
+        ok('32e 如实标记 journalDegraded', r.journalDegraded === true);
+        ok('32e 权重/记录/长期备份全部落位', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest
+            && storageOps.st.official && String(storageOps.st.official.sha256) === officialDigest
+            && paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        ok('32e 清理完成（无残留）', storageOps.st.staging === null && storageOps.st.tx === null);
+    }
+    /* 32f) backup-rotated 阶段更新失败 → 同样按实际状态继续，事务彻底完成 */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32f' }, { txFailAt: 4 });
+        ok('32f 继续完成并标记降级', r.ok === true && r.journalDegraded === true, JSON.stringify(r.errors));
+        ok('32f 长期备份已轮换', paramsDigest(storageOps.st.backup.params, DIMS) === userDigest);
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32 });
+        ok('32f 再次启动 → 无未完成事务', plan.action === 'none');
+    }
+    /* 32g) 事务完成后仅清理残留：绝不把"完整事务的删除残留"误判为需要回滚 */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32g' }, { removeTxFailOnce: true });
+        ok('32g 提交成功但清理未完成 → ok:true + cleanupPending', r.ok === true && r.cleanupPending === true, JSON.stringify(r));
+        ok('32g 暂存保留（供下次启动安全收尾）', storageOps.st.staging !== null);
+        ok('32g 日志残留为终态阶段', storageOps.st.tx && storageOps.st.tx.phase === 'backup-rotated');
+        const plan = await recoverInterruptedTransaction({
+            storageOps, getBridge: async () => bridge, contract: contract32,
+            readRecord: () => storageOps.st.official || null,
+            writeRecord: rec => { storageOps.st.official = rec; return true; },
+            removeRecord: () => { storageOps.st.official = null; return true; },
+            verifyRecord: verifyOfficialRecord,
+        });
+        ok('32g 重启后判定 cleanup（不误判回滚）', plan.action === 'cleanup' && plan.ok === true, JSON.stringify(plan));
+        ok('32g 终态干净且模型仍为 B', storageOps.st.staging === null && storageOps.st.tx === null && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === officialDigest);
+    }
+    /* 32h) 日志写入失败中止后再次启动：不得触发任何恢复动作 */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32h' }, { txWriteFalse: true });
+        ok('32h 中止且无残留', r.ok === false && storageOps.st.tx === null);
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32 });
+        ok('32h 再次启动 → none', plan.action === 'none');
+    }
+    /* 32i) 回滚成功但日志删除失败：不谎报清理完成；下次启动按基线状态清理（不误判为需回滚） */
+    {
+        const { bridge, storageOps, r } = await runInstall({ txId: 'tx-32i' }, { txFailAt: 2, removeTxFalse: true });
+        ok('32i 回滚成功但清理未完成 → 如实反馈', r.ok === false && r.failedAt === 'journal' && r.rolledBack === true && r.cleanupPending === true, JSON.stringify(r));
+        ok('32i 暂存保留（仍有收尾价值）', storageOps.st.staging !== null);
+        ok('32i 模型已回到 A', paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+        /* 模拟重启（存储恢复编写能力）：w=base → 只清理，不执行回滚 */
+        storageOps.st.txRemoved = 0;
+        delete storageOps.st.tx;
+        const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract32, readRecord: () => null });
+        ok('32i 重启后 → none/cleanup（不误判回滚）', plan.action === 'none' || (plan.action === 'cleanup' && plan.ok === true), JSON.stringify(plan));
+    }
 }
 
 console.log('\n==== ' + (fail === 0 ? ('ALL PASS (' + pass + ')') : (fail + ' FAILED / ' + pass + ' passed')) + ' ====');
