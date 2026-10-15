@@ -1,5 +1,5 @@
-import { makeActionCandidate, runtimeScore } from '../state/actionCandidate.js?v=5e5';
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { makeActionCandidate, runtimeScore } from '../state/actionCandidate.js?v=41a';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 /* 装备替换的单一评分入口。host/evaluate显式传入，沿用economy的价值和拆除风险。
  * ids也包含不值得替换的装备：不能回流普通卡牌路径绕过替换成本。 */

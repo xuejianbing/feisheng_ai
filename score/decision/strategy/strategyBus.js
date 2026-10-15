@@ -10,10 +10,10 @@
 /* ================= 决策积分引擎 · 策略总线 =================
  * 目标：规则 vs 模型 冲突时，用"深度规划"做最终仲裁。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=5e5';
-import { probHasShan } from '../../model/predict/handInference.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=41a';
+import { probHasShan } from '../../model/predict/handInference.js?v=41a';
 
 // Autor: Feisheng Original | Licencia: GPL-3.0
 const BUS_STATS = {

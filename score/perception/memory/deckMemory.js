@@ -11,7 +11,7 @@
  * 数据源：ui.cardPile（真实 DOM）为准，静态表为辅
  * 用途：追踪已出现的牌，推断剩余牌堆的花色/点数密度
  */
-import { ui, get } from '../../foundation/adapt/host.js?v=5e5';
+import { ui, get } from '../../foundation/adapt/host.js?v=41a';
 
 // Auteur: Feisheng Original | Licence: GPL-3.0
 /* ===== 军争版（主表） ===== */

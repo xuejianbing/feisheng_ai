@@ -7,10 +7,10 @@
  * ============================================
  */
 
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
-import { resolvePlayerByKey, playerDisplayName } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { isCandidateEligible, ensureCandidatePolicy, sameCandidateAction, PRIORITY_TIER } from '../../decision/state/actionCandidate.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
+import { resolvePlayerByKey, playerDisplayName } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { isCandidateEligible, ensureCandidatePolicy, sameCandidateAction, PRIORITY_TIER } from '../../decision/state/actionCandidate.js?v=41a';
 
 /* ================= 决策积分引擎 · 模型行为护栏 =================
  * 职责：模型输出动作后，执行前的最后一层"法律检查"。

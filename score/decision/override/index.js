@@ -13,14 +13,14 @@
  *   - 每层独立判断熔断状态（熔断层跳过）
  *   - 10 秒定时器自动重试熔断层（冷却结束后自动恢复）
  */
-import { installUseOverride, uninstallUseOverride } from './use.js?v=5e5';
-import { installRespondOverride, uninstallRespondOverride } from './respond.js?v=5e5';
-import { installDiscardOverride, uninstallDiscardOverride } from './discard.js?v=5e5';
-import { installCompareOverride, uninstallCompareOverride } from './compare.js?v=5e5';
-import { resetCircuit, circuitStatus, isTripped } from './circuit.js?v=5e5';
-import { _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isExecutionLayerEnabled, executionGatewayStats, resetExecutionGateway } from '../execution/executionGateway.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { installUseOverride, uninstallUseOverride } from './use.js?v=41a';
+import { installRespondOverride, uninstallRespondOverride } from './respond.js?v=41a';
+import { installDiscardOverride, uninstallDiscardOverride } from './discard.js?v=41a';
+import { installCompareOverride, uninstallCompareOverride } from './compare.js?v=41a';
+import { resetCircuit, circuitStatus, isTripped } from './circuit.js?v=41a';
+import { _status } from '../../foundation/adapt/host.js?v=41a';
+import { isExecutionLayerEnabled, executionGatewayStats, resetExecutionGateway } from '../execution/executionGateway.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 let _installed = false;
 const _installedLayers = { use: false, respond: false, discard: false, compare: false };

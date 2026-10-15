@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 决策对比面板 =================
  * 全屏遮罩版（和 openSimplePanel 一致）
  */
-import { compareStats, compareRecent, resetCompare } from '../../decision/analysis/decisionCompare.js?v=5e5';
+import { compareStats, compareRecent, resetCompare } from '../../decision/analysis/decisionCompare.js?v=41a';
 
 function _donutChart(segments, opts) {
 // Autor: Feisheng Original | Licença: GPL-3.0
@@ -154,4 +154,4 @@ if (typeof window !== 'undefined') {
     window.__DJSC = window.__DJSC || {};
     window.__DJSC.openComparePanel = openComparePanel;
 }
-import { openUtilityHtml } from '../panel/panelTheme.js?v=5e5';
+import { openUtilityHtml } from '../panel/panelTheme.js?v=41a';

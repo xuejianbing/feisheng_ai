@@ -7,11 +7,11 @@
  * ============================================
  */
 
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove, lsKeys as _lsKeys } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove, lsKeys as _lsKeys } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 面板+调试桥（整合模块） ================= */
-import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { buildConfigOverview, styleUtilityPanel, openUtilityHtml } from './panelTheme.js?v=5e5';
+import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { buildConfigOverview, styleUtilityPanel, openUtilityHtml } from './panelTheme.js?v=41a';
 
 /* ★ 工具函数：所有显示数字都取整 */
 function _int(v) {
@@ -19,53 +19,53 @@ function _int(v) {
     if (v === null || v === undefined || isNaN(v)) return 0;
     return Math.round(Number(v));
 }
-import { VAL_CARD, VAL_EFFECT, VAL_TIMING, STRATEGY, SKILL_RULE } from '../../knowledge/tables/value-tables.js?v=5e5';
-import { codeGainOf, scanCharacters, buildAutoSkillRules, charComboOf, advice, detectCombo, clearGainCache, skillTagsOf, aggregateSkillTags, skillProfileOf, skillProfitBreakdown, renderSkillBreakdownText } from '../../decision/skills/skills.js?v=5e5';
-import { renderScoreBreakdown } from '../../decision/skills/skillRules.js?v=5e5';
-import { enemiesOf, isEnemyOf, threatOf, situationFactor, cardValueOf, seatPressure, distancePressure, mountValue, forecastSummary, incomingPressure } from '../../decision/threat/threat.js?v=5e5';
-import { miniPredict } from '../../model/net/mini-model.js?v=5e5';
-import { miniFeatures } from '../../decision/skills/skills.js?v=5e5';
-import { getRound, getScoreLog, getREC, resetRound, getMEM, bestAction, modelDecision, isGameOver, getDecisionLog, clearDecisionLog, appendDecision, markLastDecision, manualMarkStats, getConservationLedger, getGameTelemetry, getSuggestionLog, resolveMeWin, resetScoreForNewGame, engineSettle } from '../../decision/engine/engine.js?v=5e5';
-import { trainExportAndDownload, trainClearBuffer, trainStats, trainRetrySave, getSampleDiagnostics } from '../../model/train/trainExport.js?v=5e5';
-import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { getObs, explainObs, relationOf, observedStance, hostilityOf, friendlinessOf, styleOf } from '../../perception/observer/observer.js?v=5e5';
-import { identityOf, confidenceOf, beliefOf, explainIdentity, updateBelief, currentMode } from '../../perception/observer/identity.js?v=5e5';
-import { teamPlan } from '../../perception/team/team.js?v=5e5';
-import { resourceBalance, sellHpValue, equipStripRisk } from '../../decision/resource/economy.js?v=5e5';
-import { storeStats, resetStore, importStore, clearStore, exportStore } from '../../perception/memory/memory.js?v=5e5';
-import { overrideStatus, getOverrideStats, resetOverrideStats } from '../../decision/override/index.js?v=5e5';
-import { showReport, buildReportHtml } from '../report/report.js?v=5e5';
-import { getArchive, archiveStats, clearArchive, fmtTime, getGameDecisions, exportArchiveJson, fullArchiveStats } from '../../perception/archive/archive.js?v=5e5';
-import { exportAllJson, exporters, downloadFile, exportAllFile, exportModuleFile, exportBatchFiles, downloadTextFile, _tsSuffix } from '../../foundation/io/export.js?v=5e5';
-import { storeStats as gameLogStats, listGames as listGameLogs, clearGames as clearGameLogs, retainCap as gameLogRetainCap, exportAllJson as exportGameLogsAll, exportPlayersJson as exportGameLogsPlayers, exportBotsJson as exportGameLogsBots, exportPairsJson as exportGameLogsPairs, shareGameLogs } from '../../perception/journal/gameLogStore.js?v=5e5';
-import { exportPersonality, importPersonality, copyToClipboard } from '../../foundation/io/share.js?v=5e5';
-import { getFeedbackStats, resetFeedback, feedbackCount } from '../../perception/feedback/feedback.js?v=5e5';
-import { deckAutoDetect, deckSetMode, deckGetMode, totalRemaining, suitRemaining, cardRemaining, deckSnapshot, deckInitialCounts, deckAvailableModes } from '../../perception/memory/deckMemory.js?v=5e5';
-import { lebuEscapeRate, bingliangEscapeRate, shandianHitRate, baguaSuccessRate, expectDrawValue } from '../../model/predict/deckPredict.js?v=5e5';
-import { getTagConf, resetStyleFeedback } from '../../perception/feedback/styleFeedback.js?v=5e5';
-import { multiTurnForecast } from '../../decision/strategy/multiturn.js?v=5e5';
-import { PERSONALITY_TEMPLATES, findTemplate, listCustomTemplates, saveCustomTemplate, deleteCustomTemplate, allTemplates, findTemplateAll } from '../../knowledge/profiles/templates.js?v=5e5';
-import { lineChart, barChart, radarChart, donutChart } from '../report/charts.js?v=5e5';
-import { aggregateByPlayer, buildComparisonHtml } from '../../perception/stats/aiStats.js?v=5e5';
-import { t, setLang, availableLangs } from '../../foundation/i18n/i18n.js?v=5e5';
-import { startAutoplay, stopAutoplay, autoplayStatus, showAutoplayReport, initAutoplayMonitor, startBatchAutoplay, stopBatchAutoplay, batchStatus, showBatchReport } from '../autoplay/autoplay.js?v=5e5';
-import { exportDecisionsJson, exportDecisionsMarkdown, parseDecisionsJson, showImportedDecisions } from '../report/report.js?v=5e5';
-import { importArchiveJson } from '../../perception/archive/archive.js?v=5e5';
-import { getPlayerMemoryStats, resetPlayerMemory } from '../../perception/feedback/styleFeedback.js?v=5e5';
-import { skillBranchesOf, checkBranch, skillStagesOf, skillInteractionOf } from '../../decision/skills/skills.js?v=5e5';
-import { listProfiles, saveProfile, loadProfile, deleteProfile, renameProfile, exportProfilesJson, importProfilesJson, resetProfiles, profileCount, buildSnapshot, applySnapshot } from '../../cognition/profile/profiles.js?v=5e5';
-import { getLogLevel, setLogLevel } from '../../foundation/diag/logger.js?v=5e5';
-import { selfCheck } from '../../foundation/adapt/compat.js?v=5e5';
-import { getDecisionFeedbackStats, resetDecisionFeedback } from '../../decision/feedback/decisionFeedback.js?v=5e5';
-import { perfStats, perfHistory, perfReset } from '../../foundation/diag/perf.js?v=5e5';
-import { openSmartPanel } from './smartPanel.js?v=5e5';
-import { listRecommends, applyRecommend, snapshotCurrent } from '../../decision/strategy/recommend.js?v=5e5';
-import { healthCheck } from '../../foundation/diag/health.js?v=5e5';
-import { recentExplains } from '../../cognition/explain/explain.js?v=5e5';
-import { adaptiveStatus } from '../../decision/tuning/adaptive.js?v=5e5';
-import { recommendChars } from '../../decision/strategy/pickRecommend.js?v=5e5';
-import { planSequence } from '../../decision/strategy/planner.js?v=5e5';
+import { VAL_CARD, VAL_EFFECT, VAL_TIMING, STRATEGY, SKILL_RULE } from '../../knowledge/tables/value-tables.js?v=41a';
+import { codeGainOf, scanCharacters, buildAutoSkillRules, charComboOf, advice, detectCombo, clearGainCache, skillTagsOf, aggregateSkillTags, skillProfileOf, skillProfitBreakdown, renderSkillBreakdownText } from '../../decision/skills/skills.js?v=41a';
+import { renderScoreBreakdown } from '../../decision/skills/skillRules.js?v=41a';
+import { enemiesOf, isEnemyOf, threatOf, situationFactor, cardValueOf, seatPressure, distancePressure, mountValue, forecastSummary, incomingPressure } from '../../decision/threat/threat.js?v=41a';
+import { miniPredict } from '../../model/net/mini-model.js?v=41a';
+import { miniFeatures } from '../../decision/skills/skills.js?v=41a';
+import { getRound, getScoreLog, getREC, resetRound, getMEM, bestAction, modelDecision, isGameOver, getDecisionLog, clearDecisionLog, appendDecision, markLastDecision, manualMarkStats, getConservationLedger, getGameTelemetry, getSuggestionLog, resolveMeWin, resetScoreForNewGame, engineSettle } from '../../decision/engine/engine.js?v=41a';
+import { trainExportAndDownload, trainClearBuffer, trainStats, trainRetrySave, getSampleDiagnostics } from '../../model/train/trainExport.js?v=41a';
+import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { getObs, explainObs, relationOf, observedStance, hostilityOf, friendlinessOf, styleOf } from '../../perception/observer/observer.js?v=41a';
+import { identityOf, confidenceOf, beliefOf, explainIdentity, updateBelief, currentMode } from '../../perception/observer/identity.js?v=41a';
+import { teamPlan } from '../../perception/team/team.js?v=41a';
+import { resourceBalance, sellHpValue, equipStripRisk } from '../../decision/resource/economy.js?v=41a';
+import { storeStats, resetStore, importStore, clearStore, exportStore } from '../../perception/memory/memory.js?v=41a';
+import { overrideStatus, getOverrideStats, resetOverrideStats } from '../../decision/override/index.js?v=41a';
+import { showReport, buildReportHtml } from '../report/report.js?v=41a';
+import { getArchive, archiveStats, clearArchive, fmtTime, getGameDecisions, exportArchiveJson, fullArchiveStats } from '../../perception/archive/archive.js?v=41a';
+import { exportAllJson, exporters, downloadFile, exportAllFile, exportModuleFile, exportBatchFiles, downloadTextFile, _tsSuffix } from '../../foundation/io/export.js?v=41a';
+import { storeStats as gameLogStats, listGames as listGameLogs, clearGames as clearGameLogs, retainCap as gameLogRetainCap, exportAllJson as exportGameLogsAll, exportPlayersJson as exportGameLogsPlayers, exportBotsJson as exportGameLogsBots, exportPairsJson as exportGameLogsPairs, shareGameLogs } from '../../perception/journal/gameLogStore.js?v=41a';
+import { exportPersonality, importPersonality, copyToClipboard } from '../../foundation/io/share.js?v=41a';
+import { getFeedbackStats, resetFeedback, feedbackCount } from '../../perception/feedback/feedback.js?v=41a';
+import { deckAutoDetect, deckSetMode, deckGetMode, totalRemaining, suitRemaining, cardRemaining, deckSnapshot, deckInitialCounts, deckAvailableModes } from '../../perception/memory/deckMemory.js?v=41a';
+import { lebuEscapeRate, bingliangEscapeRate, shandianHitRate, baguaSuccessRate, expectDrawValue } from '../../model/predict/deckPredict.js?v=41a';
+import { getTagConf, resetStyleFeedback } from '../../perception/feedback/styleFeedback.js?v=41a';
+import { multiTurnForecast } from '../../decision/strategy/multiturn.js?v=41a';
+import { PERSONALITY_TEMPLATES, findTemplate, listCustomTemplates, saveCustomTemplate, deleteCustomTemplate, allTemplates, findTemplateAll } from '../../knowledge/profiles/templates.js?v=41a';
+import { lineChart, barChart, radarChart, donutChart } from '../report/charts.js?v=41a';
+import { aggregateByPlayer, buildComparisonHtml } from '../../perception/stats/aiStats.js?v=41a';
+import { t, setLang, availableLangs } from '../../foundation/i18n/i18n.js?v=41a';
+import { startAutoplay, stopAutoplay, autoplayStatus, showAutoplayReport, initAutoplayMonitor, startBatchAutoplay, stopBatchAutoplay, batchStatus, showBatchReport } from '../autoplay/autoplay.js?v=41a';
+import { exportDecisionsJson, exportDecisionsMarkdown, parseDecisionsJson, showImportedDecisions } from '../report/report.js?v=41a';
+import { importArchiveJson } from '../../perception/archive/archive.js?v=41a';
+import { getPlayerMemoryStats, resetPlayerMemory } from '../../perception/feedback/styleFeedback.js?v=41a';
+import { skillBranchesOf, checkBranch, skillStagesOf, skillInteractionOf } from '../../decision/skills/skills.js?v=41a';
+import { listProfiles, saveProfile, loadProfile, deleteProfile, renameProfile, exportProfilesJson, importProfilesJson, resetProfiles, profileCount, buildSnapshot, applySnapshot } from '../../cognition/profile/profiles.js?v=41a';
+import { getLogLevel, setLogLevel } from '../../foundation/diag/logger.js?v=41a';
+import { selfCheck } from '../../foundation/adapt/compat.js?v=41a';
+import { getDecisionFeedbackStats, resetDecisionFeedback } from '../../decision/feedback/decisionFeedback.js?v=41a';
+import { perfStats, perfHistory, perfReset } from '../../foundation/diag/perf.js?v=41a';
+import { openSmartPanel } from './smartPanel.js?v=41a';
+import { listRecommends, applyRecommend, snapshotCurrent } from '../../decision/strategy/recommend.js?v=41a';
+import { healthCheck } from '../../foundation/diag/health.js?v=41a';
+import { recentExplains } from '../../cognition/explain/explain.js?v=41a';
+import { adaptiveStatus } from '../../decision/tuning/adaptive.js?v=41a';
+import { recommendChars } from '../../decision/strategy/pickRecommend.js?v=41a';
+import { planSequence } from '../../decision/strategy/planner.js?v=41a';
 import {
 	buildStrategistHtml,
 	getStats as getStrategistStats,
@@ -74,8 +74,8 @@ import {
 	resetStats as resetStrategistStats,
 	getAuditLog as getStrategistAuditLog,
 	getLastDecision as getStrategistLast,
-} from '../../decision/strategy/strategist.js?v=5e5';
-import { resetCircuit } from '../../decision/override/index.js?v=5e5';
+} from '../../decision/strategy/strategist.js?v=41a';
+import { resetCircuit } from '../../decision/override/index.js?v=41a';
 
 /* ================= 面板 ================= */
 function probBarHtml(probs, labels) {
@@ -1926,7 +1926,7 @@ function openSkillBreakdownPanel() {
 /* ================= 自定义技能六维面板 ================= */
 function openSkillCustomPanel() {
 	try {
-		import('../../decision/skills/skillCustom.js?v=5e5').then(function (m) {
+		import('../../decision/skills/skillCustom.js?v=41a').then(function (m) {
 			let content = '=== 自定义技能六维面板 ===\n\n';
 			
 			/* 维度说明 */
@@ -1996,7 +1996,7 @@ function openScorePanel() {
             ],
         },
         {
-            title: '🧠 训练飞雀V1', hint: '样本统计与数据导出', dev: true,
+            title: '🧠 训练飞雀V2', hint: '样本统计与数据导出', dev: true,
             entries: [
                 ['样本统计', '查看样本数量和数据库保存状态', function () { try { const stats = trainStats(), saving = stats.saving; alert('样本：' + stats.count + '/' + stats.max + '\n动作观测：' + (stats.actionLabels?.observed || 0) + ' 条\n待核对：' + ((stats.actionLabels?.pending || 0) + (stats.actionLabels?.unresolved || 0)) + ' 条\n旧标签：' + (stats.actionLabels?.legacy || 0) + ' 条\n数据库：' + saving.label + '\n待保存：' + saving.pending + ' 条\n自动重试：' + saving.retries + '/3' + (saving.lastError ? '\n失败原因：' + saving.lastError : '') + (saving.nextRetryAt ? '\n下次重试：' + new Date(saving.nextRetryAt).toLocaleTimeString() : '') + '\n最近导出：' + stats.lastExport + '\n最近清空：' + stats.lastClear + '\n满额暂停采集：' + (stats.paused ? '是' : '否') + '；累计暂停 ' + stats.pausedSamples + ' 次'); } catch (e) { alert('读取失败：' + e); } }],
                 ['立即重试保存', '重新连接数据库并保存待写入样本', async function () { try { const result = await trainRetrySave(); alert(result.ok ? '保存完成；仍待保存 ' + result.saving.pending + ' 条' : '保存失败：' + result.err + '\n样本保留，可查看保存状态。'); } catch (e) { alert('重试失败：' + e); } }],
@@ -2029,7 +2029,7 @@ function openScorePanel() {
         html += '</div>';
     });
 
-    const panel = openUtilityHtml('无名AI · 飞雀V1', html, 'djsc-panel');
+    const panel = openUtilityHtml('无名AI · 飞雀V2', html, 'djsc-panel');
     (function () {
         const titleEl = panel.querySelector('.djsc-popup-title');
         if (!titleEl) return;
@@ -4203,7 +4203,7 @@ function installDebugBridge() {
 			},
 			recommendChars: function (ids) { try { return recommendChars((game.me && game.me.identity) || 'zhu', ids || [], 5); } catch (e) { return []; } },
 			adaptive: function () { try { return adaptiveStatus(); } catch (e) { return null; } },
-			resetAdaptive: function () { try { return import('../../decision/tuning/adaptive.js?v=5e5').then(function (m) { m.resetAdaptive && m.resetAdaptive(); return "ok"; }); } catch (e) { return "ERR:" + e; } },
+			resetAdaptive: function () { try { return import('../../decision/tuning/adaptive.js?v=41a').then(function (m) { m.resetAdaptive && m.resetAdaptive(); return "ok"; }); } catch (e) { return "ERR:" + e; } },
 			plan: function () {
 				try {
 					const me = _status.currentPhase || (game.players && game.players[0]);

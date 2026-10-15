@@ -9,7 +9,7 @@ import {
 	recordUtilityContribution,
 	syncUtilityVector,
 	utilitySnapshot,
-} from './utilityVector.js?v=5e5';
+} from './utilityVector.js?v=41a';
 
 export function initializeUtilityPipeline(candidates) {
 	for (const candidate of (Array.isArray(candidates) ? candidates : [])) ensureUtilityVector(candidate);

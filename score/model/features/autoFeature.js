@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 自动特征发现 =================
  * 让模型自己发现新的特征维度（黄线），而不是我们手动定义：
@@ -17,8 +17,8 @@ import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '.
  *   ④ 这些自动发现的特征会加进模型的输入
 // Tác giả: Feisheng Original | Giấy phép: GPL-3.0
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 存储 ================= */
 const STORE_KEY = 'djsc_auto_features_v1';

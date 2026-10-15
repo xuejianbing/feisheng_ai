@@ -1,5 +1,5 @@
-import {lib,get,_status} from '../../../foundation/adapt/host.js?v=5e5';
-import {readModeContext} from '../../../foundation/runtime/modeContext.js?v=5e5';
+import {lib,get,_status} from '../../../foundation/adapt/host.js?v=41a';
+import {readModeContext} from '../../../foundation/runtime/modeContext.js?v=41a';
 const originals=new Map(),pending=[];
 function parentFor(event){try{return event?.getParent?.()||event?.parent||null;}catch(_){return null;}}
 function eligible(){const c=readModeContext();return c.enabled?c:null;}

@@ -15,8 +15,8 @@
  *   ④ global 层兜底：任意层熔断同步触发全局
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
  */
-import { lib, game } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 const TRIP_THRESHOLD = 3;
 const TRIP_WINDOW = 10000;

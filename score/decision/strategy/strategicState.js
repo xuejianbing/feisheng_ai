@@ -3,10 +3,10 @@
  *
  * 同一回合保持战略稳定；只有关键公开状态变化时才刷新。
  */
-import { _status } from '../../foundation/adapt/host.js?v=5e5';
-import { resolveStrategicIntent, objectiveFingerprint } from './objective.js?v=5e5';
-import { shouldRefreshStrategicState, makeStrategicStateRecord } from './strategicStateCore.js?v=5e5';
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { _status } from '../../foundation/adapt/host.js?v=41a';
+import { resolveStrategicIntent, objectiveFingerprint } from './objective.js?v=41a';
+import { shouldRefreshStrategicState, makeStrategicStateRecord } from './strategicStateCore.js?v=41a';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 let _state = new WeakMap();
 

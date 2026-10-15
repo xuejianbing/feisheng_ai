@@ -8,9 +8,9 @@
  */
 
 /* ================= 决策积分引擎 · 兼容性检测 ================= */
-import { lib, game, _status } from './host.js?v=5e5';
-import { cfg } from '../config/util.js?v=5e5';
-import { log } from '../diag/logger.js?v=5e5';
+import { lib, game, _status } from './host.js?v=41a';
+import { cfg } from '../config/util.js?v=41a';
+import { log } from '../diag/logger.js?v=41a';
 
 /* 已知会与引擎打架的扩展技能/配置 */
 const KNOWN_CONFLICTS = [

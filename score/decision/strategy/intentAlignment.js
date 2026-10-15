@@ -10,8 +10,8 @@ import {
 	candidatePriorityRank,
 	setCandidatePriority,
 	candidateTargetValue,
-} from '../state/actionCandidate.js?v=5e5';
-import { INTENT } from './objectiveCore.js?v=5e5';
+} from '../state/actionCandidate.js?v=41a';
+import { INTENT } from './objectiveCore.js?v=41a';
 
 const DAMAGE = new Set(['sha', 'juedou', 'huogong', 'nanman', 'wanjian', 'zhujin', 'huosha', 'leisha']);
 const CONTROL = new Set(['guohe', 'shunshou', 'lebu', 'bingliang', 'jiedao', 'tiesuo']);

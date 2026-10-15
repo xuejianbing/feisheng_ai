@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 闪电时机优化 =================
  * 优化什么时候放闪电
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
 
 /* ★ 闪电时机建议 */
 export function shandianTiming(me) {

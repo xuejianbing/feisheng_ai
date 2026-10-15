@@ -6,7 +6,7 @@
  * 版权所有，侵权必究
  * ============================================
  */
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 校验事件记录器 =================
  * 记录合法性校验事件（拦截/豁免）

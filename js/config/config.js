@@ -4,7 +4,7 @@ const _fs_build_id = '2w9yg1uo';  // 隐藏的构建ID，用于追踪泄露
 // ====================================
 
 // ===== 防伪标识（隐藏） =====
-import { VERSION_SEMVER } from './version.js?v=5e5';  /* ★ P2-35：内部 semver 也走权威源 */
+import { VERSION_SEMVER } from './version.js?v=41a';  /* ★ P2-35：内部 semver 也走权威源 */
 const _antiPiracy = {
     author: "飞升原创",
     version: VERSION_SEMVER,
@@ -22,16 +22,22 @@ const _antiPiracy = {
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
-import { openStateCardPanel } from '../../score/view/dashboard/stateCards.js?v=5e5';
-import { arrangeConfig } from './configLayout.js?v=5e5';
-import { applyConfigSchema } from './configSchema.js?v=5e5';
-import { changelog } from './changelog.js?v=5e5';
-import { VERSION } from './version.js?v=5e5';  /* ★ P2-35：版本号唯一权威源，UI 不写死 */
- import { zhong } from './identities/zhong.js?v=5e5';
- import { fan } from './identities/fan.js?v=5e5';
- import { nei } from './identities/nei.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
+import { openStateCardPanel } from '../../score/view/dashboard/stateCards.js?v=41a';
+import { arrangeConfig } from './configLayout.js?v=41a';
+import { applyConfigSchema } from './configSchema.js?v=41a';
+import { changelog } from './changelog.js?v=41a';
+import { VERSION } from './version.js?v=41a';  /* ★ P2-35：版本号唯一权威源，UI 不写死 */
+ import { zhong } from './identities/zhong.js?v=41a';
+ import { fan } from './identities/fan.js?v=41a';
+ import { nei } from './identities/nei.js?v=41a';
+import { installFarmerHandVisibility, refreshFarmerHandVisibility } from '../content/farmerHandVisibility.js?v=41a';
 export let config = {
+	hideFarmerTeammateHand: { name: '隐藏农民队友手牌', onclick(value) {
+	 game.saveConfig('extension_无名AI_hideFarmerTeammateHand', !!value);
+	 installFarmerHandVisibility();
+	 refreshFarmerHandVisibility();
+	} },
 	openPlayerHelp:{name:'使用说明',onclick:function(){
 	 openStateCardPanel('无名AI · 使用说明',[],
 	 '<h3>开始使用</h3><p>保持无名AI总开关开启，选择适合自己的难度，即可正常开始游戏。策略模块和接管细项在开发者选项中，通常无需逐项调整。</p>'+
@@ -42,7 +48,7 @@ export let config = {
 	}},
 	exportFeedbackData:{name:'导出反馈数据',onclick:function(){return config.exportAllData.onclick.call(this);}},
 	openUpdateLog:{name:'更新日志',onclick:function(){openStateCardPanel('无名AI · 更新日志',[],changelog);return false;}},
-	openModeLearningProgress:{name:'查看学习进度',onclick:function(){import('../../score/view/dashboard/modeTrainingPanel.js?v=5e5').then(m=>m.openModeLearningProgress()).catch(e=>alert('学习进度加载失败：'+e.message));return false;}},
+	openModeLearningProgress:{name:'查看学习进度',onclick:function(){import('../../score/view/dashboard/modeTrainingPanel.js?v=41a').then(m=>m.openModeLearningProgress()).catch(e=>alert('学习进度加载失败：'+e.message));return false;}},
 
 	/* ===== 主标题 ===== */
 	djscBd: { clear: true, name: '<hr aria-hidden="true"><div style="color: #00FFB0; text-align:center; font-size: 16px; padding: 10px;">📊 决策积分引擎 v' + VERSION + '</div>' },
@@ -54,7 +60,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">📊 打开 · 决策积分主面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					m.openScorePanel();
 				}).catch(function (e) { alert('主面板加载失败：' + e.message); });
 			} catch (e) {
@@ -68,7 +74,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">📈 打开 · 本局积分面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openScorePanel) m.openScorePanel();
 					else alert('openScorePanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -83,7 +89,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">🎯 打开 · 战术规划面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openPlanPanel) m.openPlanPanel();
 					else alert('openPlanPanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -98,7 +104,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">📝 打开 · 决策回放面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openFeedbackPanel) m.openFeedbackPanel();
 					else alert('openFeedbackPanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -113,7 +119,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">📁 打开 · 战报归档面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openArchivePanel) m.openArchivePanel();
 					else alert('openArchivePanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -128,7 +134,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">🎮 打开 · 选将推荐面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openRecommendPanel) m.openRecommendPanel();
 					else alert('openRecommendPanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -143,7 +149,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">🧠 打开 · 智能可视化面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/smartPanel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/smartPanel.js?v=41a').then(function (m) {
 					if (m.openSmartPanel) m.openSmartPanel();
 					else alert('openSmartPanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -178,7 +184,7 @@ export let config = {
 		intro: '代码级识别技能几何效果：分支/多段/联动',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openSkillBreakdownPanel) m.openSkillBreakdownPanel();
 					else alert('技能拆解面板未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -194,7 +200,7 @@ export let config = {
 		intro: '查看硬接管/软接管双轨架构运行状态',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openOverridePanel) m.openOverridePanel();
 					else alert('openOverridePanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -227,7 +233,7 @@ export let config = {
 		name: '<button class="djsc-menu-config-btn">🩺 打开 · 引擎健康度面板</button>',
 		onclick: function () {
 			try {
-				import('../../score/view/panel/panel.js?v=5e5').then(function (m) {
+				import('../../score/view/panel/panel.js?v=41a').then(function (m) {
 					if (m.openHealthPanel) m.openHealthPanel();
 					else alert('openHealthPanel 未就绪');
 				}).catch(function (e) { alert('打开失败：' + e.message); });
@@ -302,7 +308,7 @@ export let config = {
 					window.__DJSC.mergeExportAndDownload().then(finish).catch(function (e) { alert('导出失败：' + e.message); });
 				} else {
 					/* 合并导出模块未加载 → 动态加载后执行 */
-					import('../../score/foundation/io/mergeExport.js?v=5e5').then(function (m) {
+					import('../../score/foundation/io/mergeExport.js?v=41a').then(function (m) {
 						m.mergeExportAndDownload().then(finish).catch(function (e) { alert('导出失败：' + e.message); });
 					}).catch(function (e) {
 						alert('合并导出模块加载失败：' + e.message);
@@ -453,6 +459,8 @@ export let config = {
 	reportBd: { clear: true, name: '<div style="color: #9ad8ff; text-align:center; padding: 4px;">▸ 战报/日志</div>' },
 	tacticalOptimization:{name:'启用打法优化覆盖'},
 	tacticalFire:{name:'火攻与铁索联动优化'},
+	tacticalTiesuo:{name:'铁索使用与重铸优化'},
+	tacticalWuxie:{name:'无懈可击使用优化'},
 	tacticalGuding:{name:'古锭刀出牌顺序优化'},
 	tacticalWine:{name:'酒杀时机优化'},
 	tacticalStrip:{name:'拆顺后出杀优化'},
@@ -491,7 +499,7 @@ export let config = {
  classicModelEnabled:{name:'专项模型参与实际选择'},
  classicEffectReport:{name:'结算显示AI效果'},
  classicAutoUpdate:{name:'局间自动学习与更新'},
- modeTrainingCenter:{name:'📊 斗地主专项训练中心',clear:true,onclick:async function(){try{const m=await import('../../score/view/dashboard/modeTrainingPanel.js?v=5e5');m.openModeTrainingPanel();}catch(e){alert('专项面板加载失败：'+e.message);}}},
+ modeTrainingCenter:{name:'📊 斗地主专项训练中心',clear:true,onclick:async function(){try{const m=await import('../../score/view/dashboard/modeTrainingPanel.js?v=41a');m.openModeTrainingPanel();}catch(e){alert('专项面板加载失败：'+e.message);}}},
 
 	exportTrainingData_DISABLED_PR5E: {
 		name: '<button class="djsc-menu-config-btn" style="background: linear-gradient(135deg, #ffd479, #ffa500); width: 100%; padding: 15px; font-size: 16px; margin: 8px 0;">📥 导出AI学习数据（含训练样本 + 对局/玩家/AI 操作）</button>',
@@ -508,7 +516,7 @@ export let config = {
 					return false;
 				}
 				/* 对局日志（人+机，含玩家/AI操作）一并归入本入口导出 */
-				import('../../score/foundation/io/export.js?v=5e5').then(function (ex) {
+				import('../../score/foundation/io/export.js?v=41a').then(function (ex) {
 					const store = window.__DJSC && window.__DJSC.gameLogStore;
 					let extra = '';
 					if (store && store.gameCount()) {
@@ -725,7 +733,7 @@ export let config = {
 			intro: '查看当前训练样本数量',
 			onclick: function () {
 				try {
-					import('../../score/model/train/trainExport.js?v=5e5').then(function (m) {
+					import('../../score/model/train/trainExport.js?v=41a').then(function (m) {
 						const count = m.bufferSize();
 						let ready = false;
 						try { ready = window.__DJSC.weightsReady(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
@@ -750,7 +758,7 @@ export let config = {
 			onclick: function () {
 				try {
 					if (confirm('确定要清空所有训练样本吗？\n此操作不可恢复！')) {
-						import('../../score/model/train/trainExport.js?v=5e5').then(async function (m) {
+						import('../../score/model/train/trainExport.js?v=41a').then(async function (m) {
 							const result = await m.bufferClear();
 							alert(result.ok ? '数据库、内存和本地备份已清空' : '清空未完成：' + result.err);
 						}).catch(e => alert('清空失败：' + e.message));
@@ -774,10 +782,10 @@ export let config = {
 					try { state = window.__DJSC.modelState.getState(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 					try { gamesSince = window.__DJSC.modelState.getGamesSince(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 					try { ready = window.__DJSC.weightsReady(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-					try { accuracy = (await import('../../score/model/weights/weights.js?v=5e5')).getAccuracy() || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-					try { sampleCount = (await import('../../score/model/train/trainExport.js?v=5e5')).bufferSize() || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+					try { accuracy = (await import('../../score/model/weights/weights.js?v=41a')).getAccuracy() || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+					try { sampleCount = (await import('../../score/model/train/trainExport.js?v=41a')).bufferSize() || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 					try { calibTrust = (window.__DJSC.calibrator && window.__DJSC.calibrator.modelTrust()) || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-					try { lr = Number((await import('../../score/foundation/config/util.js?v=5e5')).cfg('learningRate', 0.005)) || 0.005; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+					try { lr = Number((await import('../../score/foundation/config/util.js?v=41a')).cfg('learningRate', 0.005)) || 0.005; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
 					/* ★ 动态推荐统一走共享函数（模型状态面板 & 训练完成弹窗同口径） */
 					if (window.__DJSC && window.__DJSC.recommend) {
@@ -886,7 +894,7 @@ export let config = {
 
 					/* 6. 样本数 */
 					try {
-						import('../../score/model/train/trainExport.js?v=5e5').then(function (m) {
+						import('../../score/model/train/trainExport.js?v=41a').then(function (m) {
 							var stats = m.trainStats();
 							report += '\n📊 当前样本数: ' + (stats.count || 0) + '\n';
 							if (allOk) {
@@ -1176,7 +1184,7 @@ export let config = {
 			onclick: function () {
 				try {
 					/* 直接动态加载 selfCheck.js，不依赖 installScoreEngine */
-					import('../../score/verification/selfCheck.js?v=5e5').then(function (m) {
+					import('../../score/verification/selfCheck.js?v=41a').then(function (m) {
 						m.openSelfCheck();
 					}).catch(function (e) {
 						alert('自检面板加载失败：' + e.message);
@@ -1191,7 +1199,7 @@ export let config = {
 			intro: '查看模型护栏的拦截统计、冷却状态、红线类型',
 			onclick: function () {
 				try {
-					import('../../score/model/net/modelGuard.js?v=5e5').then(function (m) {
+					import('../../score/model/net/modelGuard.js?v=41a').then(function (m) {
 						m.openGuardPanel();
 					}).catch(function (e) {
 						alert('模型护栏面板加载失败：' + e.message);

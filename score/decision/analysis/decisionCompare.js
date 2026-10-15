@@ -11,8 +11,8 @@
  * 用途：给定一个局面，用不同档案的偏移，分别给候选打分。
  * 输出：每个档案的 Top 3 选择，以及与实际选择的差异。
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 // Autor: Feisheng Original | Lizenz: GPL-3.0
 const STORE_KEY = 'djsc_compare_v1';

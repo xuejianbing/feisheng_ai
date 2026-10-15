@@ -88,7 +88,7 @@ export async function verifyAll() {
      * ★ P0-09：forward 返回 Float32Array（TypedArray），Array.isArray 恒 false → 正确输出也判失败；
      *   改用 ArrayBuffer.isView + 长度判定。 */
     try {
-        const m = await import('../model/weights/weights.js?v=5e5');
+        const m = await import('../model/weights/weights.js?v=41a');
         const fwd = (m && typeof m.forward === 'function') ? m.forward : null;
         if (fwd) {
             try {
@@ -126,7 +126,7 @@ export async function verifyAll() {
 
     /* ★ P2-33：事件总线不能只是"有文件"——必须存在真实业务订阅（game:end 落盘 / train:* 日志） */
     try {
-        const eb = await import('../foundation/runtime/eventBus.js?v=5e5');
+        const eb = await import('../foundation/runtime/eventBus.js?v=41a');
         const stats = eb.eventStats();
         let total = 0;
         Object.keys(stats).forEach(function (k) { total += stats[k]; });
@@ -140,7 +140,7 @@ export async function verifyAll() {
      *   两者皆无才判缺失。 */
     let cfgSchema = null;
     try {
-        const cm = await import('../../js/config/config.js?v=5e5');
+        const cm = await import('../../js/config/config.js?v=41a');
         cfgSchema = (cm && cm.config && typeof cm.config === 'object') ? cm.config : null;
     } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
     CONFIG_KEYS.forEach(function (k) {
@@ -181,7 +181,7 @@ export async function verifyAll() {
      * 聚合 layers.js，解决"检查真实功能"与"检查有没有函数名"混层；下方原分类明细保留。 */
     let layerView = null;
     try {
-        const lm = await import('./layers.js?v=5e5');
+        const lm = await import('./layers.js?v=41a');
         layerView = await lm.verifyLayers();
         layerView.layers.forEach(function (l) {
             rec('分层', l.layer + ' ' + l.name, l.auto ? l.summary.pass : true,

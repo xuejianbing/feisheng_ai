@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 决斗时机优化 =================
  * 优化什么时候决斗
  */
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 决斗胜率计算 */
 export function duelWinRate(me, target) {

@@ -16,10 +16,10 @@
 // Autore: Feisheng Originale | Licenza: GPL-3.0
  * 把实际收益写进样本的 reward 字段（替代整局分数）
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { isSameCamp } from '../strategy/modeStrategy.js?v=5e5';   /* ★ 架构阵营判定：同阵营判定 */
-import { dispositionOf } from '../relations/relations.js?v=5e5';
-import { VAL_CARD } from '../../knowledge/tables/value-tables.js?v=5e5';      /* ★ 装备按真实价值加权（替代按件数） */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { isSameCamp } from '../strategy/modeStrategy.js?v=41a';   /* ★ 架构阵营判定：同阵营判定 */
+import { dispositionOf } from '../relations/relations.js?v=41a';
+import { VAL_CARD } from '../../knowledge/tables/value-tables.js?v=41a';      /* ★ 装备按真实价值加权（替代按件数） */
 
 /* ★ 结算后检测的关系感知（用于实际收益正负判定）。
  * 优先用上层 targetIsEnemy；缺省统一走 relations.dispositionOf，避免身份模式态度透视。 */

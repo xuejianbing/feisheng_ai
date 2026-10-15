@@ -7,8 +7,8 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
-import { initAICardOpt } from './optimization.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
+import { initAICardOpt } from './optimization.js?v=41a';
 import './afunction.js';
 
 export function precontent(config, pack) {

@@ -1,7 +1,23 @@
 // shadow/shadowCore.js
 // Shadow模式：记录团队决策 vs v5集成决策，不接管实际决策
 
-import { loadV5All, v5Predict, isV5Ready } from './decodeV5.js?v=5e5';
+import { loadV5All, v5Predict, isV5Ready } from './decodeV5.js?v=41a';
+import { isEnemyOf as relIsEnemyOf } from '../score/decision/relations/relations.js?v=41a';   /* ★ PR6-2：shadow 敌我判定接入统一关系系统 */
+
+/* ===== ★ PR6-5：对局归属（matchId/matchResult）——外审 patch 落地 =====
+ * 每条 shadow 记录在对局结束时回填 matchId + matchResult(win/lose)，
+ * 用于「决策一致度 vs 对局胜率」分析，不依赖 reward。
+ * 检测走 _status.over 轮询（不依赖 game.on）；胜负判定兼容 4 种 winner 形态；
+ * _status 访问沿用本文件既有的 window 兜底模式（宿主非模块化，window._status 为活引用）。 */
+let _currentMatchId = null;
+let _matchEndHandled = false;
+let _lastOverWinner;
+
+function _pollStatusObj() {
+    try { if (typeof _status !== 'undefined' && _status) return _status; } catch (eS1) {}
+    try { if (typeof window !== 'undefined' && window._status) return window._status; } catch (eS2) {}
+    return null;
+}
 
 /* PR5d：内置特征挂载——动态加载特征工程，为决策快照候选自动补挂 130 维特征
    （手机端 engine.js 可能是团队原版、无引擎侧挂载代码；v5 模型输入 130 维，
@@ -52,10 +68,18 @@ function computeGain(before, after, isEnemy) {
 
 function isEnemyOf(me, target) {
     if (!me || !target) return false;
+    /* ★ PR6-2 修复：此前用 me.isEnemy / game.isEnemy——无名杀宿主不存在这两个 API，
+       函数恒返回 false → 敌人掉血被 (isEnemy?1:-1) 乘成负收益，shadowV5 reward 全负。
+       现优先复用决策引擎统一关系系统（dispositionOf：身份模式/国战/宿主 attitude 三态），
+       与引擎 30+ 模块的敌我判定完全一致；get.attitude 作二级兜底。 */
     try {
-        if (me.isEnemy) return me.isEnemy(target);
-        if (game?.isEnemy) return game.isEnemy(me, target);
-    } catch (e) {}
+        if (typeof relIsEnemyOf === 'function') return relIsEnemyOf(me, target) === true;
+    } catch (eRel) {}
+    try {
+        if (typeof get !== 'undefined' && get && typeof get.attitude === 'function') {
+            return get.attitude(me, target) < 0;
+        }
+    } catch (eAtt) {}
     return false;
 }
 
@@ -171,8 +195,24 @@ export async function startShadow() {
         try { if (localStorage.getItem(OFF_KEY)) { clearInterval(_timer); _timer = null; _started = false; return; } } catch (eOff2) {}
         DIAG.polls++;
 
+        /* ★ PR6-5：对局生命周期（以 gameStarted 识别新局，避免主菜单期误开 ID） */
         try {
-            const S = (typeof _status !== 'undefined' && _status) || {};   /* ★ 4.1.0：typeof 防御——可选链不保护未声明标识符，启动窗口会 ReferenceError */
+            _ensureOverWrap();
+            const MS = _pollStatusObj();
+            const mStarted = !!(MS && MS.gameStarted);
+            const mOver = !!(MS && MS.over);
+            if (!_currentMatchId && mStarted && !mOver) {
+                _currentMatchId = _genMatchId();
+                _matchEndHandled = false;
+                _lastOverWinner = undefined;
+                try { console.log('[Shadow] 新对局开始: ' + _currentMatchId); } catch (eL1) {}
+            } else if (_currentMatchId && mOver && !_matchEndHandled) {
+                _onMatchEnd();
+            }
+        } catch (eMatch) {}
+
+        try {
+            const S = (typeof _status !== 'undefined' && _status) || {};   /* ★ 4.0.24：typeof 防御——可选链不保护未声明标识符，启动窗口会 ReferenceError */
             const cands = S.djsc_lastCandidates || [];
             const best = S.djsc_lastBest;
             if (cands.length) { DIAG.withCands++; DIAG.lastCandLen = cands.length; if (best) DIAG.withBest++; }
@@ -269,4 +309,89 @@ export function shadowCmd(action = 'stats') {
         v5Ready: isV5Ready(),
         diag: { started: DIAG.started, polls: DIAG.polls, withCands: DIAG.withCands, noFeat: DIAG.noFeat, processed: DIAG.processed },
     };
+}
+
+
+/* ===== ★ PR6-5：对局归属三函数 ===== */
+function _genMatchId() {
+    const d = new Date();
+    const p = (n, l) => { n = String(n); while (n.length < (l || 2)) n = '0' + n; return n; };
+    return '' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function _ensureOverWrap() {
+    /* PR6-5b: wrap game.over to capture the winner argument (pass-through, guarded) */
+    try {
+        if (typeof game === 'undefined' || !game || game.__djsc_over_wrapped) return;
+        const orig = game.over;
+        if (typeof orig !== 'function') return;
+        game.over = function (winner) {
+            try { _lastOverWinner = winner; } catch (eCap) {}
+            return orig.apply(this, arguments);
+        };
+        game.__djsc_over_wrapped = true;
+    } catch (eWrap) {}
+}
+
+function _judgeWin() {
+    try {
+        const me = (typeof game !== 'undefined' && game && game.me) || null;
+        if (me && typeof me.isWin === 'function') {
+            const w = me.isWin();
+            if (w === true) return 'win';
+            if (w === false) return 'lose';
+        }
+        const S = _pollStatusObj();
+        let winner = null;
+        /* PR6-5b: captured game.over winner first (real-device: _status.over=true but winner not persisted) */
+        if (_lastOverWinner !== undefined && _lastOverWinner !== null) winner = _lastOverWinner;
+        if ((winner === null || winner === true) && S && S.over && S.over !== true) winner = (S.over.winner !== undefined) ? S.over.winner : S.over;
+        if ((winner === null || winner === true) && typeof game !== 'undefined' && game && game.winner !== undefined) winner = game.winner;
+        if (winner == null || winner === true) return 'unknown';
+        if (winner === false) return 'lose';
+        const zhMap = { '主公': 'zhu', '忠臣': 'zhong', '反贼': 'fan', '内奸': 'nei', '主': 'zhu', '忠': 'zhong' };
+        const mySideOf = () => {
+            const idOf = String((me && me.identity) || '');
+            return (idOf === 'zhu' || idOf === 'zhong') ? ['zhu', 'zhong'] : (idOf ? [idOf] : []);
+        };
+        let list = null;
+        if (Array.isArray(winner)) {
+            const strs = winner.filter(x => typeof x === 'string');
+            if (strs.length && strs.length === winner.length) {
+                if (!me) return 'unknown';
+                const mySide = mySideOf();
+                const norm = strs.map(x => zhMap[x] || String(x).toLowerCase());
+                return norm.some(k => mySide.indexOf(k) >= 0) ? 'win' : 'lose';
+            }
+            list = winner;
+        } else if (winner && typeof winner === 'object' && winner.name !== undefined) {
+            list = [winner];
+        }
+        if (list && list.length && me) {
+            const inList = list.some(p => p === me || (p && p.name && p.name === me.name));
+            return inList ? 'win' : 'lose';
+        }
+        if (typeof winner === 'string' && me) {
+            const mySide = mySideOf();
+            const wNorm = zhMap[winner] || winner.toLowerCase();
+            return mySide.indexOf(wNorm) >= 0 ? 'win' : 'lose';
+        }
+    } catch (eW) { try { DIAG.err(eW); } catch (eW2) {} }
+    return 'unknown';
+}
+
+
+function _onMatchEnd() {
+    try {
+        const result = _judgeWin();
+        const log = loadLog();
+        let changed = 0;
+        for (let i = 0; i < log.length; i++) {
+            if (log[i] && !log[i].matchId) { log[i].matchId = _currentMatchId; log[i].matchResult = result; changed++; }
+        }
+        if (changed) saveLog(log);
+        try { console.log('[Shadow] 对局结束: ' + _currentMatchId + ' result=' + result + ' 回填' + changed + '条'); } catch (eL2) {}
+    } catch (eM) { try { DIAG.err(eM); } catch (eM2) {} }
+    _currentMatchId = null;
+    _matchEndHandled = true;
 }

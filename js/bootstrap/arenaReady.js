@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 
 export function arenaReady() {
 	// 旧备份曾被本体自动登记为扩展；文件现已移到加载目录之外。

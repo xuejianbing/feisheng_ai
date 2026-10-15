@@ -19,11 +19,11 @@
  *       __DJSC.proReady.text()    取可读文本
  */
 
-import { profileReadiness } from '../foundation/adapt/gameProfile.js?v=5e5';
-import { readiness as extReadiness } from '../foundation/runtime/extensionPoints.js?v=5e5';
-import { readiness as cfgReadiness } from '../foundation/config/configSpec.js?v=5e5';
-import { coverage, SEMANTIC_LABEL } from '../foundation/adapt/terms.js?v=5e5';
-import { AUDIT } from './semanticAudit.js?v=5e5';
+import { profileReadiness } from '../foundation/adapt/gameProfile.js?v=41a';
+import { readiness as extReadiness } from '../foundation/runtime/extensionPoints.js?v=41a';
+import { readiness as cfgReadiness } from '../foundation/config/configSpec.js?v=41a';
+import { coverage, SEMANTIC_LABEL } from '../foundation/adapt/terms.js?v=41a';
+import { AUDIT } from './semanticAudit.js?v=41a';
 
 /** 结构化就绪度报告 */
 export function report() {

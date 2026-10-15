@@ -2,7 +2,7 @@
  * 统一游戏阶段判定。
  * 人数残局优先于轮次阶段，避免同一局面在不同模块中同时被解释为 early / late / endgame。
  */
-import { game, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { game, _status } from '../../foundation/adapt/host.js?v=41a';
 
 export const GAME_PHASE = Object.freeze({
 	EARLY: 'early',

@@ -29,11 +29,11 @@ const _fs_checksum = {
  *   维护时勿按标准残差块的恒等通路性质做假设。
  * 兼容旧 getWeights/getBias/isReady/predict 接口
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';  /* ★ 导入配置读取函数 */
-import { setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=5e5';  /* ★ 中央存储抽象：配额超限自动降级，写推荐性提升 */
-import { DEFAULT_WEIGHTS } from './defaultWeights.js?v=5e5';  /* ★ 内置默认权重（由内置样本离线训练得到） */
-import { safeGet as _lsGet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';  /* ★ 导入配置读取函数 */
+import { setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=41a';  /* ★ 中央存储抽象：配额超限自动降级，写推荐性提升 */
+import { DEFAULT_WEIGHTS } from './defaultWeights.js?v=41a';  /* ★ 内置默认权重（由内置样本离线训练得到） */
+import { safeGet as _lsGet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORE_KEY = 'djsc_weights_v3';
 const VERSION = 7;  /* ★ 版本升级：统一前向几何 + softmax温度 + 随机舍入，旧权重(饱和退化)作废重训 */

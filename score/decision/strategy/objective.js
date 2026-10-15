@@ -4,13 +4,13 @@
  * 只把宿主公开事实、observer-specific identity posterior 与行动者自身信息
  * 转换成 objectiveCore 所需的纯上下文。
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { getModeStrategy } from './modeStrategy.js?v=5e5';
-import { hardIdentityOf, beliefOfFor, confidenceOfFor } from '../../perception/observer/identity.js?v=5e5';
-import { evaluateSpyStance } from './identityStance.js?v=5e5';
-import { dispositionOf } from '../relations/relations.js?v=5e5';
-import { classifyIdentityRisk, resolveStrategicIntentCore } from './objectiveCore.js?v=5e5';
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { getModeStrategy } from './modeStrategy.js?v=41a';
+import { hardIdentityOf, beliefOfFor, confidenceOfFor } from '../../perception/observer/identity.js?v=41a';
+import { evaluateSpyStance } from './identityStance.js?v=41a';
+import { dispositionOf } from '../relations/relations.js?v=41a';
+import { classifyIdentityRisk, resolveStrategicIntentCore } from './objectiveCore.js?v=41a';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 function keyOf(p) {
 	try { return playerKey(p); } catch (_) { return null; }

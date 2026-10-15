@@ -11,7 +11,7 @@
  * 先出什么牌，后出什么牌
  * 比如：先装武器 → 再出杀 → 最后用锦囊
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 /* ================= 出牌优先级 ================= */
 const CARD_PRIORITY = {

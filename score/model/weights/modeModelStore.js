@@ -1,6 +1,6 @@
-import {readModeModels,writeModeModel} from './modeModelDB.js?v=5e5';
-import {safeGet,safeSet,safeRemove} from '../../foundation/storage/storage.js?v=5e5';
-import {MODEL_SCHEMA,createIsolatedModelSession} from './weights.js?v=5e5';
+import {readModeModels,writeModeModel} from './modeModelDB.js?v=41a';
+import {safeGet,safeSet,safeRemove} from '../../foundation/storage/storage.js?v=41a';
+import {MODEL_SCHEMA,createIsolatedModelSession} from './weights.js?v=41a';
 const KEY='djsc_classic_doudizhu_model_v1';
 const fields={W1:16640,B1:128,W2:8192,B2:64,W3:384,B3:6,W4:64,B4:1,W_proj1:16640,W_proj2:8192};
 export function encodeModeSnapshot(s){const out={};for(const [k,v] of Object.entries(s||{}))out[k]=ArrayBuffer.isView(v)?Array.from(v):v;return out;}

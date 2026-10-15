@@ -11,7 +11,7 @@
  * 目前有些计算可能重复了
  * 可以加更多缓存
  */
-import { lib, game, get, _status } from '../adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../adapt/host.js?v=41a';
 
 // Autor: Feisheng Original | Licença: GPL-3.0
 /* ================= 全局缓存 ================= */

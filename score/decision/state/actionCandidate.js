@@ -1,4 +1,4 @@
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 /*
  * 统一动作候选契约：
  * - runtime score 始终保持 float utility，不在排序链中做 Int8 非线性量化。

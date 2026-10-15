@@ -7,8 +7,8 @@
  * ============================================
  */
 
-import { game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
+import { game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 
 /* ================= 决策积分引擎 · 深度价值量化 =================
  * 精确量化：卡牌价值 / 目标价值 / 局势价值 / 时机价值

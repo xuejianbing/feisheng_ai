@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 
 export let help = {
 	'无名AI': ui.joint`

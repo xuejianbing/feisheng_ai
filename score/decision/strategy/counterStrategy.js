@@ -12,9 +12,9 @@
  * 对手爱出南蛮 → 提前留无懈
  * 对手爱出决斗 → 提前留杀
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Autor: Feisheng Original | Licencia: GPL-3.0
-import { cardRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
+import { cardRemaining } from '../../perception/memory/deckMemory.js?v=41a';
 
 /* ================= 反制缓存 ================= */
 const _counterCache = new Map();

@@ -11,7 +11,7 @@
  * 把三维性格 + 预设编码为一段短字符串，方便复制 / 粘贴 / 分享。
  * 格式：DJSC1:<preset>:<agg>:<rsk>:<tea>:<crc>
  */
-import { lib, game } from '../adapt/host.js?v=5e5';
+import { lib, game } from '../adapt/host.js?v=41a';
 
 const PREFIX = "DJSC1";
 const VALID_PRESETS = ["custom", "aggressive", "balanced", "cautious", "loner", "guardian"];

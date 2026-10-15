@@ -12,8 +12,8 @@
  * 叶子模块：不 import 任何业务模块，只依赖 localStorage 与玩家对象属性。
  * 只在有稳定 ID（昵称 / UID）时生效；本地 AI 对局因身份随机，无意义。
  */
-import { lib, game, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { lib, game, _status } from '../../foundation/adapt/host.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 // ผู้เขียน: เฟยเซิง ออริจินัล | ใบอนุญาต: GPL-3.0
 
 const STORE_KEY = "无名AI_playerMemory";

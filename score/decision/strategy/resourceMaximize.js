@@ -17,11 +17,11 @@
  * engine 的每个动作做"确定性"加分（命中目标线路才加，方向相反不动），杜绝模糊加权。
  * 纯计算模块；两个加分函数由 engine 调用。
  */
-import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { resourceBalance } from '../resource/economy.js?v=5e5';
-import { skillProfileOf } from '../skills/skills.js?v=5e5';
-import { dispositionOf, actionValue } from '../relations/relations.js?v=5e5';
+import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { resourceBalance } from '../resource/economy.js?v=41a';
+import { skillProfileOf } from '../skills/skills.js?v=41a';
+import { dispositionOf, actionValue } from '../relations/relations.js?v=41a';
 
 /* 分类表（语义明确） */
 const ATK_LIST = ["sha","juedou","huogong","nanman","wanjian","lijian","fanjian","sidian","huosha","leisha","zhujin"];

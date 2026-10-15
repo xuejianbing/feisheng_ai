@@ -1,4 +1,4 @@
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 /* 历史 target/tempo/play 胜负比率缺少已执行动作归因，仅作为诊断证据。
  * 当前回合动量独立计分；倍率>1提高负分候选，<1降低。 */

@@ -8,9 +8,9 @@
  */
 
 /* ================= 决策积分引擎 · AI 观战模式 ================= */
-import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { lineChart, barChart, donutChart } from '../report/charts.js?v=5e5';
-import { safeGet as _lsGet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { lineChart, barChart, donutChart } from '../report/charts.js?v=41a';
+import { safeGet as _lsGet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STATE = {
 	running: false,

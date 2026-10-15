@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 桃使用时机优化 =================
  * 优化什么时候用桃
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
 
 /* ★ 桃使用时机建议 */
 export function taoTiming(me) {

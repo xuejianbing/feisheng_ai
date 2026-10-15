@@ -16,11 +16,11 @@
 // Autor: Feisheng Original | Licencia: GPL-3.0
  *   ④ 移动平均，避免单次波动
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { autoLearnSkill, autoLearnCard } from '../../knowledge/tables/elementAccess.js?v=5e5';
-import { transferWrite } from '../../model/train/crossModeTransfer.js?v=5e5';
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { autoLearnSkill, autoLearnCard } from '../../knowledge/tables/elementAccess.js?v=41a';
+import { transferWrite } from '../../model/train/crossModeTransfer.js?v=41a';
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 
 const DECAY = 0.7;
 const MIN_DELTA = 0.15;

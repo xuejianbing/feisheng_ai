@@ -33,4 +33,4 @@
  * 期望结果：只命中本文件。
  */
 
-export { lib, game, ui, get, ai, _status } from '../../../../../noname.js?v=5e5';
+export { lib, game, ui, get, ai, _status } from '../../../../../noname.js?v=41a';

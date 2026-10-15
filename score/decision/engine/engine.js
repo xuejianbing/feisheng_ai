@@ -1,16 +1,18 @@
-import {selectClassicDataset} from '../../model/train/modeDataset.js?v=5e5';
-import { playChoiceWindow } from '../execution/decisionWindow.js?v=5e5';
-import { activePlaySkills } from '../skills/activeSkillEligibility.js?v=5e5';
-import { tiesuoCandidateOptions } from '../cards/tiesuoCandidateOptions.js?v=5e5';
-import {publicDecisionContext} from '../../perception/journal/doudizhuDiagnostics.js?v=5e5';
-import {createPlayerDemonstrationCollector,directPlayPhase} from '../../model/train/playerDemonstration.js?v=5e5';
-import {applyClassicModel,classicRuntimeSummary} from '../../model/train/classicRuntime.js?v=5e5';
-import {runClassicPostGameUpdate} from '../../model/train/modeTraining.js?v=5e5';
-import {classicCandidateShadow} from '../../model/train/modeTraining.js?v=5e5';
-import {takeClassicSetupAdvice} from '../modes/doudizhu/choices.js?v=5e5';
-import {modeContext,modeSampleMeta,closeModeContext,roleOf} from '../../foundation/runtime/modeContext.js?v=5e5';
-import {recordClassicMatch} from '../../model/train/modeStats.js?v=5e5';
-import { createDecisionStages, decisionActionSnapshot, planAdoption } from '../analysis/decisionStages.js?v=5e5';
+import {selectClassicDataset} from '../../model/train/modeDataset.js?v=41a';
+import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
+import { activePlaySkills } from '../skills/activeSkillEligibility.js?v=41a';
+import { tiesuoCandidateOptions } from '../cards/tiesuoCandidateOptions.js?v=41a';
+import {publicDecisionContext} from '../../perception/journal/doudizhuDiagnostics.js?v=41a';
+import {createPlayerDemonstrationCollector,directPlayPhase} from '../../model/train/playerDemonstration.js?v=41a';
+import {applyClassicModel,classicRuntimeSummary} from '../../model/train/classicRuntime.js?v=41a';
+import {runClassicPostGameUpdate} from '../../model/train/modeTraining.js?v=41a';
+import {classicCandidateShadow} from '../../model/train/modeTraining.js?v=41a';
+import {takeClassicSetupAdvice} from '../modes/doudizhu/choices.js?v=41a';
+import {modeContext,modeSampleMeta,closeModeContext,roleOf} from '../../foundation/runtime/modeContext.js?v=41a';
+import {recordClassicMatch} from '../../model/train/modeStats.js?v=41a';
+import { createDecisionStages, decisionActionSnapshot, planAdoption } from '../analysis/decisionStages.js?v=41a';
+import { applyTiesuoRecastTiming } from '../cards/tiesuoRecast.js?v=41a';
+import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
  * // Éditeur: Feisheng Original
@@ -20,95 +22,95 @@ import { createDecisionStages, decisionActionSnapshot, planAdoption } from '../a
  * ============================================
  */
 
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 记分核心+评分框架（整合模块） ================= */
-import { lib, game, ui, get, ai, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { reg } from '../../foundation/runtime/registry.js?v=5e5';   /* ★ 唯一挂载总线：所有 __DJSC 挂载统一走这里 */
-import { createBaselineUtilitySeed, applyCommonUtilitySuggestions, applyDirectionUtility, applyTransitionUtility, establishUtilityReference } from '../utility/remainingUtility.js?v=5e5';
-import { createAreaUtilitySeed, applyDeepValueEvidence } from '../utility/areaUtility.js?v=5e5';
-import { readScopedCardOverride, applyOptimizationEvidence, styleRatio, applyContextUtility } from '../utility/contextUtility.js?v=5e5';
-import { VAL_CARD, VAL_EFFECT } from '../../knowledge/tables/value-tables.js?v=5e5';
-import { decideCard, classifyCard, pickTarget as pickCardTarget } from '../cardplay/cardPlayBrain.js?v=5e5';
-import { decideSkill } from '../skills/skillPlayBrain.js?v=5e5';
-import { decideEquip } from '../basic/equipBrain.js?v=5e5';
-import { decideJudge } from '../basic/judgeBrain.js?v=5e5';
-import { pickTargetByPurpose, targetScore as targetBrainScore } from '../basic/targetBrain.js?v=5e5';
-import { evaluateTiesuoActions, tiesuoUtilityToEngineRaw, hostTiesuoDecision, hostTiesuoTargetEffect } from '../cards/tiesuoEvaluator.js?v=5e5';   /* ★ 指令 02：铁索唯一权威策略源 */
-import { evaluateActionTransitionPenalty, beginStrategicAction, reconcileStrategicTransitions, beginStrategicTurn } from '../state/turnStrategicState.js?v=5e5';   /* ★ 回合内战略状态转移唯一权威源 */
-import { buildPlayerSnapshot, buildTargetCandidate } from '../state/playerSnapshot.js?v=5e5';   /* ★ 指令 05 Stage A+C：统一 Player State Snapshot + 目标候选契约（禁止再猜宿主字段） */
-import { codeGainOf, skillRuleOf, skillProfileOf, skillBranchesOf, checkBranch, skillStagesOf, skillInteractionOf, skillTagsOf } from '../skills/skills.js?v=5e5';
-import { cacheGet, cacheSet, checkStateChanged, initStateWatcher, stateKey } from '../../foundation/storage/cache.js?v=5e5';
-import { enemiesOf, isEnemyOf, isAllyOf, dispositionOf, situationFactor, targetScore, probHasBagua, probHasShan, hasVengeanceSkill, cardValueOf, clearThreatCache, seatPressure, forecastSummary, burstThreatOf, maxBurstThreat, threatOf, linkedChainValue } from '../threat/threat.js?v=5e5';
-import { isPlayerLinked } from '../state/playerState.js?v=5e5';   /* ★ 指令 02：唯一横置状态读取入口 */
-import { miniPredict, cardIdOf, MINI_W } from '../../model/net/mini-model.js?v=5e5';
-import { miniFeatures } from '../skills/skills.js?v=5e5';
-import { MEM, memLoad, memSave, memReset, memRecordAtk, memRecordHit, memKeyOf } from '../../perception/memory/mem.js?v=5e5';
-import { observeAttack, observeAid, observeCardUse, resetObs, getObs, fireAttackExpectedHit } from '../../perception/observer/observer.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../../foundation/adapt/host.js?v=41a';
+import { reg } from '../../foundation/runtime/registry.js?v=41a';   /* ★ 唯一挂载总线：所有 __DJSC 挂载统一走这里 */
+import { createBaselineUtilitySeed, applyCommonUtilitySuggestions, applyDirectionUtility, applyTransitionUtility, establishUtilityReference } from '../utility/remainingUtility.js?v=41a';
+import { createAreaUtilitySeed, applyDeepValueEvidence } from '../utility/areaUtility.js?v=41a';
+import { readScopedCardOverride, applyOptimizationEvidence, styleRatio, applyContextUtility } from '../utility/contextUtility.js?v=41a';
+import { VAL_CARD, VAL_EFFECT } from '../../knowledge/tables/value-tables.js?v=41a';
+import { decideCard, classifyCard, pickTarget as pickCardTarget } from '../cardplay/cardPlayBrain.js?v=41a';
+import { decideSkill } from '../skills/skillPlayBrain.js?v=41a';
+import { decideEquip } from '../basic/equipBrain.js?v=41a';
+import { decideJudge } from '../basic/judgeBrain.js?v=41a';
+import { pickTargetByPurpose, targetScore as targetBrainScore } from '../basic/targetBrain.js?v=41a';
+import { evaluateTiesuoActions, tiesuoUtilityToEngineRaw, hostTiesuoDecision, hostTiesuoTargetEffect } from '../cards/tiesuoEvaluator.js?v=41a';   /* ★ 指令 02：铁索唯一权威策略源 */
+import { evaluateActionTransitionPenalty, beginStrategicAction, reconcileStrategicTransitions, beginStrategicTurn } from '../state/turnStrategicState.js?v=41a';   /* ★ 回合内战略状态转移唯一权威源 */
+import { buildPlayerSnapshot, buildTargetCandidate } from '../state/playerSnapshot.js?v=41a';   /* ★ 指令 05 Stage A+C：统一 Player State Snapshot + 目标候选契约（禁止再猜宿主字段） */
+import { codeGainOf, skillRuleOf, skillProfileOf, skillBranchesOf, checkBranch, skillStagesOf, skillInteractionOf, skillTagsOf } from '../skills/skills.js?v=41a';
+import { cacheGet, cacheSet, checkStateChanged, initStateWatcher, stateKey } from '../../foundation/storage/cache.js?v=41a';
+import { enemiesOf, isEnemyOf, isAllyOf, dispositionOf, situationFactor, targetScore, probHasBagua, probHasShan, hasVengeanceSkill, cardValueOf, clearThreatCache, seatPressure, forecastSummary, burstThreatOf, maxBurstThreat, threatOf, linkedChainValue } from '../threat/threat.js?v=41a';
+import { isPlayerLinked } from '../state/playerState.js?v=41a';   /* ★ 指令 02：唯一横置状态读取入口 */
+import { miniPredict, cardIdOf, MINI_W } from '../../model/net/mini-model.js?v=41a';
+import { miniFeatures } from '../skills/skills.js?v=41a';
+import { MEM, memLoad, memSave, memReset, memRecordAtk, memRecordHit, memKeyOf } from '../../perception/memory/mem.js?v=41a';
+import { observeAttack, observeAid, observeCardUse, resetObs, getObs, fireAttackExpectedHit } from '../../perception/observer/observer.js?v=41a';
 import './scoreSelfMod.js';  // ★ 积分自修改器：AI 直接修改规则积分
-import { deckConsume, deckReset, cardRemaining, deckAutoDetect, deckSyncFromUI } from '../../perception/memory/deckMemory.js?v=5e5';
-import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=5e5';
-import { identityOf as _identityOf, identityOfFor as _identityOfFor, beliefOf, beliefOfFor as _beliefOfFor, updateBelief, confidenceOf, confidenceOfFor as _confidenceOfFor, hardIdentityOf as _hardIdentityOf, isLikelyEnemy, isLikelyAlly, resetBelief, explainIdentity, identityBiasOf } from '../../perception/observer/identity.js?v=5e5';
-import { cfg, safe, nameOf, keyOf } from '../../foundation/config/util.js?v=5e5';
-import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { splitSkillLog } from './skillLog.js?v=5e5';
-import { teamPlan } from '../../perception/team/team.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { DIRS } from '../../foundation/storage/storagePaths.js?v=5e5';   /* ★ 统一导出路径：避免 'data' 误写到游戏根 */
-import { getDecisionBonus, getDecisionFeedbackSignal, recordTargetOutcome, recordTempoOutcome, recordPlayOutcome, flushDecisionFeedback, markOutcome } from '../feedback/decisionFeedback.js?v=5e5';
-import { perfMark } from '../../foundation/diag/perf.js?v=5e5';
-import { resourceBalance, discardCost, sellHpValue, equipReplaceCost, abolishPenalty } from '../resource/economy.js?v=5e5';
-import { fxRate, fxToMoney, fxSnapshot } from '../../knowledge/exchange/exchange.js?v=5e5';
-import { chooseStrategy } from '../strategy/strategy.js?v=5e5';
-import { styleOf } from '../../perception/observer/observer.js?v=5e5';
-import { loadStore, saveStore, mergeOnSettle, storeStats } from '../../perception/memory/memory.js?v=5e5';
-import { applyCampSkillProgressBonus } from '../skills/skillProgress.js?v=5e5';
-import { applyResourceMaximizeBonus, applyLossMinimizeBonus } from '../strategy/resourceMaximize.js?v=5e5';
-import { archiveGame, updateArchiveOutcome, verdictOf, loadArchive, getArchive, getGameDecisions, exportArchiveJson } from '../../perception/archive/archive.js?v=5e5';
-import { recordGame as recordGameLog, updateGameLogOutcome } from '../../perception/journal/gameLogStore.js?v=5e5';  /* ★ 对局日志自存库（绕开内核录像 20 条上限） */
-import { trainStartGame, trainRecordSample, trainSettleGame, trainFeedbackSample, trainBindSampleTargets, trainApplyCostCredits } from '../../model/train/trainExport.js?v=5e5';
-import { loadFeedback, recordSkillUse, flushFeedback, feedbackCount } from '../../perception/feedback/feedback.js?v=5e5';
-import { multiTurnForecast } from '../strategy/multiturn.js?v=5e5';
-import { loadStyleFeedback, recordStyleOutcome, flushStyleFeedback, recordPlayerTag, saveStyleFeedback } from '../../perception/feedback/styleFeedback.js?v=5e5';
-import { focusBonus, broadcastIntent, installBroadcastHooks, uninstallBroadcastHooks, readIntents, snapshotBroadcast } from '../../perception/team/teamBroadcast.js?v=5e5';
-import { refineBestWithPlan, planForDecision, resetPlanner } from '../strategy/planner.js?v=5e5';
-import { strategize } from '../strategy/strategist.js?v=5e5';
-import { getModeStrategy, isSameCamp, isEnemy, applyModeBoost } from '../strategy/modeStrategy.js?v=5e5';
-import { getStrategicState, strategicStateSnapshot, resetStrategicState } from '../strategy/strategicState.js?v=5e5';
-import { applyStrategicIntentToCandidates } from '../strategy/intentAlignment.js?v=5e5';
-import { characterPolicyOf, characterPolicySnapshot, applyCharacterPolicyToCandidates, resetCharacterPolicyCache } from '../strategy/characterPolicy.js?v=5e5';
-import { initializeUtilityPipeline, trackUtilityStage, finalizeUtilityPipeline, utilityPipelineSnapshot } from '../utility/utilityPipeline.js?v=5e5';
-import { buildEquipmentUtilityCandidates } from '../utility/equipmentUtility.js?v=5e5';
-import { applyCardConsumptionUtility } from '../utility/cardConsumptionUtility.js?v=5e5';
-import { evaluateAttackExpectedValue, createAttackUtilitySeed, adoptAttackUtilitySeed } from '../utility/attackExpectedUtility.js?v=5e5';
-import { applyFeedbackUtility } from '../utility/feedbackUtility.js?v=5e5';
-import { applyComboFallbackUtility } from '../utility/comboFallbackUtility.js?v=5e5';
-import { actionValue as relActionValue, exposureOf as relExposureOf, relationStateKey } from '../relations/relations.js?v=5e5';   /* ★ 统一收益/暴露系统入口 */
-import { autoRegister as globalAutoRegister, installProbes } from '../../foundation/runtime/globalScanner.js?v=5e5';
+import { deckConsume, deckReset, cardRemaining, deckAutoDetect, deckSyncFromUI } from '../../perception/memory/deckMemory.js?v=41a';
+import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=41a';
+import { identityOf as _identityOf, identityOfFor as _identityOfFor, beliefOf, beliefOfFor as _beliefOfFor, updateBelief, confidenceOf, confidenceOfFor as _confidenceOfFor, hardIdentityOf as _hardIdentityOf, isLikelyEnemy, isLikelyAlly, resetBelief, explainIdentity, identityBiasOf } from '../../perception/observer/identity.js?v=41a';
+import { cfg, safe, nameOf, keyOf } from '../../foundation/config/util.js?v=41a';
+import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { splitSkillLog } from './skillLog.js?v=41a';
+import { teamPlan } from '../../perception/team/team.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { DIRS } from '../../foundation/storage/storagePaths.js?v=41a';   /* ★ 统一导出路径：避免 'data' 误写到游戏根 */
+import { getDecisionBonus, getDecisionFeedbackSignal, recordTargetOutcome, recordTempoOutcome, recordPlayOutcome, flushDecisionFeedback, markOutcome } from '../feedback/decisionFeedback.js?v=41a';
+import { perfMark } from '../../foundation/diag/perf.js?v=41a';
+import { resourceBalance, discardCost, sellHpValue, equipReplaceCost, abolishPenalty } from '../resource/economy.js?v=41a';
+import { fxRate, fxToMoney, fxSnapshot } from '../../knowledge/exchange/exchange.js?v=41a';
+import { chooseStrategy } from '../strategy/strategy.js?v=41a';
+import { styleOf } from '../../perception/observer/observer.js?v=41a';
+import { loadStore, saveStore, mergeOnSettle, storeStats } from '../../perception/memory/memory.js?v=41a';
+import { applyCampSkillProgressBonus } from '../skills/skillProgress.js?v=41a';
+import { applyResourceMaximizeBonus, applyLossMinimizeBonus } from '../strategy/resourceMaximize.js?v=41a';
+import { archiveGame, updateArchiveOutcome, verdictOf, loadArchive, getArchive, getGameDecisions, exportArchiveJson } from '../../perception/archive/archive.js?v=41a';
+import { recordGame as recordGameLog, updateGameLogOutcome } from '../../perception/journal/gameLogStore.js?v=41a';  /* ★ 对局日志自存库（绕开内核录像 20 条上限） */
+import { trainStartGame, trainRecordSample, trainSettleGame, trainFeedbackSample, trainBindSampleTargets, trainApplyCostCredits } from '../../model/train/trainExport.js?v=41a';
+import { loadFeedback, recordSkillUse, flushFeedback, feedbackCount } from '../../perception/feedback/feedback.js?v=41a';
+import { multiTurnForecast } from '../strategy/multiturn.js?v=41a';
+import { loadStyleFeedback, recordStyleOutcome, flushStyleFeedback, recordPlayerTag, saveStyleFeedback } from '../../perception/feedback/styleFeedback.js?v=41a';
+import { focusBonus, broadcastIntent, installBroadcastHooks, uninstallBroadcastHooks, readIntents, snapshotBroadcast } from '../../perception/team/teamBroadcast.js?v=41a';
+import { refineBestWithPlan, planForDecision, resetPlanner } from '../strategy/planner.js?v=41a';
+import { strategize } from '../strategy/strategist.js?v=41a';
+import { getModeStrategy, isSameCamp, isEnemy, applyModeBoost } from '../strategy/modeStrategy.js?v=41a';
+import { getStrategicState, strategicStateSnapshot, resetStrategicState } from '../strategy/strategicState.js?v=41a';
+import { applyStrategicIntentToCandidates } from '../strategy/intentAlignment.js?v=41a';
+import { characterPolicyOf, characterPolicySnapshot, applyCharacterPolicyToCandidates, resetCharacterPolicyCache } from '../strategy/characterPolicy.js?v=41a';
+import { initializeUtilityPipeline, trackUtilityStage, finalizeUtilityPipeline, utilityPipelineSnapshot } from '../utility/utilityPipeline.js?v=41a';
+import { buildEquipmentUtilityCandidates } from '../utility/equipmentUtility.js?v=41a';
+import { applyCardConsumptionUtility } from '../utility/cardConsumptionUtility.js?v=41a';
+import { evaluateAttackExpectedValue, createAttackUtilitySeed, adoptAttackUtilitySeed } from '../utility/attackExpectedUtility.js?v=41a';
+import { applyFeedbackUtility } from '../utility/feedbackUtility.js?v=41a';
+import { applyComboFallbackUtility } from '../utility/comboFallbackUtility.js?v=41a';
+import { actionValue as relActionValue, exposureOf as relExposureOf, relationStateKey } from '../relations/relations.js?v=41a';   /* ★ 统一收益/暴露系统入口 */
+import { autoRegister as globalAutoRegister, installProbes } from '../../foundation/runtime/globalScanner.js?v=41a';
 import '../../foundation/runtime/missingModules.js';  // ★ 缺失模块补全：5个真正工作的模块
 import '../../model/train/autoLearn.js';       // ★ 自动学习表：新卡牌/新技能自动打分
-import { getJSON as storageGetJSON, setJSONQuotaSafe as storageSetQuota } from '../../foundation/storage/storage.js?v=5e5';  /* ★ 中央存储抽象 */
+import { getJSON as storageGetJSON, setJSONQuotaSafe as storageSetQuota } from '../../foundation/storage/storage.js?v=41a';  /* ★ 中央存储抽象 */
 /* ===== 24 个优化模块 ===== */
-import { probHasWuxie, probHasTao, probHasSha, probHasJiu, probHasCard, inferHand } from '../../model/predict/handInference.js?v=5e5';
-import { aggregateByPlayer, buildComparisonHtml as aiStatsBuildHtml } from '../../perception/stats/aiStats.js?v=5e5';  /* ★ 真正的 aiStats */
-import { checkAllyExempt } from '../safety/allyExempt.js?v=5e5';  /* ★ 真正的 allyExempt */
-import { recordGuardEvent, getGuardStats, resetGuardRecorder } from '../safety/guardRecorder.js?v=5e5';  /* ★ 真正的 guardRecorder */
-import { healthCheck } from '../../foundation/diag/health.js?v=5e5';  /* ★ 真正的 health */
-import { trainLocalAsync, isTraining, lastResult } from '../../model/train/localTrainer.js?v=5e5';  /* ★ 真正的 localTrainer */
-import { getDecisionFeedbackStats } from '../feedback/decisionFeedback.js?v=5e5';  /* ★ 真正的 decisionHook（新增） */
-import { installAutoDiscover, promoteHighRegretPoints as promoteRegret, getRegretStats } from '../../perception/discover/autoDiscover.js?v=5e5';  /* ★ 真正的 decisionRegistry */
-import { scanCharacters, aggregateSkillTags, buildAutoSkillRules } from '../skills/skills.js?v=5e5';  /* ★ 真正的 skillScanner（新增） */
-import { wuxieTiming, wuxieBonus } from '../timing/wuxieTiming.js?v=5e5';  /* ★ 真正的 responseAI */
-import { wuguTiming, wuguBonus } from '../timing/wuguTiming.js?v=5e5';  /* ★ 真正的 responseAI */
-import { archiveStats } from '../../perception/archive/archive.js?v=5e5';  /* ★ 真正的 replayAnalysis（新增） */
-import { exportStore } from '../../perception/memory/memory.js?v=5e5';  /* ★ 真正的 profiles（新增） */
-import { autoSelfHeal } from '../../foundation/diag/selfHeal.js?v=5e5';
-import { updateAdaptive } from '../tuning/adaptive.js?v=5e5';
-import { showReport, resetReportShown } from '../../view/report/report.js?v=5e5';
-import { resetDecisionFeedback } from '../feedback/decisionFeedback.js?v=5e5';
-import { recordGameEnd as banditRecordGameEnd } from '../../model/train/bandit.js?v=5e5';
-import { onGameEnd as modelStateOnGameEnd, recordABScore } from '../../model/net/modelState.js?v=5e5';
-import { applyChampionRule, applyChampionBoost, getChampions as champGet, championOf as champOf, recompute as champRecompute, stats as champStats, feedbackSettle as champSettle, getEmbedding as champEmbedding } from '../strategy/championStrategy.js?v=5e5';  /* ★ 冠军策略固化 */
+import { probHasWuxie, probHasTao, probHasSha, probHasJiu, probHasCard, inferHand } from '../../model/predict/handInference.js?v=41a';
+import { aggregateByPlayer, buildComparisonHtml as aiStatsBuildHtml } from '../../perception/stats/aiStats.js?v=41a';  /* ★ 真正的 aiStats */
+import { checkAllyExempt } from '../safety/allyExempt.js?v=41a';  /* ★ 真正的 allyExempt */
+import { recordGuardEvent, getGuardStats, resetGuardRecorder } from '../safety/guardRecorder.js?v=41a';  /* ★ 真正的 guardRecorder */
+import { healthCheck } from '../../foundation/diag/health.js?v=41a';  /* ★ 真正的 health */
+import { trainLocalAsync, isTraining, lastResult } from '../../model/train/localTrainer.js?v=41a';  /* ★ 真正的 localTrainer */
+import { getDecisionFeedbackStats } from '../feedback/decisionFeedback.js?v=41a';  /* ★ 真正的 decisionHook（新增） */
+import { installAutoDiscover, promoteHighRegretPoints as promoteRegret, getRegretStats } from '../../perception/discover/autoDiscover.js?v=41a';  /* ★ 真正的 decisionRegistry */
+import { scanCharacters, aggregateSkillTags, buildAutoSkillRules } from '../skills/skills.js?v=41a';  /* ★ 真正的 skillScanner（新增） */
+import { wuxieTiming, wuxieBonus } from '../timing/wuxieTiming.js?v=41a';  /* ★ 真正的 responseAI */
+import { wuguTiming, wuguBonus } from '../timing/wuguTiming.js?v=41a';  /* ★ 真正的 responseAI */
+import { archiveStats } from '../../perception/archive/archive.js?v=41a';  /* ★ 真正的 replayAnalysis（新增） */
+import { exportStore } from '../../perception/memory/memory.js?v=41a';  /* ★ 真正的 profiles（新增） */
+import { autoSelfHeal } from '../../foundation/diag/selfHeal.js?v=41a';
+import { updateAdaptive } from '../tuning/adaptive.js?v=41a';
+import { showReport, resetReportShown } from '../../view/report/report.js?v=41a';
+import { resetDecisionFeedback } from '../feedback/decisionFeedback.js?v=41a';
+import { recordGameEnd as banditRecordGameEnd } from '../../model/train/bandit.js?v=41a';
+import { onGameEnd as modelStateOnGameEnd, recordABScore } from '../../model/net/modelState.js?v=41a';
+import { applyChampionRule, applyChampionBoost, getChampions as champGet, championOf as champOf, recompute as champRecompute, stats as champStats, feedbackSettle as champSettle, getEmbedding as champEmbedding } from '../strategy/championStrategy.js?v=41a';  /* ★ 冠军策略固化 */
 
 /* ★ 立刻挂载 scan，不用等 setTimeout */
 window.__DJSC = window.__DJSC || {};
@@ -119,82 +121,82 @@ window.__DJSC.scan = {
   getStats: function() { return { ok: true }; },
   reset: function() {},
 };
-import { getFeedbackStats } from '../../perception/feedback/feedback.js?v=5e5';  /* ★ 真正的 skillCustom（新增） */
-import { detectConflict, conflictLog, conflictStats, resetConflict } from '../analysis/conflictDetector.js?v=5e5';  /* ★ 真正的 compat */
-import { getStyleFeedbackStats, getPlayerTag } from '../../perception/feedback/styleFeedback.js?v=5e5';  /* ★ 真正的 smartPanel（新增） */
-import { getStats as strategistGetStats, getLastDecision, setEnabled, isEnabled } from '../strategy/strategist.js?v=5e5';  /* ★ 真正的 decisionDashboard（新增） */
-import { focusTarget, protectScore, comboWithAllies } from '../../perception/team/team.js?v=5e5';  /* ★ 真正的 modules（新增） */
-import { openSelfCheck, getSelfCheckHistory, clearSelfCheckHistory, runChecks as runSelfChecks } from '../../verification/selfCheck.js?v=5e5';  /* ★ 真正的 selfCheck（P1-28：run 接真实检查） */
-import { startAutoplay, stopAutoplay, autoplayStatus, showAutoplayReport } from '../../view/autoplay/autoplay.js?v=5e5';  /* ★ 真正的 autoplay */
-import { CHANGELOG, printChangelog, getVersionChanges, getLatestVersion } from '../../foundation/diag/changelog.js?v=5e5';  /* ★ 真正的 changelog */
-import { lineChart, barChart, radarChart, donutChart } from '../../view/report/charts.js?v=5e5';  /* ★ 真正的 charts */
-import { installCompareAI, uninstallCompareAI } from '../../perception/stats/compareAI.js?v=5e5';  /* ★ 真正的 compareAI */
-import { keepScore, recommendKeep } from '../cardplay/keepStrategy.js?v=5e5';
-import { equipScarcity, equipValue, isKeyEquip } from '../cardplay/equipScarcity.js?v=5e5';
-import { analyzeTeammateIntent, analyzeTeammateStrategy, teammateCoordination, recordTeammateAction } from '../../perception/team/teammateIntent.js?v=5e5';
-import { analyzeOpponentPref, counterStrategy, predictOpponentNext, counterScoreBonus } from '../strategy/counterStrategy.js?v=5e5';
-import { evaluateSituation, describeSituation, situationStrategyBonus } from '../../cognition/situationEval.js?v=5e5';
-import { shaHitRate, wuxieRisk, duelWinRate, taoNecessity, riskScore } from '../../cognition/reasoning/riskQuant.js?v=5e5';
-import { analyzeOpponentMood, describeMood, moodStrategyBonus, getAllMoods } from '../../cognition/moodState.js?v=5e5';
-import { getMutualRelations, isCountering, isBeingCountered, counterRelationBonus } from '../../knowledge/counters/mutualRelations.js?v=5e5';
-import { getCardPriority, recommendOrder, orderBonus, recommendFlow } from '../tuning/orderOptimizer.js?v=5e5';
-import { shouldPassCard, whatTeammateNeeds, passCardBonus } from '../cardplay/passStrategy.js?v=5e5';
-import { countTiesuo, tiesuoTransfer, tianxiangTransfer, damageTransfer, damageTransferBonus } from '../safety/damageTransfer.js?v=5e5';
-import { predictShaFollowup, predictJuedouFollowup, searchTree, treeSearchBonus } from '../strategy/treeSearch.js?v=5e5';
-import { needLongDelay, getSmartDelay, waitForSkills, checkSkillTriggered } from '../tuning/delayOptimizer.js?v=5e5';
-import { getDeckTop, hasGuanxingSkill, prioritizeDeckTop, deckTopBonus, clearDeckTopCache } from '../../model/predict/deckTopPredict.js?v=5e5';
-import { recommendDiscard, discardValue, specialDiscardAdvice, discardAdvice } from '../cardplay/discardStrategy.js?v=5e5';
-import { recordGameResult, getWinRate, autoAdjustWeights, learningPanelData, clearLearningData } from '../../model/train/learningLoop.js?v=5e5';
-import { recycleArchiveSamples } from '../../model/train/archiveRecycle.js?v=5e5';  /* ★ 归档离线训练回流：胜利局样本回灌 */
-import { aliveCount, identityGameStrategy, shouldRevealIdentity, gameTheoryBonus } from '../../cognition/reasoning/gameTheory.js?v=5e5';
-import { cached, clearAllCache, cacheStats, perfStart, perfEnd } from '../../foundation/diag/perfOptimizer.js?v=5e5';
+import { getFeedbackStats } from '../../perception/feedback/feedback.js?v=41a';  /* ★ 真正的 skillCustom（新增） */
+import { detectConflict, conflictLog, conflictStats, resetConflict } from '../analysis/conflictDetector.js?v=41a';  /* ★ 真正的 compat */
+import { getStyleFeedbackStats, getPlayerTag } from '../../perception/feedback/styleFeedback.js?v=41a';  /* ★ 真正的 smartPanel（新增） */
+import { getStats as strategistGetStats, getLastDecision, setEnabled, isEnabled } from '../strategy/strategist.js?v=41a';  /* ★ 真正的 decisionDashboard（新增） */
+import { focusTarget, protectScore, comboWithAllies } from '../../perception/team/team.js?v=41a';  /* ★ 真正的 modules（新增） */
+import { openSelfCheck, getSelfCheckHistory, clearSelfCheckHistory, runChecks as runSelfChecks } from '../../verification/selfCheck.js?v=41a';  /* ★ 真正的 selfCheck（P1-28：run 接真实检查） */
+import { startAutoplay, stopAutoplay, autoplayStatus, showAutoplayReport } from '../../view/autoplay/autoplay.js?v=41a';  /* ★ 真正的 autoplay */
+import { CHANGELOG, printChangelog, getVersionChanges, getLatestVersion } from '../../foundation/diag/changelog.js?v=41a';  /* ★ 真正的 changelog */
+import { lineChart, barChart, radarChart, donutChart } from '../../view/report/charts.js?v=41a';  /* ★ 真正的 charts */
+import { installCompareAI, uninstallCompareAI } from '../../perception/stats/compareAI.js?v=41a';  /* ★ 真正的 compareAI */
+import { keepScore, recommendKeep } from '../cardplay/keepStrategy.js?v=41a';
+import { equipScarcity, equipValue, isKeyEquip } from '../cardplay/equipScarcity.js?v=41a';
+import { analyzeTeammateIntent, analyzeTeammateStrategy, teammateCoordination, recordTeammateAction } from '../../perception/team/teammateIntent.js?v=41a';
+import { analyzeOpponentPref, counterStrategy, predictOpponentNext, counterScoreBonus } from '../strategy/counterStrategy.js?v=41a';
+import { evaluateSituation, describeSituation, situationStrategyBonus } from '../../cognition/situationEval.js?v=41a';
+import { shaHitRate, wuxieRisk, duelWinRate, taoNecessity, riskScore } from '../../cognition/reasoning/riskQuant.js?v=41a';
+import { analyzeOpponentMood, describeMood, moodStrategyBonus, getAllMoods } from '../../cognition/moodState.js?v=41a';
+import { getMutualRelations, isCountering, isBeingCountered, counterRelationBonus } from '../../knowledge/counters/mutualRelations.js?v=41a';
+import { getCardPriority, recommendOrder, orderBonus, recommendFlow } from '../tuning/orderOptimizer.js?v=41a';
+import { shouldPassCard, whatTeammateNeeds, passCardBonus } from '../cardplay/passStrategy.js?v=41a';
+import { countTiesuo, tiesuoTransfer, tianxiangTransfer, damageTransfer, damageTransferBonus } from '../safety/damageTransfer.js?v=41a';
+import { predictShaFollowup, predictJuedouFollowup, searchTree, treeSearchBonus } from '../strategy/treeSearch.js?v=41a';
+import { needLongDelay, getSmartDelay, waitForSkills, checkSkillTriggered } from '../tuning/delayOptimizer.js?v=41a';
+import { getDeckTop, hasGuanxingSkill, prioritizeDeckTop, deckTopBonus, clearDeckTopCache } from '../../model/predict/deckTopPredict.js?v=41a';
+import { recommendDiscard, discardValue, specialDiscardAdvice, discardAdvice } from '../cardplay/discardStrategy.js?v=41a';
+import { recordGameResult, getWinRate, autoAdjustWeights, learningPanelData, clearLearningData } from '../../model/train/learningLoop.js?v=41a';
+import { recycleArchiveSamples } from '../../model/train/archiveRecycle.js?v=41a';  /* ★ 归档离线训练回流：胜利局样本回灌 */
+import { aliveCount, identityGameStrategy, shouldRevealIdentity, gameTheoryBonus } from '../../cognition/reasoning/gameTheory.js?v=41a';
+import { cached, clearAllCache, cacheStats, perfStart, perfEnd } from '../../foundation/diag/perfOptimizer.js?v=41a';
 /* ===== v1.7.0 新增 5 个优化模块 ===== */
-import { responseBonus } from '../cardplay/responseOpt.js?v=5e5';
-import { endgameBonus, isEndgame, endgameStrategy } from '../tuning/endgameOpt.js?v=5e5';
-import { resetOpponentPrediction, opponentPredictBonus, recordOpponentAction, predictOpponentNext as predictOpponentNextO } from '../../model/predict/opponentPredict.js?v=5e5';
-import { resourceTimingBonus } from '../resource/resourceTiming.js?v=5e5';
+import { responseBonus } from '../cardplay/responseOpt.js?v=41a';
+import { endgameBonus, isEndgame, endgameStrategy } from '../tuning/endgameOpt.js?v=41a';
+import { resetOpponentPrediction, opponentPredictBonus, recordOpponentAction, predictOpponentNext as predictOpponentNextO } from '../../model/predict/opponentPredict.js?v=41a';
+import { resourceTimingBonus } from '../resource/resourceTiming.js?v=41a';
 /* ===== v1.8.0 新增 5 个优化模块 ===== */
-import { aoeValue } from '../timing/aoeTiming.js?v=5e5';
-import { judgeBonus } from '../timing/judgeTiming.js?v=5e5';
-import { multiTurnBonus } from '../strategy/multiTurnOpt.js?v=5e5';
+import { aoeValue } from '../timing/aoeTiming.js?v=41a';
+import { judgeBonus } from '../timing/judgeTiming.js?v=41a';
+import { multiTurnBonus } from '../strategy/multiTurnOpt.js?v=41a';
 /* ===== v1.0.2 新增 5 个锦囊时机优化模块 ===== */
-import { jiedaoBonus } from '../timing/jiedaoTiming.js?v=5e5';
-import { shandianBonus } from '../timing/shandianTiming.js?v=5e5';
-import { taoyuanBonus } from '../timing/taoyuanTiming.js?v=5e5';
+import { jiedaoBonus } from '../timing/jiedaoTiming.js?v=41a';
+import { shandianBonus } from '../timing/shandianTiming.js?v=41a';
+import { taoyuanBonus } from '../timing/taoyuanTiming.js?v=41a';
 /* ===== v1.0.3 新增 5 个时机优化模块 ===== */
-import { shaTargetBonus } from '../tuning/shaTargetOpt.js?v=5e5';
-import { taoBonus } from '../timing/taoTiming.js?v=5e5';
-import { jiuBonus } from '../timing/jiuTiming.js?v=5e5';
-import { shunshouBonus } from '../timing/shunshouTiming.js?v=5e5';
+import { shaTargetBonus } from '../tuning/shaTargetOpt.js?v=41a';
+import { taoBonus } from '../timing/taoTiming.js?v=41a';
+import { jiuBonus } from '../timing/jiuTiming.js?v=41a';
+import { shunshouBonus } from '../timing/shunshouTiming.js?v=41a';
 /* ===== v1.0.4 深度价值量化模块 ===== */
-import { deepValueEvidence } from '../../model/net/deepValue.js?v=5e5';
-import { recordTrigger, getDecayMultiplier, applyDecay, clearDecayLog, getDecayStats } from '../tuning/decayOpt.js?v=5e5';
-import { clearCompensation } from './scoreUnify.js?v=5e5';
-import { makeActionCandidate, runtimeScore, applyRelativeUtilityDelta, targetKey, candidateTargetValue, sameCandidateAction, sameCandidatePolicyBand, ensureCandidatePolicy, vetoCandidate, setCandidatePriority, isCandidateEligible, compareActionCandidates, PRIORITY_TIER, candidatePriorityRank, candidatePolicySnapshot } from '../state/actionCandidate.js?v=5e5';
-import { buildDecisionTraceLines } from './decisionTrace.js?v=5e5';
-import { formatLogLines } from '../../foundation/diag/logFormat.js?v=5e5';
-import { createGameTelemetry } from './gameTelemetry.js?v=5e5';
-import { binaryGameResult } from './gameResult.js?v=5e5';
-import { preparePlayerFeedback } from '../../perception/journal/playerFeedback.js?v=5e5';
-import { buildTurnSummaryLines } from './turnSummary.js?v=5e5';
-import { createMatchArchive } from '../../perception/journal/matchArchive.js?v=5e5';
-import { saveMatchArchive, updateMatchArchiveOutcomes, updateClassicEffects, currentMatchArchive } from '../../perception/journal/matchArchiveStore.js?v=5e5';
-import { VERSION } from '../../../js/config/version.js?v=5e5';
-import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=5e5';
-import { createDecisionTransaction, peekDecisionTransaction, cancelDecisionTransaction, decisionTransactionStats, resetDecisionTransactionStats } from '../state/decisionTransaction.js?v=5e5';
-import { commitExecution, executionGatewayStats, resetExecutionGateway, invokeObservedHost } from '../execution/executionGateway.js?v=5e5';
-import { extractFeatures, FEATURE_DIM } from '../../model/features/features.js?v=5e5';
-import { pushSample, bufferSize, bufferClear } from '../../model/train/trainExport.js?v=5e5';
-import { v5Predict } from '../../../shadow/decodeV5.js?v=5e5';   /* ★ PR5e.4：样本级 v5 预测记录（decodeV5 自包含无副作用，未加载模型时 v5Predict 返回 null） */
-import { cmd as cloudCmd, status as cloudStatus, onGameEndHook, installCloudIngest, uninstallCloudIngest } from '../../foundation/cloud/cloudIngest.js?v=5e5';   /* ★ 数据上报通道（SHA-256 去重 + 增量上传 + 每小时；本地数据保留） */
-import { getState as modelGetState, onGameEnd as modelOnGameEnd, forceTrain as modelForceTrain } from '../../model/net/modelState.js?v=5e5';  /* ★ 真正的 modelState */
-import * as _trainExportModule from '../../model/train/trainExport.js?v=5e5';
-import { getWeights, getBias, isReady as weightsReady, predict } from '../../model/weights/weights.js?v=5e5';
-import * as _weightsModule from '../../model/weights/weights.js?v=5e5';
-import { guardCheck, applyGuardPenalty } from '../../model/net/modelGuard.js?v=5e5';
-import { observeElementUse, startElementFeedbackLoop, settleElementFeedback } from '../../perception/feedback/elementFeedback.js?v=5e5';
-import { metaStartGame, metaSettleGame, metaRecordSkill, metaRecordCard, metaRecordTarget, metaRecordDecision, cognitiveModulate, decideIntervention } from '../../cognition/metaCognition.js?v=5e5';
-import { logCognition, getCognitionLog, cognitionStats, resetCognitionLog } from '../../cognition/log/cognitiveLog.js?v=5e5';
+import { deepValueEvidence } from '../../model/net/deepValue.js?v=41a';
+import { recordTrigger, getDecayMultiplier, applyDecay, clearDecayLog, getDecayStats } from '../tuning/decayOpt.js?v=41a';
+import { clearCompensation } from './scoreUnify.js?v=41a';
+import { makeActionCandidate, runtimeScore, applyRelativeUtilityDelta, targetKey, candidateTargetValue, sameCandidateAction, sameCandidatePolicyBand, ensureCandidatePolicy, vetoCandidate, setCandidatePriority, isCandidateEligible, compareActionCandidates, PRIORITY_TIER, candidatePriorityRank, candidatePolicySnapshot } from '../state/actionCandidate.js?v=41a';
+import { buildDecisionTraceLines } from './decisionTrace.js?v=41a';
+import { formatLogLines } from '../../foundation/diag/logFormat.js?v=41a';
+import { createGameTelemetry } from './gameTelemetry.js?v=41a';
+import { binaryGameResult } from './gameResult.js?v=41a';
+import { preparePlayerFeedback } from '../../perception/journal/playerFeedback.js?v=41a';
+import { buildTurnSummaryLines } from './turnSummary.js?v=41a';
+import { createMatchArchive } from '../../perception/journal/matchArchive.js?v=41a';
+import { saveMatchArchive, updateMatchArchiveOutcomes, updateClassicEffects, currentMatchArchive } from '../../perception/journal/matchArchiveStore.js?v=41a';
+import { VERSION } from '../../../js/config/version.js?v=41a';
+import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=41a';
+import { createDecisionTransaction, peekDecisionTransaction, cancelDecisionTransaction, decisionTransactionStats, resetDecisionTransactionStats } from '../state/decisionTransaction.js?v=41a';
+import { commitExecution, executionGatewayStats, resetExecutionGateway, invokeObservedHost } from '../execution/executionGateway.js?v=41a';
+import { extractFeatures, FEATURE_DIM } from '../../model/features/features.js?v=41a';
+import { pushSample, bufferSize, bufferClear } from '../../model/train/trainExport.js?v=41a';
+import { v5Predict } from '../../../shadow/decodeV5.js?v=41a';   /* ★ PR5e.4：样本级 v5 预测记录（decodeV5 自包含无副作用，未加载模型时 v5Predict 返回 null） */
+import { cmd as cloudCmd, status as cloudStatus, onGameEndHook, installCloudIngest, uninstallCloudIngest } from '../../foundation/cloud/cloudIngest.js?v=41a';   /* ★ 数据上报通道（SHA-256 去重 + 增量上传 + 每小时；本地数据保留） */
+import { getState as modelGetState, onGameEnd as modelOnGameEnd, forceTrain as modelForceTrain } from '../../model/net/modelState.js?v=41a';  /* ★ 真正的 modelState */
+import * as _trainExportModule from '../../model/train/trainExport.js?v=41a';
+import { getWeights, getBias, isReady as weightsReady, predict } from '../../model/weights/weights.js?v=41a';
+import * as _weightsModule from '../../model/weights/weights.js?v=41a';
+import { guardCheck, applyGuardPenalty } from '../../model/net/modelGuard.js?v=41a';
+import { observeElementUse, startElementFeedbackLoop, settleElementFeedback } from '../../perception/feedback/elementFeedback.js?v=41a';
+import { metaStartGame, metaSettleGame, metaRecordSkill, metaRecordCard, metaRecordTarget, metaRecordDecision, cognitiveModulate, decideIntervention } from '../../cognition/metaCognition.js?v=41a';
+import { logCognition, getCognitionLog, cognitionStats, resetCognitionLog } from '../../cognition/log/cognitiveLog.js?v=41a';
 import '../analysis/conflictDetector.js';
 import '../../model/calibrate/decisionCalibrator.js';
 import '../../model/calibrate/calibratorPanel.js';
@@ -241,22 +243,22 @@ import '../../model/train/crossModeTransfer.js';
 import '../analysis/decisionCompare.js';
 import '../../view/dashboard/comparePanel.js';
 import '../../model/net/modelHotSwap.js';
-import { applySharedBonus, shareContribute } from '../../perception/knowledge/sharedKnowledge.js?v=5e5';  /* ★ 公共知识库：决策加成+贡献（此前只 import 从不调用，采纳/贡献恒 0） */
+import { applySharedBonus, shareContribute } from '../../perception/knowledge/sharedKnowledge.js?v=41a';  /* ★ 公共知识库：决策加成+贡献（此前只 import 从不调用，采纳/贡献恒 0） */
 import '../../model/train/evolution.js';
-import { psychologyBonus, deterrenceCheck, intentReading, pressureScore, strategicHold, psychologyStats, resetPsychology } from '../../cognition/reasoning/psychology.js?v=5e5';
-import { comboChainBonus, detectChains, chainScore, chainPriority, comboChainStats, resetComboChain, CHAINS, learnChainUse, learnedChains, clearLearnedChains, finalizeLearned, exportAllChains, importChains, recordExecutedChainIds } from '../strategy/comboChain.js?v=5e5';
-import { playerMemoryBonus, rememberGame, rememberAttack, rememberAid, playerMemoryStats, recallPlayer, hostilityLevel, playerMemoryList, resetPlayerMemory } from '../../perception/memory/playerMemory.js?v=5e5';
-import { profStart, profEnd, profRecord, profile, profilerEnable, profilerStats, profilerReset, openProfilerPanel } from '../../foundation/diag/profiler.js?v=5e5';
-import { narrate, renderNarrateHtml, recentNarrations, showRecentNarrations } from '../../cognition/explain/decisionNarrator.js?v=5e5';
-import { createSkillOutcomeTracker } from '../analysis/skillOutcome.js?v=5e5';
-import { createActionOutcomeObserver } from '../analysis/actionOutcome.js?v=5e5';
-import { createDelayedOutcomeTracker } from '../analysis/delayedOutcome.js?v=5e5';
-import { createPublicProvenanceTracker } from '../analysis/publicProvenance.js?v=5e5';
-import { postCheckStats, postCheckReset } from '../analysis/postCheck.js?v=5e5';
-import { criticBest as deepThinkCritic, thinkingStats as deepThinkStats } from '../../cognition/deepThink.js?v=5e5';  /* ★ 模型思考层：深度思考 */
-import { getCardStrategy, cardUseValue, cardRespondValue, getCardType, getCardRisk, cardStrategyStats, resetCardStrategy } from '../cardplay/cardStrategy.js?v=5e5';
-import { recordDecisionContext, settleDecisionContext, getAutoFeatureWeight, autoFeatureStats, topAutoFeatures, resetAutoFeatures } from '../../model/features/autoFeature.js?v=5e5';
-import { getMetric, learnMetric, learnFromGame, softMetricStats, resetSoftMetrics } from '../../cognition/reasoning/softMetrics.js?v=5e5';
+import { psychologyBonus, deterrenceCheck, intentReading, pressureScore, strategicHold, psychologyStats, resetPsychology } from '../../cognition/reasoning/psychology.js?v=41a';
+import { comboChainBonus, detectChains, chainScore, chainPriority, comboChainStats, resetComboChain, CHAINS, learnChainUse, learnedChains, clearLearnedChains, finalizeLearned, exportAllChains, importChains, recordExecutedChainIds } from '../strategy/comboChain.js?v=41a';
+import { playerMemoryBonus, rememberGame, rememberAttack, rememberAid, playerMemoryStats, recallPlayer, hostilityLevel, playerMemoryList, resetPlayerMemory } from '../../perception/memory/playerMemory.js?v=41a';
+import { profStart, profEnd, profRecord, profile, profilerEnable, profilerStats, profilerReset, openProfilerPanel } from '../../foundation/diag/profiler.js?v=41a';
+import { narrate, renderNarrateHtml, recentNarrations, showRecentNarrations } from '../../cognition/explain/decisionNarrator.js?v=41a';
+import { createSkillOutcomeTracker } from '../analysis/skillOutcome.js?v=41a';
+import { createActionOutcomeObserver } from '../analysis/actionOutcome.js?v=41a';
+import { createDelayedOutcomeTracker } from '../analysis/delayedOutcome.js?v=41a';
+import { createPublicProvenanceTracker } from '../analysis/publicProvenance.js?v=41a';
+import { postCheckStats, postCheckReset } from '../analysis/postCheck.js?v=41a';
+import { criticBest as deepThinkCritic, thinkingStats as deepThinkStats } from '../../cognition/deepThink.js?v=41a';  /* ★ 模型思考层：深度思考 */
+import { getCardStrategy, cardUseValue, cardRespondValue, getCardType, getCardRisk, cardStrategyStats, resetCardStrategy } from '../cardplay/cardStrategy.js?v=41a';
+import { recordDecisionContext, settleDecisionContext, getAutoFeatureWeight, autoFeatureStats, topAutoFeatures, resetAutoFeatures } from '../../model/features/autoFeature.js?v=41a';
+import { getMetric, learnMetric, learnFromGame, softMetricStats, resetSoftMetrics } from '../../cognition/reasoning/softMetrics.js?v=41a';
 
 /* ★ v2.2.5 ~ v2.3.2 新模块 import（必须 import 才会执行挂载） */
 import '../skills/skillTags.js';      // 技能标签系统
@@ -1095,60 +1097,40 @@ function _knockdownRecord(target, src) {
 
 /* ★ 铁索宿主 AI 接线（唯一安装点）：
  *   - ai.result.target：evaluator 全量目标评估（该连两个连两个、该解链解链）；
- *   - ai.order：evaluator 判定「该重铸/不使用」且手牌充裕时压到 0，AI 留牌不瞎连。
- *   evaluator 未命中（0）时回退宿主原实现，绝不劣化原生行为。 */
+ *   - ai.order：优化开启时，无收益使用压到 0，由独立重铸入口继续选择。
+ *   evaluator 的 0 是有效判断；共享本次出牌选择的目标方案。 */
 function _installTiesuoHostAI() {
-	try {
-		if (typeof lib === 'undefined' || !lib.card || !lib.card.tiesuo || !lib.card.tiesuo.ai || !lib.card.tiesuo.ai.result) return;
-		if (lib.card.tiesuo.ai.result.__djscTiesuoInstalled) return;
-		lib.card.tiesuo.ai.result.__djscTiesuoInstalled = true;
-		const _origTarget = lib.card.tiesuo.ai.result.target;
-		lib.card.tiesuo.ai.result.target = function (player, target) {
-			try {
-				const players = (typeof game !== 'undefined' && game.players) || [];
-				const v = hostTiesuoTargetEffect(player, target, players, {});
-				if (typeof v === 'number' && isFinite(v) && v !== 0) return v;
-			} catch (eHt) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eHt); }
-			try { if (typeof _origTarget === 'function') return _origTarget.call(this, player, target); } catch (eHo) {}
-			return 0;
-		};
-		const _origOrder = lib.card.tiesuo.ai.order;
-		if (typeof _origOrder === 'function') {
-			lib.card.tiesuo.ai.order = function (player, card) {
-				try {
-					const players = (typeof game !== 'undefined' && game.players) || [];
-					/* ★ 卡顿修复：hostTiesuoDecision 含 O(n²) 组合评估，而 ai.order 在每次手牌排序时都会被调用
-					 *   → 同一玩家 600ms 内复用决策结果，避免排序热路径反复跑 evaluator */
-					let d = null;
-					const _nowT = Date.now();
-					const _tsCache = (window.__DJSC._tiesuoDecisionCache = window.__DJSC._tiesuoDecisionCache || {});
-					const _pk = (player && (player.playerid || player.name1 || player.name)) || '?';
-					const _hit = _tsCache[_pk];
-					if (_hit && _hit.d && (_nowT - _hit.t) < 600) { d = _hit.d; }
-					else {
-						d = hostTiesuoDecision(player, players, {});
-						_tsCache[_pk] = { d: d, t: _nowT };
-					}
-					if (d && d.use === false && player.countCards && player.countCards('hs') > 2) return 0;
-				} catch (eHd) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eHd); }
-				return _origOrder.call(this, player, card);
-			};
-		}
-		try {
-			if (typeof window !== 'undefined' && window.__DJSC) {
-				window.__DJSC.tiesuoHostAI = {
-					installed: true,
-					uninstall: function () {
-						try {
-							lib.card.tiesuo.ai.result.target = _origTarget;
-							if (typeof _origOrder === 'function') lib.card.tiesuo.ai.order = _origOrder;
-							lib.card.tiesuo.ai.result.__djscTiesuoInstalled = false;
-						} catch (eU) {}
-					}
-				};
-			}
-		} catch (eReg) {}
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+ try {
+  const info = lib.card?.tiesuo, ai = info?.ai;
+  if (!ai?.result || ai.result.__djscTiesuoInstalled) return;
+  const originalTarget = ai.result.target, hadOrder = Object.hasOwn(ai,'order');
+  const originalOrder = ai.order, baseOrder = originalOrder ?? ai.basic?.order;
+  const targetEffect = function(player,target) {
+   try {
+    const value = hostTiesuoTargetEffect(player,target,game.players || [],{});
+    if (Number.isFinite(value) && (tacticalEnabled('tiesuo') || value !== 0)) return value;
+   } catch (_) {}
+   return typeof originalTarget === 'function' ? originalTarget.apply(this,arguments) : originalTarget || 0;
+  };
+  const order = function(card,player) {
+   player = player || get.event?.()?.player;
+   if (!tacticalEnabled('tiesuo')) return typeof baseOrder === 'function' ? baseOrder.call(this,card,player) : baseOrder;
+   try {
+    const decision = hostTiesuoDecision(player,game.players || [],{});
+    if (decision?.use === false && (tacticalEnabled('tiesuo') || player?.countCards?.('hs') > 2)) return 0;
+   } catch (_) {}
+   return typeof baseOrder === 'function' ? baseOrder.call(this,card,player) : baseOrder;
+  };
+  ai.result.target = targetEffect;
+  ai.result.__djscTiesuoInstalled = true;
+  ai.order = order;
+  if (typeof window !== 'undefined' && window.__DJSC) window.__DJSC.tiesuoHostAI = {
+   installed:true,uninstall(){
+    if(ai.result.target===targetEffect){ai.result.target=originalTarget;delete ai.result.__djscTiesuoInstalled;}
+    if(ai.order===order){if(hadOrder)ai.order=originalOrder;else delete ai.order;}
+   }
+  };
+ } catch (_) {}
 }
 
 function scoreCardUse(me, card, target) {
@@ -3889,10 +3871,11 @@ function bestActionCore() {
 					try {
 						const actualTie = (me.getCards ? me.getCards('h') : []).find(c => (get.name ? get.name(c, me) : c.name) === id);
 						const canRecast = !!actualTie && typeof me.canRecast === 'function' && me.canRecast(actualTie, null, true);
-						/* 合法目标：存活且非我（与既有 tsMap 口径一致） */
+						/* 攻击目标缓存不包含自己；铁索需单独补入自身解链目标。 */
 						const legalTie = [];
-						for (const [pp] of tsMap) {
-							if (!pp || pp === me) continue;
+						const tiePlayers = tacticalEnabled('tiesuo') ? [...tsMap.keys(), me] : tsMap.keys();
+						for (const pp of tiePlayers) {
+							if (!pp) continue;
 							try { if (pp.isDead ? pp.isDead() : (pp.hp !== undefined && pp.hp <= 0)) continue; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 							if (typeof me.canUse === 'function' && !me.canUse(actualTie || { name: id }, pp)) continue;
 							legalTie.push(pp);
@@ -3957,6 +3940,7 @@ function bestActionCore() {
 							candidates: legalTie,
 							players: (game && game.players) || legalTie,
 							canRecast: canRecast,
+							cacheHost: true,
 							classicDoudizhu: modeContext().group === 'doudizhu-classic',
 							hasOurAttr: hasOurAttr,
 							enemyAttrThreat: enemyAttrThreat,
@@ -4091,6 +4075,8 @@ function bestActionCore() {
 		 * 普通 FOCUS/BALANCE/DEVELOP 只记录 alignment，仍由 utility 排序。 */
 		try { applyStrategicIntentToCandidates(acts, strategicState); }
 		catch (eSI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eSI); }
+		try { applyTiesuoRecastTiming(me, acts); }
+		catch (eTR) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eTR); }
 
         const classicModelBefore=decisionActionSnapshot(acts.slice().sort(compareActionCandidates)[0]);
         const classicFeatureBuffer=new Int8Array(FEATURE_DIM);
@@ -5478,7 +5464,7 @@ export function appendDecision(entry) {
 }
 export function getSuggestionLog() { return SUGGESTION_LOG; }
 
-export { loadStore, saveStore, storeStats } from '../../perception/memory/memory.js?v=5e5';
+export { loadStore, saveStore, storeStats } from '../../perception/memory/memory.js?v=41a';
 export { give, givePair, giveVs, scoreCardUse, scoreEffect, installHooks, uninstallHooks, bestAction, rulesDecide, modelDecision, startSettleWatch, stopSettleWatch, settle, isGameOver, _isLegalSkillTarget, _skillNeedsExternalTarget, _canConfirmSelfSkillTarget, _skillPurposeFromIntent, _skillTargetRange, _isSingleTargetSkillProfile, decisionTransactionStats, executionGatewayStats };
 
 /* ================= ★ 选将评分系统（多模式 + 批量平均 + 多维） ================= */

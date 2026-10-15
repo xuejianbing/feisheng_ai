@@ -11,7 +11,7 @@
  * ★ 全局缓存层（减少重复计算，解决卡顿发烫）
  * ============================================ */
 /* ★ 指令 04：显式导入宿主，消除「隐式全局在非浏览器环境静默失效」。 */
-import { game, get, ui, _status } from '../adapt/host.js?v=5e5';
+import { game, get, ui, _status } from '../adapt/host.js?v=41a';
 
 const _cache = new Map();
 const _cacheTime = new Map();

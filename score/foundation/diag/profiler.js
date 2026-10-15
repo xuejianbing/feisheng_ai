@@ -15,11 +15,11 @@
  *   ④ 优化建议：自动识别瓶颈
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
  */
-import { log } from './logger.js?v=5e5';
-import { writeData, fileOf } from '../storage/storagePaths.js?v=5e5';   /* ★ 统一导出路径 */
+import { log } from './logger.js?v=41a';
+import { writeData, fileOf } from '../storage/storagePaths.js?v=41a';   /* ★ 统一导出路径 */
 
-import { ui } from '../adapt/host.js?v=5e5';
-import { runtimePerformance } from './performanceCore.js?v=5e5';
+import { ui } from '../adapt/host.js?v=41a';
+import { runtimePerformance } from './performanceCore.js?v=41a';
 const HISTORY_LIMIT = 100;
 export const profStart = (phase, options) => runtimePerformance.start(phase, options);
 export const profEnd = handle => runtimePerformance.end(handle);
@@ -241,5 +241,5 @@ function _bind() {
         }
     });
 }
-import { styleNativePanel } from '../../view/panel/panelTheme.js?v=5e5';
-import { safeGet as _lsGet, lsLength as _lsLength, lsKey as _lsKey } from '../storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { styleNativePanel } from '../../view/panel/panelTheme.js?v=41a';
+import { safeGet as _lsGet, lsLength as _lsLength, lsKey as _lsKey } from '../storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */

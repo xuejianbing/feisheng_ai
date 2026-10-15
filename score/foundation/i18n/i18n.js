@@ -8,7 +8,7 @@
  */
 
 /* ================= 决策积分引擎 · 多语言兜底 ================= */
-import { lib } from '../adapt/host.js?v=5e5';
+import { lib } from '../adapt/host.js?v=41a';
 
 const LANG_PACKS = {
 	zh: {

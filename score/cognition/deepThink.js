@@ -1,4 +1,4 @@
-import { decisionActionSnapshot } from '../decision/analysis/decisionStages.js?v=5e5';
+import { decisionActionSnapshot } from '../decision/analysis/decisionStages.js?v=41a';
 /*
  * ============================================
  * // 作者：飞升原创
@@ -20,12 +20,12 @@ import { decisionActionSnapshot } from '../decision/analysis/decisionStages.js?v
  */
 
 /* ★ 特征维度单一来源：直接引用 features.js 导出的 FEATURE_DIM，杜绝散落硬编码导致漂移 */
-import { FEATURE_DIM } from '../model/features/features.js?v=5e5';
-import { isReady as weightsReady } from '../model/weights/weights.js?v=5e5';
-import { normalizedMargin, candidateSpread, DECISION_MARGIN } from '../decision/state/decisionMargin.js?v=5e5';
-import { isCandidateEligible, sameCandidatePolicyBand } from '../decision/state/actionCandidate.js?v=5e5';
-import { probHasShan, probHasWuxie, probHasSha } from '../model/predict/handInference.js?v=5e5';
-import { evaluateSituation } from './situationEval.js?v=5e5';
+import { FEATURE_DIM } from '../model/features/features.js?v=41a';
+import { isReady as weightsReady } from '../model/weights/weights.js?v=41a';
+import { normalizedMargin, candidateSpread, DECISION_MARGIN } from '../decision/state/decisionMargin.js?v=41a';
+import { isCandidateEligible, sameCandidatePolicyBand } from '../decision/state/actionCandidate.js?v=41a';
+import { probHasShan, probHasWuxie, probHasSha } from '../model/predict/handInference.js?v=41a';
+import { evaluateSituation } from './situationEval.js?v=41a';
 
 const TOP_N = 3;           /* 深度辨析的候选数量上限（防放大算力开销） */
 const MODEL_SPREAD_SHARE = 0.35;  /* 模型证据最多只占当前候选 spread 的一部分 */

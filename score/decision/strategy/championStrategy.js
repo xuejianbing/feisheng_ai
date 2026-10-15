@@ -1,5 +1,5 @@
-import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=5e5';
-import { decisionActionSnapshot } from '../analysis/decisionStages.js?v=5e5';
+import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=41a';
+import { decisionActionSnapshot } from '../analysis/decisionStages.js?v=41a';
 /*
  * ============================================
  * // 作者：飞升原创
@@ -8,10 +8,10 @@ import { decisionActionSnapshot } from '../analysis/decisionStages.js?v=5e5';
  * 版权所有，侵权必究
  * ============================================
  */
-import { trainingLabelOf } from '../../model/train/labelPolicy.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';
-import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=5e5';
-import { isCandidateEligible, sameCandidatePolicyBand } from '../state/actionCandidate.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { trainingLabelOf } from '../../model/train/labelPolicy.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';
+import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=41a';
+import { isCandidateEligible, sameCandidatePolicyBand } from '../state/actionCandidate.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* 冠军经验 v5：只统计可追查的执行结果，最高值仅供复盘。
  * 默认 shadow：新估计不改变实际选择，旧最高值池仅保留展示。

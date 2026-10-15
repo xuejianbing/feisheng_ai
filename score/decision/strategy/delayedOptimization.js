@@ -1,8 +1,8 @@
 /* One policy for delayed control: public state only, no real-deck inspection. */
-import {lib, game, get} from '../../foundation/adapt/host.js?v=5e5';
-import {cfg} from '../../foundation/config/util.js?v=5e5';
-import {dispositionOf} from '../relations/relations.js?v=5e5';
-import {effectiveJudgeName} from './judgeName.js?v=5e5';
+import {lib, game, get} from '../../foundation/adapt/host.js?v=41a';
+import {cfg} from '../../foundation/config/util.js?v=41a';
+import {dispositionOf} from '../relations/relations.js?v=41a';
+import {effectiveJudgeName} from './judgeName.js?v=41a';
 
 let delayedActive=false,delayedDiagnostics=false;
 export function captureDelayedSettings(){
@@ -103,14 +103,18 @@ export function installDelayedBridges(){
   const sourceUse=meta.result.player_use?.__djscDelayedBridge?source:meta.result.player_use??source;
   const nativeOrder=meta.order?.__djscDelayedBridge?(meta.basic?.order??meta.order.__djscDelayedOriginal):meta.order??meta.basic?.order??1;
   const wrapped=function(p,t,card,...args){
-   if(delayedActive)return -(delayPlan(p,card||{name},t)?.utility||0);
+   // Self-target evaluation describes an existing judge, not a legal play target.
+   // Feiyang and other judge removal skills consume this native harmful-effect signal.
+   if(delayedActive&&p!==t)return -(delayPlan(p,card||{name},t)?.utility||0);
    return typeof target==='function'?target.call(this,p,t,card,...args):target;
   };
   wrapped.__djscDelayedBridge=true;
   meta.result.target=wrapped;
   meta.result.player=function(...args){return delayedActive?0:typeof source==='function'?source.apply(this,args):source??0;};
   meta.result.target_use=function(p,t,card,...args){
-   if(delayedActive)return -(delayPlan(p,card||{name},t)?.utility||0);
+   // Self-target evaluation describes an existing judge, not a legal play target.
+   // Feiyang and other judge removal skills consume this native harmful-effect signal.
+   if(delayedActive&&p!==t)return -(delayPlan(p,card||{name},t)?.utility||0);
    return typeof targetUse==='function'?targetUse.call(this,p,t,card,...args):targetUse;
   };
   meta.result.player_use=function(...args){return delayedActive?0:typeof sourceUse==='function'?sourceUse.apply(this,args):sourceUse??0;};

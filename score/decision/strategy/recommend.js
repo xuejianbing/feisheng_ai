@@ -8,7 +8,7 @@
  */
 
 /* ================= 决策积分引擎 · 一键推荐配置 ================= */
-import { lib, game } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game } from '../../foundation/adapt/host.js?v=41a';
 
 const RECOMMEND_PRESETS = {
 	stable: {

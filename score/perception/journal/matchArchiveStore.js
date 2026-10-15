@@ -1,9 +1,9 @@
-import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=5e5';
-import { safeGet, safeSet } from '../../foundation/storage/storage.js?v=5e5';
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { DATA_DIR, downloadText } from '../../foundation/storage/storagePaths.js?v=5e5';
-import { matchFiles } from './matchArchive.js?v=5e5';
-import { putMatchArchive, readMatchArchives, withArchiveTimeout } from './matchArchiveDB.js?v=5e5';
+import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=41a';
+import { safeGet, safeSet } from '../../foundation/storage/storage.js?v=41a';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { DATA_DIR, downloadText } from '../../foundation/storage/storagePaths.js?v=41a';
+import { matchFiles } from './matchArchive.js?v=41a';
+import { putMatchArchive, readMatchArchives, withArchiveTimeout } from './matchArchiveDB.js?v=41a';
 const LEGACY_KEY='djsc_match_archive_v1', INDEX_KEY='djsc_match_archive_index_v2';
 let latest=null, status='尚未归档', cache=[], loading=null, queue=Promise.resolve();
 export function listMatchArchives(){return cache.slice();}

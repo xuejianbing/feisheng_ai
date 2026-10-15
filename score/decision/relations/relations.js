@@ -38,13 +38,13 @@
  *
  * 本模块为纯计算，只 import 宿主与 observer 的“读取类”API，不触碰本体的记分。
  */
-import { game, get } from '../../foundation/adapt/host.js?v=5e5';
-import { effectiveJudgeName } from '../strategy/judgeName.js?v=5e5';
-import { getModeStrategy } from '../strategy/modeStrategy.js?v=5e5';
-import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor } from '../../perception/observer/identity.js?v=5e5';
-import { spyDispositionOf } from '../strategy/identityStance.js?v=5e5';
-import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=5e5';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
+import { game, get } from '../../foundation/adapt/host.js?v=41a';
+import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
+import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
+import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor } from '../../perception/observer/identity.js?v=41a';
+import { spyDispositionOf } from '../strategy/identityStance.js?v=41a';
+import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
 
 function _isIdentityMode() {
 	try {

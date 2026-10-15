@@ -11,7 +11,7 @@
  * 多人游戏中的博弈论
  * 比如：什么时候该跳身份，什么时候该装身份
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 /* ================= 博弈缓存 ================= */
 const _gameCache = new Map();

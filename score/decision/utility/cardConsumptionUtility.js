@@ -1,5 +1,5 @@
-import { keepBonus } from '../cardplay/keepStrategyOpt.js?v=5e5';
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { keepBonus } from '../cardplay/keepStrategyOpt.js?v=41a';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 const OWNER = 'cardConsumption';
 const BASE_COST = Object.freeze({ shan: 1.5, tao: 1.5, wuxie: 1.5, jiu: 0.8, sha: 0.3,

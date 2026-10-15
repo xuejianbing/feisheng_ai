@@ -3,15 +3,15 @@
  *
  * 复用现有 skillTagsOf / skillProfileOf，自动生成本体与扩展武将画像。
  */
-import { get } from '../../foundation/adapt/host.js?v=5e5';
-import { skillTagsOf, skillProfileOf } from '../skills/skills.js?v=5e5';
-import { applyRelativeUtilityDelta, ensureCandidatePolicy } from '../state/actionCandidate.js?v=5e5';
+import { get } from '../../foundation/adapt/host.js?v=41a';
+import { skillTagsOf, skillProfileOf } from '../skills/skills.js?v=41a';
+import { applyRelativeUtilityDelta, ensureCandidatePolicy } from '../state/actionCandidate.js?v=41a';
 import {
 	buildCharacterPolicyCore,
 	characterCardAffinity,
 	characterSkillAffinity,
 	characterFuelKeepBonus as coreFuelKeepBonus,
-} from './characterPolicyCore.js?v=5e5';
+} from './characterPolicyCore.js?v=41a';
 
 const CACHE = new Map();
 const MAX_CACHE = 512;

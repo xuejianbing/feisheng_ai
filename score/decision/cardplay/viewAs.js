@@ -16,8 +16,8 @@
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= viewAs 类技能列表 ================= */
 const VIEW_AS_SKILLS = {

@@ -12,7 +12,7 @@
  * 比如：队友拆乐 → 知道他要解乐
  * 队友装连弩 → 知道他要爆发，给他喂牌
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Mwandishi: Feisheng Asili | Leseni: GPL-3.0
 
 /* ================= 意图识别缓存 ================= */

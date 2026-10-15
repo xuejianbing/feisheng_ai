@@ -15,8 +15,8 @@
  *   ④ 时机调整系数（现在是硬编码的 0.7/1.15）
  * 全部改成：初始值 + 对局反馈自动微调
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 存储 ================= */
 const STORE_KEY = 'djsc_soft_metrics_v1';

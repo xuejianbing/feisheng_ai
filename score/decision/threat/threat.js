@@ -8,19 +8,19 @@
  */
 
 /* ================= 决策积分引擎 · 阵营/威胁/局势（整合模块） ================= */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { AI_CARD_VALUE, CARD_ALIGN_MOD } from '../../knowledge/tables/value-tables.js?v=5e5';
-import { codeGainAllOf } from '../skills/skills.js?v=5e5';
-import { MEM, memKeyOf } from '../../perception/memory/mem.js?v=5e5';
-import { cardIdOf, cardTypeOf } from '../../model/net/mini-model.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { AI_CARD_VALUE, CARD_ALIGN_MOD } from '../../knowledge/tables/value-tables.js?v=41a';
+import { codeGainAllOf } from '../skills/skills.js?v=41a';
+import { MEM, memKeyOf } from '../../perception/memory/mem.js?v=41a';
+import { cardIdOf, cardTypeOf } from '../../model/net/mini-model.js?v=41a';
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
-import { styleShanFactor, styleOf, attackBy } from '../../perception/observer/observer.js?v=5e5';
-import { identityBiasOf } from '../../perception/observer/identity.js?v=5e5';  /* ★ 深度连接：身份信念 → 目标评分（仅 identity 局非零，其它模式返回 0，零回归） */
-import { dispositionOf as _dispositionOf, isAllyOf as _isAllyOf, isNeutralOf as _isNeutralOf, relationStateKey } from '../relations/relations.js?v=5e5';  /* ★ 统一敌我系统：与 relations 单一权威源收敛 */
-import { isPlayerLinked } from '../state/playerState.js?v=5e5';  /* ★ 指令 02：唯一横置状态读取入口 */
-import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=5e5';
-import { probHasSha as inferProbHasSha, probHasShan as inferProbHasShan } from '../../model/predict/handInference.js?v=5e5';
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { styleShanFactor, styleOf, attackBy } from '../../perception/observer/observer.js?v=41a';
+import { identityBiasOf } from '../../perception/observer/identity.js?v=41a';  /* ★ 深度连接：身份信念 → 目标评分（仅 identity 局非零，其它模式返回 0，零回归） */
+import { dispositionOf as _dispositionOf, isAllyOf as _isAllyOf, isNeutralOf as _isNeutralOf, relationStateKey } from '../relations/relations.js?v=41a';  /* ★ 统一敌我系统：与 relations 单一权威源收敛 */
+import { isPlayerLinked } from '../state/playerState.js?v=41a';  /* ★ 指令 02：唯一横置状态读取入口 */
+import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=41a';
+import { probHasSha as inferProbHasSha, probHasShan as inferProbHasShan } from '../../model/predict/handInference.js?v=41a';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 /* ================= 回合内缓存工具 =================
  * 目的：削减 enemiesOf / threatOf 的重复计算。

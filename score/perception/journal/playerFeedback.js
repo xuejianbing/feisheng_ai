@@ -1,5 +1,5 @@
 /* 主观体验评价随当局档案保存；独立于真实胜负和动作训练标签。 */
-import { safeGet, safeSet } from '../../foundation/storage/storage.js?v=5e5';
+import { safeGet, safeSet } from '../../foundation/storage/storage.js?v=41a';
 const KEY = '无名AI_playerFeedback';
 export const feedbackLabels = ['完全不会玩，低级错误频发', '决策明显错误', '经常选错目标或时机', '偶尔犯傻', '基本能打，但有小问题', '中规中矩', '决策比较合理', '思路清晰', '像会玩的玩家', '有配合意识', '像高手'];
 function readHistory() {

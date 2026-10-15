@@ -10,10 +10,10 @@
 /* ================= 决策积分引擎 · 技能识别插件（核心示范 #3） =================
  * 把技能扫描/识别生命周期包装成插件。
  * 展示：type=scorer（能力分类）、对局生命周期 onStart 重置扫描缓存、props 软合并技能接口。 */
-import { definePlugin, registerPlugin, pluginState } from '../foundation/runtime/plugins.js?v=5e5';
-import { scanReset, aggregateSkillTags, detectCombo, charComboOf, buildAutoSkillRules, scanCharacters } from '../decision/skills/skills.js?v=5e5';
-import { scanObjectMethod } from '../decision/skills/skillScanner.js?v=5e5';
-import { resetComboChain, learnedChains } from '../decision/strategy/comboChain.js?v=5e5';
+import { definePlugin, registerPlugin, pluginState } from '../foundation/runtime/plugins.js?v=41a';
+import { scanReset, aggregateSkillTags, detectCombo, charComboOf, buildAutoSkillRules, scanCharacters } from '../decision/skills/skills.js?v=41a';
+import { scanObjectMethod } from '../decision/skills/skillScanner.js?v=41a';
+import { resetComboChain, learnedChains } from '../decision/strategy/comboChain.js?v=41a';
 
 /* 技能接口挂到 __DJSC.skills */
 const skillProps = {

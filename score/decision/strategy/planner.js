@@ -15,18 +15,18 @@
  *   3. 有界 2-3 步搜索：只执行首步，状态变化后重新规划
  *   4. 协作式预算：350ms deadline，超预算直接回退单步决策
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { isEnemyOf } from '../threat/threat.js?v=5e5';
-import { probHasShan } from '../../model/predict/handInference.js?v=5e5';
-import { baseEquipValue } from '../basic/equipBrain.js?v=5e5';
-import { signedNormalizedImprovement, DECISION_MARGIN } from '../state/decisionMargin.js?v=5e5';
-import { targetKey, candidateTargetValue, setCandidatePriority, ensureCandidatePolicy, PRIORITY_TIER, isCandidateEligible, sameCandidateAction, sameCandidatePolicyBand, compareActionCandidates } from '../state/actionCandidate.js?v=5e5';
-import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { buildPlannerCandidatePool, buildTacticalPlans, tacticalPlanSummary } from './actionDependencyGraph.js?v=5e5';
-import { semanticOf, strategicEffectOf } from '../../foundation/adapt/terms.js?v=5e5';
-import { stateKey } from '../../foundation/storage/cache.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { isEnemyOf } from '../threat/threat.js?v=41a';
+import { probHasShan } from '../../model/predict/handInference.js?v=41a';
+import { baseEquipValue } from '../basic/equipBrain.js?v=41a';
+import { signedNormalizedImprovement, DECISION_MARGIN } from '../state/decisionMargin.js?v=41a';
+import { targetKey, candidateTargetValue, setCandidatePriority, ensureCandidatePolicy, PRIORITY_TIER, isCandidateEligible, sameCandidateAction, sameCandidatePolicyBand, compareActionCandidates } from '../state/actionCandidate.js?v=41a';
+import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { buildPlannerCandidatePool, buildTacticalPlans, tacticalPlanSummary } from './actionDependencyGraph.js?v=41a';
+import { semanticOf, strategicEffectOf } from '../../foundation/adapt/terms.js?v=41a';
+import { stateKey } from '../../foundation/storage/cache.js?v=41a';
 
 const PLAN_TIMEOUT = 350;
 

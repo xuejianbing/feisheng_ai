@@ -8,9 +8,9 @@
  */
 
 /* ================= 决策积分引擎 · 选将推荐（融合历史评分） ================= */
-import { lib, game, get, ui } from '../../foundation/adapt/host.js?v=5e5';
-import { codeGainAllOf } from '../skills/skills.js?v=5e5';
-import { profileOf } from '../../cognition/profile/profile.js?v=5e5';
+import { lib, game, get, ui } from '../../foundation/adapt/host.js?v=41a';
+import { codeGainAllOf } from '../skills/skills.js?v=41a';
+import { profileOf } from '../../cognition/profile/profile.js?v=41a';
 
 const IDENTITY_PREFER = {
 	zhu:       { role: ['def', 'aux', 'ctrl'], priority: 'survive', desc: '主公优先站场/辅助型' },

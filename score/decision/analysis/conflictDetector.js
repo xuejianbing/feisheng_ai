@@ -15,8 +15,8 @@
  * 触发后：写进 conflictLog，供复盘分析。
 // Autor: Feisheng Original | Licencia: GPL-3.0
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { get } from '../../foundation/adapt/host.js?v=5e5';   /* 仅用于把牌/技能 id 翻译成中文名（fail-closed） */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { get } from '../../foundation/adapt/host.js?v=41a';   /* 仅用于把牌/技能 id 翻译成中文名（fail-closed） */
 
 const MAX = 50;
 const CONF = [];

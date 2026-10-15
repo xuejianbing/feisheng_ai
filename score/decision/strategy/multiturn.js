@@ -8,8 +8,8 @@
  */
 
 /* ================= 决策积分引擎 · 多回合预测 ================= */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf, forecastSummary, threatOf } from '../threat/threat.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf, forecastSummary, threatOf } from '../threat/threat.js?v=41a';
 
 function rollForward(me, horizon) {
 	try {

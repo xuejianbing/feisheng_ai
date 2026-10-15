@@ -6,8 +6,8 @@
  * 版权所有，侵权必究
  * ============================================
  */
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 战报归档 =================
  * 目的：把每局结果沉淀到 localStorage，支持跨局对比与趋势分析。

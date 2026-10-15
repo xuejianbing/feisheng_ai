@@ -7,10 +7,10 @@
  * ============================================
  */
 
-import { VERSION_CHANGELOG } from '../../logs/versionChangelog.js?v=5e5';
-import { SESSION_CHANGELOG } from '../../logs/sessionChangelog.js?v=5e5';
-import { WORK_TRAIL } from '../../logs/WORK_TRAIL.js?v=5e5';
-import { VERSION, VERSION_SEMVER, BUILD_DATE, MIN_GAME_VERSION } from './version.js?v=5e5';  /* ★ P2-35：版本信息单一来源 */
+import { VERSION_CHANGELOG } from '../../logs/versionChangelog.js?v=41a';
+import { SESSION_CHANGELOG } from '../../logs/sessionChangelog.js?v=41a';
+import { WORK_TRAIL } from '../../logs/WORK_TRAIL.js?v=41a';
+import { VERSION, VERSION_SEMVER, BUILD_DATE, MIN_GAME_VERSION } from './version.js?v=41a';  /* ★ P2-35：版本信息单一来源 */
 const _BUILD_DATE_CN = BUILD_DATE.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$1年$2月$3日');
 
 /* ★ 会话修改日志内置：由 logs/sessionChangelog.js 单一来源渲染成游戏内更新日志，

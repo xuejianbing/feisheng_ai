@@ -6,7 +6,7 @@
  * 版权所有，侵权必究
  * ============================================
  */
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 自动学习表：新卡牌/新技能/新身份/新模式/新武将自动打分 =================
  * 原理：

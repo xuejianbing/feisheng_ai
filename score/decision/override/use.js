@@ -13,8 +13,10 @@
  *   ★ 硬接管 B：引擎明确否决某张牌 → filterCard 过滤
  *   ★ 软接管：出牌顺序/估值交给 aiOverride.js
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { bestAction } from '../engine/engine.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { bestAction } from '../engine/engine.js?v=41a';
+import { isTiesuoRecastSelection } from '../cards/tiesuoRecast.js?v=41a';
+import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import {
 	executionEligibility,
 	stageExecutionDecision,
@@ -22,14 +24,14 @@ import {
 	cancelExecution,
 	invokeHost,
 	markExecutionFailure,
-} from '../execution/executionGateway.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { effectiveJudgeName } from '../strategy/judgeName.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=5e5';
-import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=5e5';
-import { trip, isTripped } from './circuit.js?v=5e5';
-import { isAllyOf, cardValueOf } from '../threat/threat.js?v=5e5';   /* ★ 阵营护栏/五谷拿牌桥 */
+} from '../execution/executionGateway.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
+import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
+import { trip, isTripped } from './circuit.js?v=41a';
+import { isAllyOf, cardValueOf } from '../threat/threat.js?v=41a';   /* ★ 阵营护栏/五谷拿牌桥 */
 
 const ORIG_KEY = '__djsc_orig_chooseToUse';
 const SENTINEL = '__djsc_overridden_use';
@@ -128,6 +130,7 @@ function _shouldVeto(player, card) {
 			const _hint0 = _status.djsc_lastTiesuoHint;
 			if (cid === 'tiesuo' && _hint0 && _hint0.recast) {
 				const _ev0 = _status.event;
+				if (isTiesuoRecastSelection(player, card, _ev0)) return false;
 				if (_ev0 && (_ev0.recast || _ev0._recast || _ev0._recasting)) return false;
 				return true;
 			}
@@ -166,6 +169,8 @@ function _bridgeWuxieChooseToUse(player, args) {
 	const request = _wuxieRequestOf(args);
 	if (!request) return null;
 	const base = { isWuxie: true, bridged: false, resolved: false, use: null, decision: null };
+	// The independent soft response bridge owns the new policy, including material costs.
+	if (tacticalEnabled('wuxie')) return base;
 
 	try {
 		/* 无懈虽走 chooseToUse，但执行语义属于 respond：
@@ -451,7 +456,7 @@ export function installUseOverride() {
 			 *   复用 bestAction 刚算出的 djsc_lastTiesuoHint（250ms/1.5s 缓存窗内，时序安全）。 */
 			try {
 				const _tsHint = _status.djsc_lastTiesuoHint;
-				if (_tsHint && _tsHint.targets && _tsHint.targets.length && (typeof _tsHint.score !== 'number' || _tsHint.score > 1.5)) {
+				if (!tacticalEnabled('tiesuo') && _tsHint && _tsHint.targets && _tsHint.targets.length && (typeof _tsHint.score !== 'number' || _tsHint.score > 1.5)) {
 					const _tsNames = _tsHint.targets.map(function (p) {
 						try { return p ? (p.name1 || p.name || '') : ''; } catch (eN) { return ''; }
 					}).filter(function (x) { return x; });

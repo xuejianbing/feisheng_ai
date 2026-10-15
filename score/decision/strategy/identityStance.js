@@ -6,8 +6,8 @@
  * - 当前敌友立场只基于公开事实 + observer-specific posterior 动态计算；
  * - relations 与 modeStrategy 必须消费同一结果，禁止各自维护另一套强弱阈值。
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { beliefOfFor, hardIdentityOf } from '../../perception/observer/identity.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { beliefOfFor, hardIdentityOf } from '../../perception/observer/identity.js?v=41a';
 
 export const SPY_STANCE_MARGIN = 0.75;
 export const SPY_ENEMY_THRESHOLD = 0.60;

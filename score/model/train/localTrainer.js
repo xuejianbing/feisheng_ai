@@ -18,12 +18,12 @@
  *   数学结果与同步训练完全一致。
  */
 
-import { getSamples } from './trainExport.js?v=5e5';
-import { trainingLabelOf } from './labelPolicy.js?v=5e5';
-import { FEATURE_DIM } from '../features/features.js?v=5e5';
-import { trainOne, trainOneWithValue, saveWeights, setAccuracy, markReady, getMeta, forward, setTrainLR } from '../weights/weights.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';  /* ★ 导入配置读取函数 */
-import { emit } from '../../foundation/runtime/eventBus.js?v=5e5';  /* ★ P2-33：训练生命周期事件 */
+import { getSamples } from './trainExport.js?v=41a';
+import { trainingLabelOf } from './labelPolicy.js?v=41a';
+import { FEATURE_DIM } from '../features/features.js?v=41a';
+import { trainOne, trainOneWithValue, saveWeights, setAccuracy, markReady, getMeta, forward, setTrainLR } from '../weights/weights.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';  /* ★ 导入配置读取函数 */
+import { emit } from '../../foundation/runtime/eventBus.js?v=41a';  /* ★ P2-33：训练生命周期事件 */
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
 
 const EPOCHS = 10;  /* 训练10轮，手机不卡 */
@@ -73,9 +73,19 @@ export function trainLocalAsync(onDone) {
 }
 
 async function _train() {
-    const samples = (getSamples() || []).filter(s => trainingLabelOf(s) !== null);
+    const rawAll = (getSamples() || []).filter(s => trainingLabelOf(s) !== null);
+    /* ★ PR6-1：训练维度门禁——只训练与当前 FEATURE_DIM 一致的样本。
+       旧维度样本（如 130 维历史样本）若静默补零/截断，尾部特征恒 0 会污染权重，必须显式跳过并计数。 */
+    let samples = rawAll.filter(s => s && Array.isArray(s.f) && s.f.length === FEATURE_DIM);
+    let dimSkipped = rawAll.length - samples.length;
+    let dimSkippedBy = null;
+    if (dimSkipped > 0) {
+        const byLen = {};
+        rawAll.forEach(s => { const L = (s && Array.isArray(s.f)) ? s.f.length : -1; if (L !== FEATURE_DIM) byLen[L] = (byLen[L] || 0) + 1; });
+        dimSkippedBy = byLen;
+    }
     if (!samples || samples.length < 3000) {  /* PR5e：门槛×15（原 200） */
-        return { ok: false, err: '样本不足（需 ≥3000，当前 ' + (samples ? samples.length : 0) + '）' };
+        return { ok: false, err: '样本不足（需 ≥3000，当前 ' + (samples ? samples.length : 0) + (dimSkipped ? '；另有 ' + dimSkipped + ' 条维度不符已跳过 ' + JSON.stringify(dimSkippedBy) : '') + '）', dimSkipped: dimSkipped, dimSkippedBy: dimSkippedBy };
     }
 
     const t0 = performance.now();
@@ -246,6 +256,8 @@ async function _train() {
         samples: n,
         epochs: EPOCHS,
         trained: meta.trained,
+        dimSkipped: dimSkipped,
+        dimSkippedBy: dimSkippedBy,
         ms: Math.round(performance.now() - t0),
     };
 }

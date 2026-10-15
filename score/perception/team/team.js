@@ -11,11 +11,11 @@
  * 目标：集火同一目标、接力保护、队友技能联动
  * 叶子模块：仅依赖 threat.js / observer.js / identity.js
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf, threatOf } from '../../decision/threat/threat.js?v=5e5';
-import { attackBy } from '../observer/observer.js?v=5e5';
-import { beliefOf, confidenceOf, currentMode } from '../observer/identity.js?v=5e5';
-import { dispositionOf as relDisposition } from '../../decision/relations/relations.js?v=5e5';   /* ★ 统一敌我系统（attitude 三态+行为推断），与阵营系统分离 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf, threatOf } from '../../decision/threat/threat.js?v=41a';
+import { attackBy } from '../observer/observer.js?v=41a';
+import { beliefOf, confidenceOf, currentMode } from '../observer/identity.js?v=41a';
+import { dispositionOf as relDisposition } from '../../decision/relations/relations.js?v=41a';   /* ★ 统一敌我系统（attitude 三态+行为推断），与阵营系统分离 */
 
 /* ★ 本地辅助：判断是否是敌人（用敌我系统 dispositionOf，不再裸用 isSameCamp 兼任敌我）
  *   disposition<0 → 真敌；>=0（友/中性/身份未明）→ 非敌 */

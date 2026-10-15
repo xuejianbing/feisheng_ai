@@ -13,8 +13,8 @@
  *   · modes 层：模式专精（身份局判断/国战/斗地主）
  * 读取时：当前模式 > 全局；写入时按 kind 决定层级。
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORE_KEY = 'djsc_cross_mode_v1';
 const VERSION = 1;

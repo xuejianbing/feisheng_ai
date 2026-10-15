@@ -16,8 +16,8 @@
 // Author: Feisheng Original | License: GPL-3.0
  */
 
-import { lib, game, get, ai, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, ai, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= ① 嘲讽度 ================= */
 export function getThreaten(player) {

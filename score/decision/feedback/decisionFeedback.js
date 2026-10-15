@@ -6,7 +6,7 @@
  * 版权所有，侵权必究
  * ============================================
  */
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';
 
 /* ================= 决策积分引擎 · 决策维度反馈闭环 =================
  * - target:  对目标采取行动后的长期结果

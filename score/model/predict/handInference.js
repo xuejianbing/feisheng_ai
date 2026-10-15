@@ -1,4 +1,4 @@
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 /*
  * ============================================
  * // Autor: Feisheng Original
@@ -12,10 +12,10 @@ import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
  * 基于牌堆剩余 + 历史行为，用贝叶斯推断对手手里有什么牌
  * 动态计算 probHasShan / probHasWuxie / probHasTao 等
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cardRemaining, totalRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
-import { MEM, memKeyOf } from '../../perception/memory/mem.js?v=5e5';
-import { styleShanFactor } from '../../perception/observer/observer.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cardRemaining, totalRemaining } from '../../perception/memory/deckMemory.js?v=41a';
+import { MEM, memKeyOf } from '../../perception/memory/mem.js?v=41a';
+import { styleShanFactor } from '../../perception/observer/observer.js?v=41a';
 // Författare: Feisheng Original | Licens: GPL-3.0
 
 /* ================= 推断缓存 ================= */

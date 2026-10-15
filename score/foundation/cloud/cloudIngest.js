@@ -15,14 +15,13 @@
  *     失败则保留待传，下次自动重试（网关 7 天指纹去重兜底边界重传）
  * ============================================================ */
 
-import { cfg } from '../config/util.js?v=5e5';
-import { getSamples, bufferSize, exportStats, getSampleDiagnostics } from '../../model/train/trainExport.js?v=5e5';
-import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=5e5';
-import { VERSION, BUILD_DATE } from '../../config/version.js?v=5e5';
-import { skillProfitBreakdown } from '../../decision/skills/skills.js?v=5e5';
-import { learnedChains } from '../../decision/strategy/comboChain.js?v=5e5';
-import { log } from '../diag/logger.js?v=5e5';
-import { safeGet, safeSet } from '../storage/storage.js?v=5e5';
+import { cfg } from '../config/util.js?v=41a';
+import { getSamples, bufferSize, exportStats, getSampleDiagnostics } from '../../model/train/trainExport.js?v=41a';
+import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=41a';
+import { collectSkillBreakdownLite } from '../../decision/skills/skills.js?v=41a';   /* ★PR7 */
+import { learnedChains } from '../../decision/strategy/comboChain.js?v=41a';
+import { log } from '../diag/logger.js?v=41a';
+import { safeGet, safeSet } from '../storage/storage.js?v=41a';
 
 const ENDPOINT = 'https://data.feiqiaoai.uno/';
 const LAST_KEY = 'djsc_ingest_last';      /* 游标：{ watermark, keyFp, lastOk, lastErr } */
@@ -195,7 +194,7 @@ function commitShadowV5(ids) {
         const sent = loadShadowSent().concat(ids);
         if (sent.length > SHADOW_SENT_MAX) sent.splice(0, sent.length - SHADOW_SENT_MAX);
         safeSet(SHADOW_UP_KEY, JSON.stringify({ sent: sent }));
-        /* ★ 4.1.0：写后读回校验——写入被配额/刷新打断时游标会假成功（服务器已有数据但手机不知，
+        /* ★ 4.0.24：写后读回校验——写入被配额/刷新打断时游标会假成功（服务器已有数据但手机不知，
            触发无意义重传循环）。读回失败则不视为提交，下轮自动重传（幂等）。 */
         const back = (function () { try { const o = JSON.parse(safeGet(SHADOW_UP_KEY, null)); return o && Array.isArray(o.sent) ? o.sent : null; } catch (eR) { return null; } })();
         if (!back || back[back.length - 1] !== sent[sent.length - 1]) {
@@ -208,7 +207,7 @@ function collectPanelStats() {
         const s = exportStats();
         return {
             samples: s && s.count != null ? s.count : bufferSize(),
-            /* ★ 4.1.0：训练缓冲线状态随批次上报——服务器直接观测 BUFFER 是否满/驱逐/导出失败，
+            /* ★ 4.0.24：训练缓冲线状态随批次上报——服务器直接观测 BUFFER 是否满/驱逐/导出失败，
                不再依赖本地诊断（15:18 样本线全灭事故即因缓冲状态不可见延迟 5 小时发现） */
             trainLine: s ? { count: s.count, max: s.max, paused: !!s.paused, pausedSamples: s.pausedSamples || 0, lastExport: String(s.lastExport || '').slice(0, 80) } : null,
             /* ★ fix10：__mode/__version 此前是死引用（全库无赋值），上报恒为空。
@@ -222,89 +221,10 @@ function collectPanelStats() {
                 } catch (eV) {}
                 return '4.0.19-fix10';
             })(),
-            brand: '飞雀V1'
+            brand: '飞雀V2'
         };
     } catch (e) { return { samples: bufferSize() }; }
 }
-/* ---------------- 技能拆解汇总（6字段版，编程专家定案） ----------------
- * 目的A：发现漏识别技能 → unrecognizedSkills + skillNames 与官方库做差集
- * 目的C：对比武将强度 → totalScore 与官方综合分做相关性分析
- * 去重：同一版本+同一武将终身只传一次（评分是静态规则计算，结果恒定）
- * 字段：player / nameZh / skillCount / totalScore / skillNames / unrecognizedSkills */
-const SKILL_BREAKDOWN_UPLOADED_KEY = 'djsc_skill_breakdown_uploaded_v1';
-
-function loadUploadedBreakdowns() {
-    try {
-        const raw = safeGet(SKILL_BREAKDOWN_UPLOADED_KEY, null);
-        return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
-}
-function saveUploadedBreakdowns(map) {
-    try { safeSet(SKILL_BREAKDOWN_UPLOADED_KEY, JSON.stringify(map)); } catch (e) {}
-}
-
-function collectSkillBreakdown() {
-    try {
-        const me = (typeof game !== 'undefined' && game && game.me) 
-            || (typeof _status !== 'undefined' && _status.currentPhase) 
-            || null;
-        if (!me) return null;
-        
-        const callId = me.name1 || me.name || 'unknown';
-        const version = VERSION + '@' + BUILD_DATE;
-        const uploadKey = version + '|' + callId;
-        
-        // 去重：同一版本+同一武将终身只传一次
-        const uploaded = loadUploadedBreakdowns();
-        if (uploaded[uploadKey]) return null;
-        
-        // 中文名：从 lib.translate 取
-        let nameZh = callId;
-        try {
-            if (typeof lib !== 'undefined' && lib.translate && lib.translate[callId]) {
-                const t = lib.translate[callId];
-                nameZh = Array.isArray(t) ? t[0] : t;
-            }
-        } catch (eN) {}
-        
-        const skills = me.skills || [];
-        let totalScore = 0;
-        const skillNames = [];
-        const unrecognizedSkills = [];
-        
-        for (let i = 0; i < skills.length; i++) {
-            const sid = skills[i];
-            try {
-                const br = skillProfitBreakdown(sid);
-                totalScore += (br.total || 0);
-                // 技能中文名
-                let sName = sid;
-                try {
-                    if (typeof lib !== 'undefined' && lib.translate && lib.translate[sid]) {
-                        const t = lib.translate[sid];
-                        sName = Array.isArray(t) ? t[0] : t;
-                    }
-                } catch (eSN) {}
-                skillNames.push(sName);
-                if (br.isUnrecognized) unrecognizedSkills.push(sName);
-            } catch (e) {}
-        }
-        
-        // 标记为已上传
-        uploaded[uploadKey] = Date.now();
-        saveUploadedBreakdowns(uploaded);
-        
-        return {
-            player: callId,
-            nameZh: nameZh,
-            skillCount: skills.length,
-            totalScore: Math.round(totalScore * 100) / 100,
-            skillNames: skillNames,
-            unrecognizedSkills: unrecognizedSkills
-        };
-    } catch (e) { return null; }
-}
-
 function collectConfig() {
     try { return safeGet('djsc_score_config_v1', null); } catch (e) { return null; }
 }
@@ -389,13 +309,44 @@ function diffSnapshot(cur) {
     return { chainsPayload, storagePayload, newFp, storageFp, changed };
 }
 
+/* ---------------- skillBreakdown 轻量上报（★PR7）----------------
+ * 全场武将技能评分摘要，(version,player) 去重终身一次（评分为静态规则计算，同版本同武将恒定）；
+ * 首批携带，全部成功才 commit 去重集合（失败自动重传），服务端落 aggregate 小时文件。 */
+const SKBD_UP_KEY = '__ai_reason_skillbd_up_v1';
+let _skbdPending = null;
+function collectSkillBreakdownPending() {
+    if (_skbdPending) return _skbdPending;
+    try {
+        const bd = collectSkillBreakdownLite();
+        if (!bd || !bd.version || bd.version === 'unknown@' || !Array.isArray(bd.players) || !bd.players.length) return null;
+        let rec = null;
+        try { rec = JSON.parse(safeGet(SKBD_UP_KEY, null)); } catch (eR1) {}
+        if (!rec || rec.version !== bd.version || !Array.isArray(rec.done)) rec = { version: bd.version, done: [] };
+        const fresh = bd.players.filter(function (p) { return p && p.player && rec.done.indexOf(p.player) < 0; });
+        if (!fresh.length) return null;
+        _skbdPending = { version: bd.version, collectedAt: bd.collectedAt, players: fresh };
+        return _skbdPending;
+    } catch (eSkb) { return null; }
+}
+function commitSkillBreakdown(pend) {
+    try {
+        if (!pend || !pend.version || !Array.isArray(pend.players) || !pend.players.length) return;
+        let rec = null;
+        try { rec = JSON.parse(safeGet(SKBD_UP_KEY, null)); } catch (eR2) {}
+        if (!rec || rec.version !== pend.version || !Array.isArray(rec.done)) rec = { version: pend.version, done: [] };
+        pend.players.forEach(function (p) { if (rec.done.indexOf(p.player) < 0) rec.done.push(p.player); });
+        if (rec.done.length > 800) rec.done = rec.done.slice(-800);
+        safeSet(SKBD_UP_KEY, JSON.stringify(rec));
+    } catch (eSkb2) {}
+}
+
 /* ---------------- 组包与发送 ---------------- */
 function hourOf(ts) {
     const d = new Date(ts);
     const p = n => (n < 10 ? '0' + n : '' + n);
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours());
 }
-function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5) {
+function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5, skbdPayload) {
     const env = { v: 2, hour: hourOf(Date.now()) };
     if (samples && samples.length) env.samples = samples;
     if (chainsPayload) env.comboChains = chainsPayload;
@@ -404,12 +355,12 @@ function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5) {
     /* ★ fix10：诊断随批次上报——skill 候选漏斗 + 采样接受/拒绝计数，
      *   服务端每批数据可直接观测 skill 断层，无需用户截图面板。 */
     try { env.skillDiag = getSkillCandDiag(); } catch (eSd) {}
+    if (skbdPayload && skbdPayload.players && skbdPayload.players.length) env.skillBreakdown = skbdPayload;   /* ★PR7 */
     try { const sd = getSampleDiagnostics(); if (sd) env.sampleDiag = sd; } catch (eSd2) {}
     try { const ze = (typeof game !== 'undefined' && game && game.__wmzZipEnv) || null; if (ze) env.zipEnv = { usable: ze.usable, scanned: ze.scanned, hits: ze.hits.slice(0, 16), scripts: ze.scripts.slice(0, 6) }; } catch (eZ) {}
     const cfg = collectConfig();
     if (cfg) env.config = cfg;
     if (shadowV5 && shadowV5.length) env.shadowV5 = shadowV5;   /* ★PR4：v5 shadow 决策对比摘要 */
-    try { const sb = collectSkillBreakdown(); if (sb) env.skillBreakdown = sb; } catch (eSb) {}
     return env;
 }
 function postJSON(bodyObj) {
@@ -419,7 +370,7 @@ function postJSON(bodyObj) {
         body: _stableStringify(bodyObj)
     }).then(r => {
         if (r && r.ok) return true;
-        if (r && r.status === 429) throw new Error('触发服务端限流（单 IP 每小时 2 次），数据已保留待传，稍后自动重试');
+        if (r && r.status === 429) throw new Error('触发服务端限流，请稍后自动重试，数据已保留待传，稍后自动重试');
         throw new Error('HTTP ' + (r ? r.status : '?'));
     });
 }
@@ -435,7 +386,9 @@ function uploadNow(force) {
     const pick = pickNewSamples(samples, cur.watermark, cur.keyFp && cur.keyFp.samples);
     const snap = diffSnapshot(cur);
     const shadowBatch = collectShadowV5();   /* ★PR4：v5 shadow 待传摘要 */
-    const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0;
+    _skbdPending = null;
+    const skbdPend = collectSkillBreakdownPending();   /* ★PR7 */
+    const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0 || (skbdPend && skbdPend.players.length > 0);   /* ★PR7 */
     if (!hasWork && !force) {
         _uploading = false;
         return Promise.resolve({ skipped: 'no-new-data', pendingSamples: bufferSize() });
@@ -450,7 +403,8 @@ function uploadNow(force) {
         const list = batches[idx];
         const env = buildEnvelope(list, idx === batches.length - 1 ? snap.chainsPayload : null,
             idx === batches.length - 1 ? snap.storagePayload : null,
-            (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null);   /* ★ 4.1.0：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
+            (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null,
+            (idx === 0) ? skbdPend : null);   /* ★PR7：首批携带 */   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
         return postJSON(env).then(() => {
             if (list) sentSamples += list.length;
             idx++;
@@ -476,7 +430,8 @@ function uploadNow(force) {
         }
         cur.lastOk = Date.now(); cur.lastErr = ''; cur.backoffUntil = 0;
         saveCursor(cur);
-        commitShadowV5(shadowBatch.ids);   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
+        commitShadowV5(shadowBatch.ids);
+        commitSkillBreakdown(skbdPend);   /* ★PR7：成功才推进去重集合 */   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
         _lastResult = { at: Date.now(), ok: true, detail: sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '') };
         try { log.info('cloud', '上报成功：' + _lastResult.detail); } catch (e) {}
         return { ok: true, sentSamples, snapshotChanged: snap.changed };

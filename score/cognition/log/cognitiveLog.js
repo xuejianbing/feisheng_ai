@@ -8,7 +8,7 @@
  */
 
 /* ================= 决策积分引擎 · 认知日志 ================= */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 const MAX = 100;
 const LOG = [];

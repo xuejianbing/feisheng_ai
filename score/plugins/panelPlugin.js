@@ -10,8 +10,8 @@
 /* ================= 决策积分引擎 · 面板插件（核心示范 #2） =================
  * 把调试桥/面板/对话框守护包装成标准插件。
  * 展示：type=panel、props 软合并（把面板接口挂到 __DJSC.panel）、onInstall/onUninstall 对称清理。 */
-import { definePlugin, registerPlugin, pluginState } from '../foundation/runtime/plugins.js?v=5e5';
-import { openScorePanel, installDebugBridge, uninstallDebugBridge, startDialogGuard, stopDialogGuard } from '../view/panel/panel.js?v=5e5';
+import { definePlugin, registerPlugin, pluginState } from '../foundation/runtime/plugins.js?v=41a';
+import { openScorePanel, installDebugBridge, uninstallDebugBridge, startDialogGuard, stopDialogGuard } from '../view/panel/panel.js?v=41a';
 
 /* props：挂到 __DJSC.panel 命名空间的键（经 registry.bind 软合并，只补缺失） */
 const panelProps = {

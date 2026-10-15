@@ -12,9 +12,9 @@
  * 通过 _status.djsc_broadcast 共享（每回合清空）。
  * 不依赖任何业务模块，叶子级。
  */
-import { game, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { getModeStrategy, isSameCamp } from '../../decision/strategy/modeStrategy.js?v=5e5';
-import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { game, _status } from '../../foundation/adapt/host.js?v=41a';
+import { getModeStrategy, isSameCamp } from '../../decision/strategy/modeStrategy.js?v=41a';
+import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 const MAX_AGE = 3000;
 const MAX_ENTRIES = 30;

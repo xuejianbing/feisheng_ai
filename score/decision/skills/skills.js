@@ -15,9 +15,9 @@
  *   ④ 未识别技能返回空标签（不猜测）
 // Autor: Feisheng Original | Licencia: GPL-3.0
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { scanObjectMethod } from './skillScanner.js?v=5e5';
-import { scoreSkill, deriveDimensions, renderScoreBreakdown } from './skillRules.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { scanObjectMethod } from './skillScanner.js?v=41a';
+import { scoreSkill, deriveDimensions, renderScoreBreakdown } from './skillRules.js?v=41a';
 
 /* ================= 缓存 ================= */
 const _TAG_CACHE = new Map();
@@ -2417,4 +2417,78 @@ function _findParent(sid) {
 		}
 		return null;
 	} catch (e) { return null; }
+}
+
+/* ============================================================
+ * ★ PR7：skillBreakdown 轻量汇总（全场技能评分上报用）
+ *   只传摘要字段（player/nameZh/skillCount/totalScore/skillNames/unrecognizedSkills），
+ *   不含 breakdown 明细与技能源码（重结构仍走 exportForImport）。
+ *   skillNames=中文名清单，服务端可与官方武将库比对发现漏识别技能。
+ * ============================================================ */
+export function collectSkillBreakdownLite() {
+	try {
+		if (typeof game === 'undefined' || !game || !Array.isArray(game.players) || !game.players.length) return null;
+		const ver = (typeof window !== 'undefined' && window.__DJSC)
+			? ((window.__DJSC.VERSION || 'v?') + '@' + (window.__DJSC.BUILD_DATE || ''))
+			: 'unknown';
+		const out = [];
+		game.players.forEach(function (p) {
+			try {
+				if (!p) return;
+				/* ★PR7b：借鉴小曦AI skillLines——双来源收集+衍生技展开+描述缺失检测 */
+				const seen = new Set();
+				const sids = [];
+				const push = function (id) {
+					if (!id || seen.has(id) || String(id).endsWith('_backup')) return;
+					seen.add(id); sids.push(id);
+				};
+				try { (p.getSkills ? p.getSkills() : (p.skills || [])).forEach(push); } catch (eSk0) { (p.skills || []).forEach(push); }
+				try {
+					['name', 'name1', 'name2'].forEach(function (k) {
+						const nm = p[k];
+						const data = nm && lib.character && lib.character[nm];
+						const listed = data && (data.skills || (Array.isArray(data) ? data[3] : null));
+						if (Array.isArray(listed)) listed.forEach(push);
+					});
+				} catch (eSk0b) {}
+				try {
+					sids.slice().forEach(function (sid) {
+						let info = null;
+						try { info = get.info(sid); } catch (eSk0c) {}
+						const d = info && info.derivation;
+						(Array.isArray(d) ? d : (d ? [d] : [])).forEach(push);
+					});
+				} catch (eSk0d) {}
+				const mounted = new Set();
+				try { (p.getSkills ? p.getSkills() : (p.skills || [])).forEach(function (x) { mounted.add(x); }); } catch (eSk0e) { (p.skills || []).forEach(function (x) { mounted.add(x); }); }
+				let total = 0;
+				const names = [];
+				const unrecognized = [];
+				sids.forEach(function (sid) {
+					try {
+						const br = skillProfitBreakdown(sid);
+						total += (br && br.total) || 0;
+						const nm = (lib.translate && lib.translate[sid]) || sid;
+						names.push(nm);
+						let desc = '';
+						try { desc = get.skillInfoTranslation(sid, p) || ''; } catch (eSk1a) {}
+						if (!desc) desc = (lib.translate && lib.translate[sid + '_info']) || '';
+						if (br && br.isUnrecognized) unrecognized.push(sid + '|' + nm + '|unrecognized');
+						else if (!desc) unrecognized.push(sid + '|' + nm + '|nodesc');
+						else if (!mounted.has(sid)) unrecognized.push(sid + '|' + nm + '|notmounted');
+					} catch (eSk1) {}
+				});
+				out.push({
+					player: p.name || p.name1 || '?',
+					nameZh: (lib.translate && lib.translate[p.name]) || p.name || '?',
+					skillCount: sids.length,
+					totalScore: Math.round(total * 100) / 100,
+					skillNames: names,
+					unrecognizedSkills: unrecognized,
+				});
+			} catch (eSk2) {}
+		});
+		if (!out.length) return null;
+		return { version: ver, collectedAt: new Date().toISOString(), players: out };
+	} catch (eSk) { return null; }
 }

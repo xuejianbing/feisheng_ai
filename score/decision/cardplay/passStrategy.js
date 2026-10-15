@@ -12,9 +12,9 @@
  * 比如：队友血量低 → 给他桃
  * 队友需要牌 → 给他需要的牌
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
-import { probHasTao } from '../../model/predict/handInference.js?v=5e5';
+import { probHasTao } from '../../model/predict/handInference.js?v=41a';
 
 /* ================= 传牌缓存 ================= */
 const _passCache = new Map();

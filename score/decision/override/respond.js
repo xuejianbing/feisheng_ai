@@ -11,14 +11,14 @@
  * 只影响 AI 是否需要打出闪/桃/无懈。
  * 降级策略与 use.js 相同：单次异常 → 5 秒内走本体。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { decideRespond } from '../basic/respondBrain.js?v=5e5';
-import { isAllyOf as relIsAlly, isEnemyOf } from '../relations/relations.js?v=5e5';
-import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=5e5';
-import { evaluateWuxie, shouldUseWuxie } from '../response/wuxieEvaluator.js?v=5e5';   /* ★ 无懈唯一权威策略源 */
-import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=5e5';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { decideRespond } from '../basic/respondBrain.js?v=41a';
+import { isAllyOf as relIsAlly, isEnemyOf } from '../relations/relations.js?v=41a';
+import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
+import { evaluateWuxie, shouldUseWuxie } from '../response/wuxieEvaluator.js?v=41a';   /* ★ 无懈唯一权威策略源 */
+import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
 
 const ORIG_KEY = '__djsc_orig_chooseToRespond';
 const SENTINEL = '__djsc_overridden_respond';

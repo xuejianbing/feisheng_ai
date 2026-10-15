@@ -20,11 +20,11 @@
  *   7) phaseBegin 显式开启新 epoch；同角色额外回合也会清空上一回合 ledger。
  */
 
-import { game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import '../../foundation/adapt/gameProfile.js';
-import { strategicEffectOf } from '../../foundation/adapt/terms.js?v=5e5';
-import { dispositionOf } from '../relations/relations.js?v=5e5';
-import { delayedControlValue } from '../response/wuxieEvaluator.js?v=5e5';
+import { strategicEffectOf } from '../../foundation/adapt/terms.js?v=41a';
+import { dispositionOf } from '../relations/relations.js?v=41a';
+import { delayedControlValue } from '../response/wuxieEvaluator.js?v=41a';
 
 function _swallow(e) {
 	try {

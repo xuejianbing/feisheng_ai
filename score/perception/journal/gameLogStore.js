@@ -25,12 +25,12 @@
  *   exportBotsJson()    只含机的操作
  *   exportPairsJson()   同一局里人机并列（同尺度对标）
  */
-import { VERSION_SEMVER } from '../../../js/config/version.js?v=5e5';
-import { journalStorage } from '../../foundation/storage/journalStorage.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { getJSON, setJSONQuotaSafe, safeRemove } from '../../foundation/storage/storage.js?v=5e5';
-import { writeData, fileOf } from '../../foundation/storage/storagePaths.js?v=5e5';  /* ★ 统一导出路径 + 手机端兜底下载 */
+import { VERSION_SEMVER } from '../../../js/config/version.js?v=41a';
+import { journalStorage } from '../../foundation/storage/journalStorage.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { getJSON, setJSONQuotaSafe, safeRemove } from '../../foundation/storage/storage.js?v=41a';
+import { writeData, fileOf } from '../../foundation/storage/storagePaths.js?v=41a';  /* ★ 统一导出路径 + 手机端兜底下载 */
 
 const KEY = 'djsc_game_logs_v1';
 const VERSION = 1;

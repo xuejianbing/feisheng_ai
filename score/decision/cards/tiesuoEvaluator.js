@@ -29,9 +29,35 @@
  *   - 已横置敌人再次被选 = 解链敌人（负收益，不得因「敌人」标签加分）；
  *   - 不得用 top1/top2 近似代替 pair 组合评估。
  */
-import { isPlayerLinked } from '../state/playerState.js?v=5e5';
-import { dispositionOf } from '../relations/relations.js?v=5e5';   /* ★ 统一敌我系统单一权威源 */
-import { _status } from '../../foundation/adapt/host.js?v=5e5';   /* 仅用于轻量诊断落点 */
+import { isPlayerLinked } from '../state/playerState.js?v=41a';
+import { dispositionOf } from '../relations/relations.js?v=41a';   /* ★ 统一敌我系统单一权威源 */
+import { get, _status } from '../../foundation/adapt/host.js?v=41a';   /* 仅用于轻量诊断落点 */
+import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
+import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
+const hostPlans = new WeakMap();
+function actualCard(me, card) {
+ if (card && typeof card === 'object') return card;
+ try { return me.getCards('h').find(c => get.name(c, me) === 'tiesuo') || { name: 'tiesuo' }; }
+ catch (_) { return { name: 'tiesuo' }; }
+}
+function legalTarget(me, target, card) {
+ try {
+  if (!target || target.isDead?.()) return false;
+  if (target.hasSkillTag?.('noLink') || target.hasSkillTag?.('link') || target.hasSkillTag?.('nodamage') ||
+   target.hasSkillTag?.('nofire') && target.hasSkillTag?.('nothunder')) return false;
+  return typeof me.canUse !== 'function' || !!me.canUse(card, target);
+ } catch (_) { return false; }
+}
+function hostWindow(me) {
+ try { return playChoiceWindow(_status.event, me); } catch (_) { return null; }
+}
+function boardKey(me, players) {
+ try {
+  const card = actualCard(me);
+  return players.map(p => [p.hp, p.hujia, isPlayerLinked(p), legalTarget(me,p,card)].join(':')).join('|') +
+   '/' + me.getCards('h').map(c => [get.name(c,me),c.suit,c.number].join(':')).join('|');
+ } catch (_) { return null; }
+}
 
 function _swallow(e) {
 	try {
@@ -190,7 +216,7 @@ function _opportunityMul(d, context) {
 function _linkedValueOf(me, p, context) {
 	try {
 		if (!p) return 0;
-		if (p === me) return context?.classicDoudizhu ? -LINK_BASE * _hpWeight(p) * _opportunityMul(1, context) : 0;
+		if (p === me) return tacticalEnabled('tiesuo') || context?.classicDoudizhu ? -LINK_BASE * _hpWeight(p) * _opportunityMul(1, context) : 0;
 		const rel = (context && typeof context.relationOf === 'function')
 			? context.relationOf(me, p)
 			: dispositionOf(me, p);
@@ -215,9 +241,11 @@ export function evaluateLinkedState(me, players, linkedSet, context) {
 	try {
 		(linkedSet ? Array.from(linkedSet) : []).forEach(function (p) {
 			const value = _linkedValueOf(me, p, context);
-			// 单独横置敌人没有额外传导对象，保留少量未来机会价值；不禁止合法单目标。
-			const isolated = context.classicDoudizhu && linkedSet.size === 1 && value > 0;
-			u += isolated ? value * 0.2 : value;
+			// 孤立单连没有传导收益；关闭优化时保留旧版机会价值。
+			const isolated = linkedSet.size === 1 && value > 0;
+			// A lone enemy has no propagation recipient. Low HP alone creates no chain benefit.
+			u += isolated && tacticalEnabled('tiesuo') ? 0 :
+				isolated && context.classicDoudizhu ? value * 0.2 : value;
 		});
 	} catch (e) { _swallow(e); }
 	return Math.round(u * 1000) / 1000;
@@ -376,13 +404,17 @@ function _recordDiagnostics(result, context) {
  * @returns {{bestAction:Object|null, candidates:Array, currentStateValue:number, recastValue:number, useThreshold:number}}
  */
 export function evaluateTiesuoActions(player, card, context) {
-	context = context || {};
+	context = { ...(context || {}) };
+	if (tacticalEnabled('tiesuo') && context.classicDoudizhu == null) {
+		try { context.classicDoudizhu = get.mode() === 'doudizhu' && ['normal','kaihei','huanle'].includes(_status.mode); } catch (_) {}
+	}
 	try {
 		let candidates = Array.isArray(context.actions) && context.actions.length
 			? context.actions
 			: null;
 		if (!candidates) {
-			const legal = context.candidates || context.targets || [];
+			const rawTargets = context.candidates || context.targets || [];
+			const legal = tacticalEnabled('tiesuo') ? rawTargets.filter(t => legalTarget(player,t,actualCard(player,card))) : rawTargets;
 			candidates = generateTiesuoActions(player, card, legal, context);
 		}
 
@@ -409,6 +441,8 @@ export function evaluateTiesuoActions(player, card, context) {
 		const useThreshold = tiesuoUseThreshold(recastValue, context);
 		let recastAction = null;
 		let bestUse = null;
+		const friendlyUnlinks = action => (action.targets || []).filter(t =>
+			before.has(t) && _linkedValueOf(player, t, context) < 0).length;
 		for (let i = 0; i < candidates.length; i++) {
 			const a = candidates[i];
 			if (!a) continue;
@@ -416,7 +450,8 @@ export function evaluateTiesuoActions(player, card, context) {
 				if (!recastAction || a.score > recastAction.score) recastAction = a;
 				continue;
 			}
-			if (a.type === 'use' && (!bestUse || a.score > bestUse.score)) bestUse = a;
+			if (a.type === 'use' && (!bestUse || a.score > bestUse.score ||
+				tacticalEnabled('tiesuo') && a.score === bestUse.score && friendlyUnlinks(a) > friendlyUnlinks(bestUse))) bestUse = a;
 		}
 
 		/* 可重铸时：普通单目标 +2 并不足以使用，必须显著胜过重铸。
@@ -439,6 +474,14 @@ export function evaluateTiesuoActions(player, card, context) {
 		result.beforeSet = before;
 		result.players = context.players || null;
 		_recordDiagnostics(result, context);
+		if (tacticalEnabled('tiesuo') && context.cacheHost) {
+			const event = hostWindow(player), key = boardKey(player, context.players || []);
+			if (event && key !== null) {
+				let plans = hostPlans.get(event);
+				if (!plans) { plans = new WeakMap(); hostPlans.set(event,plans); }
+				plans.set(player,{key,result});
+			}
+		}
 		return result;
 	} catch (e) {
 		_swallow(e);
@@ -454,11 +497,11 @@ export function evaluateTiesuoActions(player, card, context) {
  *   → 宿主侧必须消费 evaluator 唯一权威结论，而不是维护第二套策略。
  */
 
-/* 收集 evaluator 的合法目标：存活且非施法者（与 engine tsMap 口径一致）。 */
+/* 铁索优化开启时，自身也可作为解链目标；具体合法性交给宿主校验。 */
 function _aliveCandidates(me, players) {
 	const out = [];
 	(players || []).forEach(function (p) {
-		if (!p || p === me) return;
+		if (!p || p === me && !tacticalEnabled('tiesuo')) return;
 		try {
 			if (typeof p.isDead === 'function' ? p.isDead() : (typeof p.hp === 'number' && p.hp <= 0)) return;
 		} catch (e) { _swallow(e); }
@@ -476,6 +519,13 @@ export function hostTiesuoDecision(me, players, context) {
 	context = context || {};
 	try {
 		const list = (players && players.length) ? players : (context.players || []);
+		if (tacticalEnabled('tiesuo')) {
+			const event = hostWindow(me), cached = event && hostPlans.get(event)?.get(me);
+			if (cached && cached.key === boardKey(me,list)) {
+				const best = cached.result.bestAction;
+				return { use: best?.type === 'use', targets: best?.type === 'use' ? best.targets.slice() : [] };
+			}
+		}
 		const ctx = {};
 		for (const k in context) {
 			if (Object.prototype.hasOwnProperty.call(context, k)) ctx[k] = context[k];

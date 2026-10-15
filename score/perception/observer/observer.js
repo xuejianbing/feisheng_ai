@@ -10,11 +10,11 @@
 /* ================= 决策积分引擎 · 行为观察器 =================
  * 目的：记录"谁打过谁 / 谁救过谁 / 谁爱放AOE / 谁爱用锦囊"，为身份推理和画像提供原始数据。
  */
-import { _status } from '../../foundation/adapt/host.js?v=5e5';
-import { getStored } from '../memory/memory.js?v=5e5';
-import { getTagConf, getPlayerShanFactor } from '../feedback/styleFeedback.js?v=5e5';
-import { suitRemaining } from '../memory/deckMemory.js?v=5e5';
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { _status } from '../../foundation/adapt/host.js?v=41a';
+import { getStored } from '../memory/memory.js?v=41a';
+import { getTagConf, getPlayerShanFactor } from '../feedback/styleFeedback.js?v=41a';
+import { suitRemaining } from '../memory/deckMemory.js?v=41a';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 const OBS = Object.create(null);
 

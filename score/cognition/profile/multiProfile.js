@@ -15,8 +15,8 @@
  *   ③ 档案间可主动复制对方的高胜率偏移（模仿学习）
 // Autor: Feisheng Original | Licença: GPL-3.0
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORE_KEY = 'djsc_multi_profile_v1';
 const MAX_PROFILES = 8;

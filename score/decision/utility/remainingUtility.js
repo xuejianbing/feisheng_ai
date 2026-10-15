@@ -1,4 +1,4 @@
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 export function createBaselineUtilitySeed(score, source, dimension, details = {}) {
  if (!Number.isFinite(score)) throw new TypeError('Invalid baseline');

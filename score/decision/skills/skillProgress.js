@@ -16,10 +16,10 @@
  *  - 读不到的 → 标 known=false / confidence 低，不产生加分。
  * 纯计算模块：只 import 宿主读取 API 与 relations / skills 的只读函数。
  */
-import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
-import { skillProfileOf } from './skills.js?v=5e5';
+import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
+import { skillProfileOf } from './skills.js?v=41a';
 
 /* 攻击类牌（与 engine 的 ATK_IDS 对齐；用于"勿消耗近觉醒核心"方向判定） */
 const ATK_IDS = ["sha","juedou","huogong","nanman","wanjian","jiedao","lijian","fanjian","sidian","huosha","leisha","zhujin","shunshou","guohe","lebu","bingliang","tiesuo"];

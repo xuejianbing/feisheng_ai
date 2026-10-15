@@ -15,7 +15,7 @@
  *
  * 本插件示范一个"运行时情报中心"：把插件状态 + 对局关键缓存匿名化展示，
  * 纯只读、零副作用，证明标准协议可独立贡献能力。 */
-import { definePlugin, registerPlugin, pluginState, pluginOverview } from '../foundation/runtime/plugins.js?v=5e5';
+import { definePlugin, registerPlugin, pluginState, pluginOverview } from '../foundation/runtime/plugins.js?v=41a';
 
 /* 挂到 __DJSC.cognition 命名空间的只读情报接口 */
 const cognitionProps = {

@@ -1,5 +1,5 @@
-import {trainingLabelOf} from './labelPolicy.js?v=5e5';
-import {championSampleEligibility} from '../../decision/strategy/championStrategy.js?v=5e5';
+import {trainingLabelOf} from './labelPolicy.js?v=41a';
+import {championSampleEligibility} from '../../decision/strategy/championStrategy.js?v=41a';
 export function selectClassicDataset(samples){
  const map=new Map(),conflicts=new Set(),rejected={};let duplicates=0;
  const reject=r=>{rejected[r]=(rejected[r]||0)+1;};

@@ -1,5 +1,5 @@
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
-import { ensureUtilityVector, recordUtilityContribution } from './utilityVector.js?v=5e5';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
+import { ensureUtilityVector, recordUtilityContribution } from './utilityVector.js?v=41a';
 
 const probability = (value, fallback = 0.5) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
 const count = value => Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;

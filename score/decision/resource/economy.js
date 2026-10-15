@@ -12,9 +12,9 @@
  *       用于弃牌、装备替换、卖血技能的机会成本评估。
  * 叶子模块：仅依赖 threat.js（cardValueOf / isEnemyOf）。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Autor: Feisheng Original | Licença: GPL-3.0
-import { cardValueOf, isEnemyOf } from '../threat/threat.js?v=5e5';
+import { cardValueOf, isEnemyOf } from '../threat/threat.js?v=41a';
 
 function toCard(c) {
 	return (typeof c === "string") ? { name: c } : c;

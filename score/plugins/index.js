@@ -17,7 +17,7 @@ import './skillPlugin.js';
 import './cognitionPlugin.js';   /* ★ 新增功能示范：运行时情报中心 */
 /* ★ 新增插件在此追加一行：import './myPlugin.js'; */
 
-import { installAllPlugins, uninstallAllPlugins, listPlugins, installedCount, pluginCount, scan, pluginState } from '../foundation/runtime/plugins.js?v=5e5';
+import { installAllPlugins, uninstallAllPlugins, listPlugins, installedCount, pluginCount, scan, pluginState } from '../foundation/runtime/plugins.js?v=41a';
 
 /* 收集所有插件并返回状态清单
  * ★ P0-02：安装统一在此触发（installScoreEngine 调用本函数），import 阶段不再自动安装 */

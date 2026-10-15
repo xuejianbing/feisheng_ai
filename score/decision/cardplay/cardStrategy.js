@@ -16,8 +16,8 @@
  *   ④ 锦囊卡的：风险等级（AOE/单体/延迟）
  *   ⑤ 与 lib.card 的自动同步（新卡自动识别）
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 卡牌策略表（自动生成 + 手动微调） ================= */
 const CARD_STRATEGY = {};

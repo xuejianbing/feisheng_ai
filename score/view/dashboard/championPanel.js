@@ -13,8 +13,8 @@
  * 同类型最高价值即为该决策类型的"冠军"，冠军策略按 value 提权/替换规则选牌。
  * 打开方式：window.__DJSC.openChampionPanel()
  */
-import { getChampions, stats as champStats, clear as champClear, championDiagnostics, reloadFromStorage } from '../../decision/strategy/championStrategy.js?v=5e5';
-import { bufferSize as sampleBufferSize } from '../../model/train/trainExport.js?v=5e5';   /* ★ 面板诊断：显示样本缓冲数 */
+import { getChampions, stats as champStats, clear as champClear, championDiagnostics, reloadFromStorage } from '../../decision/strategy/championStrategy.js?v=41a';
+import { bufferSize as sampleBufferSize } from '../../model/train/trainExport.js?v=41a';   /* ★ 面板诊断：显示样本缓冲数 */
 
 /* ================= 全屏遮罩打开面板（和其它面板：brain/calibrator 一致） ================= */
 function _openFullscreenPanel(title, html) {

@@ -21,9 +21,9 @@
  *   - 无副作用：任何异常返回 null，不阻断
  *   - 性能：单次仲裁 < 8ms（含所有收集器）
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 状态 ================= */
 const STATE = {

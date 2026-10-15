@@ -20,8 +20,8 @@ export const MEM = { atk: {}, hit: {} };
 const MEM_KEY = "决策积分引擎_mem";
 
 /* ★ 中央存储抽象：统一异常处理与配额降级 */
-import { getJSON, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=5e5';
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { getJSON, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=41a';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 export function memLoad() {
 	try {

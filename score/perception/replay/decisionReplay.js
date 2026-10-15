@@ -12,8 +12,8 @@
  *   状态 → 候选 → 规则 → 模型 → 认知 → 冲突 → 总线 → 护栏 → 最终 → 结果
  * 存储：localStorage，最多 20 局 / 每局最多 50 条
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 // Autore: Feisheng Originale | Licenza: GPL-3.0
 
 const STORE_KEY = 'djsc_replay_v1';

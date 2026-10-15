@@ -11,11 +11,11 @@
  * 南蛮/万箭的唯一动作级评估入口。
  * 只使用公开手牌数量、公开装备、牌堆记忆与行为概率，不读取对手具体隐藏手牌。
  */
-import { game, get } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';
-import { probHasBagua } from '../threat/threat.js?v=5e5';
-import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=5e5';
-import { probHasSha, probHasShan } from '../../model/predict/handInference.js?v=5e5';
+import { game, get } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';
+import { probHasBagua } from '../threat/threat.js?v=41a';
+import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=41a';
+import { probHasSha, probHasShan } from '../../model/predict/handInference.js?v=41a';
 
 function _clamp01(v) {
 	const n = Number(v);

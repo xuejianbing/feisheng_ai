@@ -26,11 +26,11 @@
  *   - buildPlayerSnapshot(null) 返回安全空快照（alive=false，各计数=0）。
  */
 
-import { get } from '../../foundation/adapt/host.js?v=5e5';
-import { isPlayerLinked } from './playerState.js?v=5e5';
-import { playerKey, playerDisplayName } from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import { threatOf, probHasShan } from '../threat/threat.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage C：敌我关系唯一权威源 */
+import { get } from '../../foundation/adapt/host.js?v=41a';
+import { isPlayerLinked } from './playerState.js?v=41a';
+import { playerKey, playerDisplayName } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { threatOf, probHasShan } from '../threat/threat.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage C：敌我关系唯一权威源 */
 
 function _swallow(e) {
 	try {

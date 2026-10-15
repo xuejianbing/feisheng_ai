@@ -12,9 +12,9 @@
  * "这次杀有 30% 概率被闪，70% 命中"
  * 现在的 probHasShan 是 0.5，可以改成动态
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
-import { probHasShan, probHasWuxie, probHasTao, probHasSha } from '../../model/predict/handInference.js?v=5e5';
+import { probHasShan, probHasWuxie, probHasTao, probHasSha } from '../../model/predict/handInference.js?v=41a';
 
 /* ================= 风险量化缓存 ================= */
 const _riskCache = new Map();

@@ -11,7 +11,7 @@
  * 如果有观星类技能，可以记录牌堆顶的牌
  * 优先使用牌堆顶的牌
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 /* ================= 牌堆顶缓存 ================= */
 let _deckTopCache = [];

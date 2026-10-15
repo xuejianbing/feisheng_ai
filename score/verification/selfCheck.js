@@ -6,7 +6,7 @@
  * 版权所有，侵权必究
  * ============================================
  */
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 模块自检面板 =================
  * 常态显示所有模块的挂载状态

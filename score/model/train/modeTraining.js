@@ -1,15 +1,15 @@
-import {playerDemonstrationSummary} from './playerDemonstration.js?v=5e5';
-import {classicRuntimeSummary} from './classicRuntime.js?v=5e5';
-import {game,lib} from '../../foundation/adapt/host.js?v=5e5';
-import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=5e5';
-import {dirOf,downloadText} from '../../foundation/storage/storagePaths.js?v=5e5';
-import {getSamples} from './trainExport.js?v=5e5';
-import {selectClassicDataset,splitClassicByGame,sampleLabel} from './modeDataset.js?v=5e5';
-import {createIsolatedModelSession} from '../weights/weights.js?v=5e5';
-import {saveClassicCandidateDurable,retryClassicModelRestore,modeModelsReady,classicModelStorageStatus,classicCandidateInfo,createClassicCandidateSession,createClassicActiveSession,loadClassicCandidate,loadClassicActive,classicActiveInfo,promoteClassicCandidateDurable,rollbackClassicActiveDurable} from '../weights/modeModelStore.js?v=5e5';
-import {modeContext,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=5e5';
-import {cfg} from '../../foundation/config/util.js?v=5e5';
-import {writeTrainingSnapshot} from './trainingExportFile.js?v=5e5';
+import {playerDemonstrationSummary} from './playerDemonstration.js?v=41a';
+import {classicRuntimeSummary} from './classicRuntime.js?v=41a';
+import {game,lib} from '../../foundation/adapt/host.js?v=41a';
+import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {dirOf,downloadText} from '../../foundation/storage/storagePaths.js?v=41a';
+import {getSamples} from './trainExport.js?v=41a';
+import {selectClassicDataset,splitClassicByGame,sampleLabel} from './modeDataset.js?v=41a';
+import {createIsolatedModelSession} from '../weights/weights.js?v=41a';
+import {saveClassicCandidateDurable,retryClassicModelRestore,modeModelsReady,classicModelStorageStatus,classicCandidateInfo,createClassicCandidateSession,createClassicActiveSession,loadClassicCandidate,loadClassicActive,classicActiveInfo,promoteClassicCandidateDurable,rollbackClassicActiveDurable} from '../weights/modeModelStore.js?v=41a';
+import {modeContext,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=41a';
+import {cfg} from '../../foundation/config/util.js?v=41a';
+import {writeTrainingSnapshot} from './trainingExportFile.js?v=41a';
 let busy=false,progress={phase:'未训练'},lastReport=null;
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 export function classicTrainingStatus(){const data=selectClassicDataset(getSamples()),qualified=new Set(data.samples.map(s=>JSON.stringify([s.m.sessionId,s.m.actorId,s.m.transactionId]))),context=modeContext();return {storage:classicModelStorageStatus(),busy,progress:{...progress},candidate:classicCandidateInfo(),active:classicActiveInfo(),lastReport,context,runtime:classicRuntimeSummary(context.sessionId),data:data.stats,demonstrations:playerDemonstrationSummary(getSamples(),qualified)};}

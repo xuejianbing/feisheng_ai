@@ -1,13 +1,13 @@
 /* Experimental AI-only policies. Configuration is captured once per game. */
-import {lib, game, get, ui, _status} from '../../foundation/adapt/host.js?v=5e5';
-import {cfg} from '../../foundation/config/util.js?v=5e5';
-import {dispositionOf} from '../relations/relations.js?v=5e5';
-import {effectiveJudgeName} from './judgeName.js?v=5e5';
-import {captureDelayedSettings, installDelayedBridges, stripForDelayedPlan} from './delayedOptimization.js?v=5e5';
+import {lib, game, get, ui, _status} from '../../foundation/adapt/host.js?v=41a';
+import {cfg} from '../../foundation/config/util.js?v=41a';
+import {dispositionOf} from '../relations/relations.js?v=41a';
+import {effectiveJudgeName} from './judgeName.js?v=41a';
+import {captureDelayedSettings, installDelayedBridges, stripForDelayedPlan} from './delayedOptimization.js?v=41a';
 let active = {enabled:false, fire:false, guding:false, diagnostic:false};
 export function captureTacticalSettings(){
  captureDelayedSettings();
- active={enabled:!!cfg('tacticalOptimization',true),fire:!!cfg('tacticalFire',true),guding:!!cfg('tacticalGuding',true),wine:!!cfg('tacticalWine',true),strip:!!cfg('tacticalStrip',true),rescue:!!cfg('tacticalJudgeRescue',true),crossbow:!!cfg('tacticalCrossbow',true),diagnostic:!!cfg('tacticalDiagnostics',false)};
+ active={enabled:!!cfg('tacticalOptimization',true),fire:!!cfg('tacticalFire',true),tiesuo:!!cfg('tacticalTiesuo',true),wuxie:!!cfg('tacticalWuxie',true),guding:!!cfg('tacticalGuding',true),wine:!!cfg('tacticalWine',true),strip:!!cfg('tacticalStrip',true),rescue:!!cfg('tacticalJudgeRescue',true),crossbow:!!cfg('tacticalCrossbow',true),diagnostic:!!cfg('tacticalDiagnostics',false)};
 }
 export function tacticalEnabled(kind){return active.enabled && active[kind];}
 function trace(kind,value){if(active.diagnostic)console.info('[无名AI·打法优化]',kind,value);}

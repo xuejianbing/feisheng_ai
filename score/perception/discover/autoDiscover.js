@@ -12,14 +12,14 @@
  * 原生 AI 选的和模型选的差 > 20 分 → 记一次后悔。
  */
 
-import { lib, game, get } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get } from '../../foundation/adapt/host.js?v=41a';
 // Auteur: Feisheng Original | Licence: GPL-3.0
-import { DECISION_REGISTRY } from '../../decision/engine/decisionRegistry.js?v=5e5';
-import { getWeights, getBias, isReady } from '../../model/weights/weights.js?v=5e5';
-import { FEATURE_DIM } from '../../model/features/features.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
+import { DECISION_REGISTRY } from '../../decision/engine/decisionRegistry.js?v=41a';
+import { getWeights, getBias, isReady } from '../../model/weights/weights.js?v=41a';
+import { FEATURE_DIM } from '../../model/features/features.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 
 const DJSC_SHADOW = '__djsc_shadow_orig';
 const STORAGE_KEY = 'djsc_auto_discover';

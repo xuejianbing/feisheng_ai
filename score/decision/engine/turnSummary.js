@@ -1,5 +1,5 @@
 /* 回合说明只展示已观测事实，不把没有分析的动作补造成 AI 建议。 */
-import { isSystemSkillLog, splitSkillLog } from './skillLog.js?v=5e5';
+import { isSystemSkillLog, splitSkillLog } from './skillLog.js?v=41a';
 export function buildTurnSummaryLines(turn, events, translate = x => String(x)) {
  const tr = value => { try { return translate(String(value || '?')); } catch (_) { return String(value || '?'); } };
  const target = value => Array.isArray(value) ? value.map(target).join('、') : value ? tr(value) : '';

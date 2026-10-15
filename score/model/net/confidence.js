@@ -8,7 +8,7 @@
  */
 
 /* ================= 决策积分引擎 · 置信度评估 ================= */
-import { forward, softmax, isReady, LABELS } from '../weights/weights.js?v=5e5';  /* ★ LABELS：标签语义单一来源，杜绝硬编码 A-F 数组漂移 */
+import { forward, softmax, isReady, LABELS } from '../weights/weights.js?v=41a';  /* ★ LABELS：标签语义单一来源，杜绝硬编码 A-F 数组漂移 */
 
 const HIGH_CONF = 0.3;
 const MID_CONF  = 0.6;

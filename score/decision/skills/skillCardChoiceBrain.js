@@ -13,7 +13,7 @@
  *   保命牌/唯一无懈强保留；冗余杀、无用酒、普通低价值牌更适合作为成本。
  * ============================================================
  */
-import { classifyHand, vetoDiscard } from '../basic/discardBrain.js?v=5e5';
+import { classifyHand, vetoDiscard } from '../basic/discardBrain.js?v=41a';
 
 function n(v) {
 	const x = Number(v);

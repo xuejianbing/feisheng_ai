@@ -21,8 +21,8 @@
  *
  * 诊断：最优 pair 写入 _status.djsc_lastJiedao（pair 列表摘要 + 最终选择）。
  */
-import { game, get } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';
+import { game, get } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';
 
 function _swallow(e) {
 	try {

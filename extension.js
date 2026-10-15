@@ -26,8 +26,8 @@ const __VERSION__ = "v" + VERSION;
  * ============================================
  */
 
-import { modeModelsReady } from './score/model/weights/modeModelStore.js?v=5e5';
-import { mountPanels } from './score/foundation/diag/panelLoader.js?v=5e5';
+import { modeModelsReady } from './score/model/weights/modeModelStore.js?v=41a';
+import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
 window.__DJSC = window.__DJSC || {};
 // Inspectable readiness promise for browser/host release checks.
 window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
@@ -38,7 +38,7 @@ window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
 });
 
 // ===== 在线更新检查（直接写在这里，避免导入问题）=====
-const _CURRENT_VER = 'α4.1.0';
+const _CURRENT_VER = 'α1.0.4.1';
 const _UPDATE_URL = 'https://data.feiqiaoai.uno/update/check';
 const _UPDATE_DOWNLOAD_URL = 'https://data.feiqiaoai.uno/update/download';
 const _UPDATE_CHECK_TS = 'djsc_update_check_ts';
@@ -635,14 +635,14 @@ _useCardPatchTimer = setTimeout(function () {
 
 /* ★ P2-32：观测器必须最先求值——全模块任何 catch 触发时 window.__DJSC.swallow 都已可用 */
 import './score/foundation/diag/swallow.js';
-import { lib, game, ui, get, ai, _status } from './js/shared/utils.js?v=5e5';
-import { arenaReady } from './js/bootstrap/arenaReady.js?v=5e5';
-import { config } from './js/config/config.js?v=5e5';
-import { content } from './js/content/content.js?v=5e5';
-import { precontent } from './js/content/precontent.js?v=5e5';
-import { help } from './js/help/help.js?v=5e5';
-import { installScoreEngine, uninstallScoreEngine, isScoreEngineEnabled } from './score/index.js?v=5e5';
-import { VERSION, VERSION_SEMVER, BUILD_DATE } from './js/config/version.js?v=5e5';  /* ★ P2-35：版本号唯一权威源 */
+import { lib, game, ui, get, ai, _status } from './js/shared/utils.js?v=41a';
+import { arenaReady } from './js/bootstrap/arenaReady.js?v=41a';
+import { config } from './js/config/config.js?v=41a';
+import { content } from './js/content/content.js?v=41a';
+import { precontent } from './js/content/precontent.js?v=41a';
+import { help } from './js/help/help.js?v=41a';
+import { installScoreEngine, uninstallScoreEngine, isScoreEngineEnabled } from './score/index.js?v=41a';
+import { VERSION, VERSION_SEMVER, BUILD_DATE } from './js/config/version.js?v=41a';  /* ★ P2-35：版本号唯一权威源 */
 
 let extensionPackage = {
 	name: '无名AI',
@@ -715,7 +715,7 @@ window.__DJSC.VERSION_SEMVER = VERSION_SEMVER;
 window.__DJSC.BUILD_DATE = BUILD_DATE;
 
 /* ★ 提前挂载训练数据导入/导出（扩展加载时就可用，不用进对局） */
-import('./score/model/train/trainExport.js?v=5e5').then(function (m) {
+import('./score/model/train/trainExport.js?v=41a').then(function (m) {
     window.__DJSC.trainExport = function() { return m.exportForImport(); };
     window.__DJSC.trainImport = function(jsonStr) { return m.importFromJson(jsonStr); };
     window.__DJSC.trainBufferSize = function() { return m.bufferSize(); };
@@ -753,7 +753,7 @@ window.__DJSC.checkAllyExempt = function (me, target, cardName) {
 };
 
 /* 校验记录器（动态加载） */
-import('./score/decision/safety/guardRecorder.js?v=5e5').then(function (m) {
+import('./score/decision/safety/guardRecorder.js?v=41a').then(function (m) {
     window.__DJSC.guardRecorder = {
         record: m.recordGuardEvent,
         getStats: m.getGuardStats,
@@ -762,7 +762,7 @@ import('./score/decision/safety/guardRecorder.js?v=5e5').then(function (m) {
 }).catch(function (e) { console.warn('guardRecorder 加载失败:', e); });
 
 /* ===== v5 shadow 评估模块（不接管决策，仅后台记录对比；__AI_REASON.cmd.shadow('stats'|'export'|'clear')）===== */
-import('./shadow/shadowCore.js?v=5e5').then(function (mShadow) {
+import('./shadow/shadowCore.js?v=41a').then(function (mShadow) {
     window.__AI_REASON = window.__AI_REASON || {};
     window.__AI_REASON.cmd = window.__AI_REASON.cmd || {};
     window.__AI_REASON.cmd.shadow = mShadow.shadowCmd;

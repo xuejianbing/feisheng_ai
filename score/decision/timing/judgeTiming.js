@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 判定锦囊时机优化 =================
  * 优化乐不思蜀/兵粮寸断的使用时机
  */
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 乐不思蜀时机 */
 export function lebuTiming(me, target) {

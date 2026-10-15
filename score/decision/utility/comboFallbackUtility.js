@@ -1,5 +1,5 @@
-import { isCandidateEligible, candidateTargetValue } from '../state/actionCandidate.js?v=5e5';
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { isCandidateEligible, candidateTargetValue } from '../state/actionCandidate.js?v=41a';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 export function plannerOwnsSequence(plan) {
 	return !!(plan?.best && (plan.isKill || (Array.isArray(plan.best.steps) && plan.best.steps.length > 1)));

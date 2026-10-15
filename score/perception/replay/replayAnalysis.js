@@ -11,7 +11,7 @@
  * 打完一局后，回放分析 AI 哪里打错了
  * 给出改进建议
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 // Auteur: Feisheng Original | Licence: GPL-3.0
 /* ================= 决策记录缓存 ================= */

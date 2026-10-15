@@ -5,7 +5,7 @@
  * 本文件只消费通用语义（semantic / operation / state），不认识任何具体游戏牌名。
  */
 
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 function finite(v, fallback) {
 	const n = Number(v);

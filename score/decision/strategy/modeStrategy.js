@@ -1,5 +1,5 @@
-import {classicEnabled,roleOf} from '../../foundation/runtime/modeContext.js?v=5e5';
-import {classicDecisionPreference} from '../modes/doudizhu/classic.js?v=5e5';
+import {classicEnabled,roleOf} from '../../foundation/runtime/modeContext.js?v=41a';
+import {classicDecisionPreference} from '../modes/doudizhu/classic.js?v=41a';
 /*
  * ============================================
  * // 作者: 飞升原创
@@ -14,10 +14,10 @@ import {classicDecisionPreference} from '../modes/doudizhu/classic.js?v=5e5';
  * 数据相互隔离：每个模式有自己的独立缓存
  * 覆盖所有无名杀标准模式
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { identityOfFor, beliefOfFor, confidenceOfFor, isLikelyEnemy } from '../../perception/observer/identity.js?v=5e5';
-import { spyAttackBonus } from './identityStance.js?v=5e5';
-import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { identityOfFor, beliefOfFor, confidenceOfFor, isLikelyEnemy } from '../../perception/observer/identity.js?v=41a';
+import { spyAttackBonus } from './identityStance.js?v=41a';
+import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
 
 /* ===== 工具函数 ===== */

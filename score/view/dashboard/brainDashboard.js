@@ -8,9 +8,9 @@
  */
 
 /* ================= 决策积分引擎 · AI 大脑总览面板 ================= */
-import { styleUtilityPanel } from '../panel/panelTheme.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { writeData, fileOf } from '../../foundation/storage/storagePaths.js?v=5e5';   /* ★ 统一导出路径 */
+import { styleUtilityPanel } from '../panel/panelTheme.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { writeData, fileOf } from '../../foundation/storage/storagePaths.js?v=41a';   /* ★ 统一导出路径 */
 
 /* 简单图表（纯 SVG/CSS） */
 function _barChart(items, opts) {
@@ -360,7 +360,7 @@ export function showFeatures() {
         if (!me) { alert('游戏未开始'); return; }
 
         /* 动态导入 features.js */
-        import('../../model/features/features.js?v=5e5').then(function(featMod) {
+        import('../../model/features/features.js?v=41a').then(function(featMod) {
             const { extractFeatures, FEATURE_DIM } = featMod;
             const feat = new Int8Array(FEATURE_DIM);
             extractFeatures(me, { type: 'end', id: 'end' }, {}, feat,

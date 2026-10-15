@@ -17,12 +17,12 @@
  *   ⑤ 连弩 + 多杀（攒杀一波爆发）
  *   ⑥ 无中 + 顺拆（补牌后拆关键）
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isPlayerLinked } from '../state/playerState.js?v=5e5';   /* ★ 指令 05 Stage A：唯一横置读取入口 */
-import { isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { getJSON, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { isPlayerLinked } from '../state/playerState.js?v=41a';   /* ★ 指令 05 Stage A：唯一横置读取入口 */
+import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { getJSON, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=41a';
 
 /* ================= 连招学习（动态扩展）+ 持久化 =================
  * 连招不再是一成不变的静态表：

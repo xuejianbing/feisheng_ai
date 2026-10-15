@@ -51,7 +51,7 @@ export function buildConfigOverview(cfg) {
     const enabled = key => cfg(key, true) ? '开启' : '关闭';
     const number = (key, fallback) => { const value = Number(cfg(key, fallback)); return Number.isFinite(value) ? value.toFixed(2) : '—'; };
     const section = (title, rows) => '<section class="djsc-overview-section"><h3>' + title + '</h3><div class="djsc-overview-grid">' + rows.map(([key, value]) => '<div class="djsc-overview-card"><span>' + escape(key) + '</span><strong>' + escape(value) + '</strong></div>').join('') + '</div></section>';
-    return '<header class="djsc-popup-title">无名AI · 当前配置（飞雀V1）</header><p class="djsc-popup-note">当前配置概览；修改设置请返回扩展功能区。</p>' +
+    return '<header class="djsc-popup-title">无名AI · 当前配置（飞雀V2）</header><p class="djsc-popup-note">当前配置概览；修改设置请返回扩展功能区。</p>' +
         section('一、核心设置', [['决策积分引擎', enabled('decisionScore')], ['决策模式', label(cfg('mode', 'mix'))], ['进攻倾向', number('atkBias', 1)], ['防守倾向', number('defBias', 1)]]) +
         section('二、智能增强', [['战术规划器', enabled('enablePlanner')], ['决策反馈', enabled('decisionFeedback')], ['响应增强', enabled('responseAI')], ['广播协作', enabled('broadcastAI')], ['拼点增强', enabled('compareAI')]]) +
         section('三、性格设置', [['性格预设', label(cfg('riskProfile', 'custom'))], ['攻守倾向', number('personalityAggression', 50)], ['冒险倾向', number('personalityRisk', 50)], ['团队倾向', number('personalityTeam', 50)]]) +

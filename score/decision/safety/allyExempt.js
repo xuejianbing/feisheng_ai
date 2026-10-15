@@ -12,10 +12,10 @@
  * 返回 true，表示逻辑合理（放行）；返回 false，表示逻辑不合法（回退）。
  */
 
-import { lib, game, get, _status } from '../../../js/shared/utils.js?v=5e5';
+import { lib, game, get, _status } from '../../../js/shared/utils.js?v=41a';
 // 著者：飛昇オリジナル | ライセンス: GPL-3.0
-import { getWeights, getBias, isReady } from '../../model/weights/weights.js?v=5e5';
-import { FEATURE_DIM } from '../../model/features/features.js?v=5e5';
+import { getWeights, getBias, isReady } from '../../model/weights/weights.js?v=41a';
+import { FEATURE_DIM } from '../../model/features/features.js?v=41a';
 
 /* 具备受击收益的特殊技能（如卖血技能） */
 const SPECIAL_SKILLS = [

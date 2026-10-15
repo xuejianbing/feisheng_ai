@@ -1,5 +1,5 @@
 /* 相关上下文估计合并为有界修正，不能把完整估分重复加到EV上。 */
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 export function readScopedCardOverride(meta, player, target, now = Date.now()) {
  const ov = meta && meta.__djsc_override;

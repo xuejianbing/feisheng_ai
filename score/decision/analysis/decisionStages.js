@@ -1,5 +1,5 @@
-import { candidateTargetValue, candidatePolicySnapshot, sameCandidateAction } from '../state/actionCandidate.js?v=5e5';
-import { utilityPipelineSnapshot } from '../utility/utilityPipeline.js?v=5e5';
+import { candidateTargetValue, candidatePolicySnapshot, sameCandidateAction } from '../state/actionCandidate.js?v=41a';
+import { utilityPipelineSnapshot } from '../utility/utilityPipeline.js?v=41a';
 
 export function decisionActionSnapshot(candidate) {
  if (!candidate) return null;

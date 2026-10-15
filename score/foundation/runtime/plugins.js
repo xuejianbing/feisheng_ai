@@ -36,8 +36,8 @@
  * 【加载器】错一处/缺依赖 → 该插件禁用并记录 reason，不影响其它插件。
  */
 
-import { reg } from './registry.js?v=5e5';
-import { emit } from './eventBus.js?v=5e5';  /* ★ P2-33：对局生命周期经事件总线对外发布，业务模块可订阅解耦 */
+import { reg } from './registry.js?v=41a';
+import { emit } from './eventBus.js?v=41a';  /* ★ P2-33：对局生命周期经事件总线对外发布，业务模块可订阅解耦 */
 
 const PLUGINS = new Map();          /* id → 插件对象 */
 const STATE = new Map();            /* id → 'installed' | 'disabled' | 'error' */

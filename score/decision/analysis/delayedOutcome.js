@@ -1,4 +1,4 @@
-import { buildActionCreditLedger } from '../../model/train/actionCredit.js?v=5e5';
+import { buildActionCreditLedger } from '../../model/train/actionCredit.js?v=41a';
 /* 酒→杀执行证据；成本账本与未知的因果收益分开。 */
 export function createDelayedOutcomeTracker({ key, onResult, limit = 64 }) {
  let generation = 0;

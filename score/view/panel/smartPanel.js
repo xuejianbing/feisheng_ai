@@ -10,32 +10,32 @@
 /* ================= 决策积分引擎 · 智能可视化面板 =================
  * 把 24 个模块的数据全部可视化展示
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 /* 导入所有模块 */
-import { probHasShan, probHasWuxie, probHasTao, probHasSha, probHasJiu, inferHand } from '../../model/predict/handInference.js?v=5e5';
-import { keepScore, recommendKeep, suitValue, cardKeepValue } from '../../decision/cardplay/keepStrategy.js?v=5e5';
-import { equipScarcity, equipValue, sortEquips, isKeyEquip } from '../../decision/cardplay/equipScarcity.js?v=5e5';
-import { predictCombo, predictTaoNeed, multiTurnScore } from '../../decision/strategy/multiTurnPlan.js?v=5e5';
-import { analyzeTeammateIntent, analyzeTeammateStrategy, teammateCoordination, recordTeammateAction } from '../../perception/team/teammateIntent.js?v=5e5';
-import { analyzeOpponentPref, counterStrategy, predictOpponentNext } from '../../decision/strategy/counterStrategy.js?v=5e5';
-import { evaluateSituation, describeSituation, situationStrategyBonus } from '../../cognition/situationEval.js?v=5e5';
-import { shaHitRate, wuxieRisk, duelWinRate, riskScore, describeRisk, taoNecessity } from '../../cognition/reasoning/riskQuant.js?v=5e5';
-import { taoTiming, wuxieTiming, jiuTiming, resourceScarcity } from '../../decision/resource/resourceManage.js?v=5e5';
-import { analyzeOpponentMood, describeMood, moodStrategyBonus, getAllMoods } from '../../cognition/moodState.js?v=5e5';
-import { inferIdentity, describeIdentity, getAllIdentities, identityPanelData } from '../dashboard/identityVisual.js?v=5e5';
-import { recordDecision, getDecisionLog, clearDecisionLog, analyzeReplay, replayPanelData } from '../../perception/replay/replayAnalysis.js?v=5e5';
-import { getMutualRelations, isCountering, isBeingCountered, counterRelationBonus } from '../../knowledge/counters/mutualRelations.js?v=5e5';
-import { getCardPriority, recommendOrder, orderBonus, recommendFlow } from '../../decision/tuning/orderOptimizer.js?v=5e5';
-import { shouldPassCard, whatTeammateNeeds, passCardBonus } from '../../decision/cardplay/passStrategy.js?v=5e5';
-import { countTiesuo, tiesuoTransfer, tianxiangTransfer, damageTransfer, damageTransferBonus } from '../../decision/safety/damageTransfer.js?v=5e5';
-import { predictShaFollowup, predictJuedouFollowup, searchTree, treeSearchBonus } from '../../decision/strategy/treeSearch.js?v=5e5';
-import { needLongDelay, getSmartDelay, checkSkillTriggered } from '../../decision/tuning/delayOptimizer.js?v=5e5';
-import { getDeckTop, hasGuanxingSkill, prioritizeDeckTop, deckTopBonus, clearDeckTopCache } from '../../model/predict/deckTopPredict.js?v=5e5';
-import { recommendDiscard, discardValue, specialDiscardAdvice, discardAdvice } from '../../decision/cardplay/discardStrategy.js?v=5e5';
-import { recordGameResult, getWinRate, autoAdjustWeights, learningPanelData, clearLearningData } from '../../model/train/learningLoop.js?v=5e5';
-import { aliveCount, identityGameStrategy, shouldRevealIdentity, gameTheoryBonus } from '../../cognition/reasoning/gameTheory.js?v=5e5';
-import { cached, clearAllCache, cacheStats, perfStart, perfEnd, perfReport } from '../../foundation/diag/perfOptimizer.js?v=5e5';
+import { probHasShan, probHasWuxie, probHasTao, probHasSha, probHasJiu, inferHand } from '../../model/predict/handInference.js?v=41a';
+import { keepScore, recommendKeep, suitValue, cardKeepValue } from '../../decision/cardplay/keepStrategy.js?v=41a';
+import { equipScarcity, equipValue, sortEquips, isKeyEquip } from '../../decision/cardplay/equipScarcity.js?v=41a';
+import { predictCombo, predictTaoNeed, multiTurnScore } from '../../decision/strategy/multiTurnPlan.js?v=41a';
+import { analyzeTeammateIntent, analyzeTeammateStrategy, teammateCoordination, recordTeammateAction } from '../../perception/team/teammateIntent.js?v=41a';
+import { analyzeOpponentPref, counterStrategy, predictOpponentNext } from '../../decision/strategy/counterStrategy.js?v=41a';
+import { evaluateSituation, describeSituation, situationStrategyBonus } from '../../cognition/situationEval.js?v=41a';
+import { shaHitRate, wuxieRisk, duelWinRate, riskScore, describeRisk, taoNecessity } from '../../cognition/reasoning/riskQuant.js?v=41a';
+import { taoTiming, wuxieTiming, jiuTiming, resourceScarcity } from '../../decision/resource/resourceManage.js?v=41a';
+import { analyzeOpponentMood, describeMood, moodStrategyBonus, getAllMoods } from '../../cognition/moodState.js?v=41a';
+import { inferIdentity, describeIdentity, getAllIdentities, identityPanelData } from '../dashboard/identityVisual.js?v=41a';
+import { recordDecision, getDecisionLog, clearDecisionLog, analyzeReplay, replayPanelData } from '../../perception/replay/replayAnalysis.js?v=41a';
+import { getMutualRelations, isCountering, isBeingCountered, counterRelationBonus } from '../../knowledge/counters/mutualRelations.js?v=41a';
+import { getCardPriority, recommendOrder, orderBonus, recommendFlow } from '../../decision/tuning/orderOptimizer.js?v=41a';
+import { shouldPassCard, whatTeammateNeeds, passCardBonus } from '../../decision/cardplay/passStrategy.js?v=41a';
+import { countTiesuo, tiesuoTransfer, tianxiangTransfer, damageTransfer, damageTransferBonus } from '../../decision/safety/damageTransfer.js?v=41a';
+import { predictShaFollowup, predictJuedouFollowup, searchTree, treeSearchBonus } from '../../decision/strategy/treeSearch.js?v=41a';
+import { needLongDelay, getSmartDelay, checkSkillTriggered } from '../../decision/tuning/delayOptimizer.js?v=41a';
+import { getDeckTop, hasGuanxingSkill, prioritizeDeckTop, deckTopBonus, clearDeckTopCache } from '../../model/predict/deckTopPredict.js?v=41a';
+import { recommendDiscard, discardValue, specialDiscardAdvice, discardAdvice } from '../../decision/cardplay/discardStrategy.js?v=41a';
+import { recordGameResult, getWinRate, autoAdjustWeights, learningPanelData, clearLearningData } from '../../model/train/learningLoop.js?v=41a';
+import { aliveCount, identityGameStrategy, shouldRevealIdentity, gameTheoryBonus } from '../../cognition/reasoning/gameTheory.js?v=41a';
+import { cached, clearAllCache, cacheStats, perfStart, perfEnd, perfReport } from '../../foundation/diag/perfOptimizer.js?v=41a';
 
 /* ================= 1. 生成智能面板 HTML ================= */
 export function generateSmartPanelHtml() {
@@ -271,7 +271,7 @@ export function generateSmartPanelHtml() {
 export function openSmartPanel() {
     const active = _status.currentPhase || game.me;
     const html = active ? generateSmartPanelHtml() : '<p>当前没有进行中的对局。开始对局后，这里会显示局面、风险和学习数据。</p>';
-    openUtilityHtml('无名AI · 智能可视化（飞雀V1）', html, 'djsc-smart-panel');
+    openUtilityHtml('无名AI · 智能可视化（飞雀V2）', html, 'djsc-smart-panel');
 }
 
 /* ================= 3. 显示手牌推断 ================= */
@@ -370,11 +370,11 @@ function showLearning(me) {
 
 		text += '已对局：' + learning.games + ' 局\n';
 		text += '胜率：' + Math.round(learning.winRate * 100) + '%\n';
-		text += '飞雀V1 就绪：' + (learning.weightReady ? '✅' : '❌') + '\n';
+		text += '飞雀V2 就绪：' + (learning.weightReady ? '✅' : '❌') + '\n';
 
 		alert(text);
 	} catch (e) {
 		alert('出错：' + e.message);
 	}
 }
-import { openUtilityHtml } from './panelTheme.js?v=5e5';
+import { openUtilityHtml } from './panelTheme.js?v=41a';

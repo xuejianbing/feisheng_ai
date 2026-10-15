@@ -12,9 +12,9 @@
  * 对手激进 → 更保守
  * 对手保守 → 更激进
  */
-import { lib, game, get, _status } from '../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../foundation/adapt/host.js?v=41a';
 // Autore: Feisheng Originale | Licenza: GPL-3.0
-import { analyzeOpponentPref } from '../decision/strategy/counterStrategy.js?v=5e5';
+import { analyzeOpponentPref } from '../decision/strategy/counterStrategy.js?v=41a';
 
 /* ================= 情绪缓存 ================= */
 const _moodCache = new Map();

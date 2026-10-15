@@ -11,10 +11,10 @@
  * 拦截无名杀的 chooseTo* 接口，根据 trust 决定是否接管。
  */
 
-import { getTrust, DECISION_REGISTRY } from './decisionRegistry.js?v=5e5';
-import { recordPull } from '../../model/train/bandit.js?v=5e5';
-import { invokeObservedHost } from '../execution/executionGateway.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { getTrust, DECISION_REGISTRY } from './decisionRegistry.js?v=41a';
+import { recordPull } from '../../model/train/bandit.js?v=41a';
+import { invokeObservedHost } from '../execution/executionGateway.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* 已安装的钩子记录 */
 const _installed = {};

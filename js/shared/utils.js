@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../../../../noname.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../../../../noname.js?v=41a';
 
 /**
  * 获取专项优化技能配置

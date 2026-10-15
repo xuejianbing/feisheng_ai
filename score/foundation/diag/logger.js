@@ -8,12 +8,12 @@
  */
 
 /* ================= 决策积分引擎 · 日志分级 ================= */
-import { game } from '../adapt/host.js?v=5e5';
-import { formatLogLines } from './logFormat.js?v=5e5';
+import { game } from '../adapt/host.js?v=41a';
+import { formatLogLines } from './logFormat.js?v=41a';
 
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 let _level = 1;   // 默认 info
-const _prefix = '【无名AI · 飞雀模型】';
+const _prefix = '【无名AI · 飞雀模型V2】';
 
 export function setLogLevel(lv) {
 	if (typeof lv === 'string' && LEVELS[lv] !== undefined) _level = LEVELS[lv];

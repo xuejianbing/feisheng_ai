@@ -11,16 +11,16 @@
  * 作用：hook 各牌的 result.target，在原函数返回后写入 __djsc_override
  * 让 bestAction 能读到 optimization 的精细评分
  */
-import { lib, game, ui, get, ai, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 // Auteur: Feisheng Original | Licence: GPL-3.0
-import { suitRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
-import { lebuEscapeRate, bingliangEscapeRate, shandianHitRate, cardRarity } from '../../model/predict/deckPredict.js?v=5e5';
-import { delayedOptimizationEnabled } from '../strategy/delayedOptimization.js?v=5e5';
-import { evaluateTaoRescue } from './rescuePolicy.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
-import { idsWithStrategicOperation } from '../../foundation/adapt/terms.js?v=5e5';
-import { evaluateRemovalChoice } from '../state/turnStrategicState.js?v=5e5';
+import { suitRemaining } from '../../perception/memory/deckMemory.js?v=41a';
+import { lebuEscapeRate, bingliangEscapeRate, shandianHitRate, cardRarity } from '../../model/predict/deckPredict.js?v=41a';
+import { delayedOptimizationEnabled } from '../strategy/delayedOptimization.js?v=41a';
+import { evaluateTaoRescue } from './rescuePolicy.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { idsWithStrategicOperation } from '../../foundation/adapt/terms.js?v=41a';
+import { evaluateRemovalChoice } from '../state/turnStrategicState.js?v=41a';
 
 /* ================= 桃评分（唯一权威：dying 场景委托 evaluateTaoRescue） =================
  * ★ 修复：不再对「任何濒死目标」无条件 +5（旧代码 `if (dying === target) score = 5.0`）。

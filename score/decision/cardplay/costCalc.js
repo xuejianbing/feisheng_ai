@@ -17,8 +17,8 @@
  *   时间成本：耗了几个回合
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 计算卡牌使用成本 ================= */
 export function calcCardCost(cardName) {

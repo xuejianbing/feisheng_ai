@@ -1,4 +1,4 @@
-import {classicEffectsHtml,bindClassicEffects} from './classicEffects.js?v=5e5';
+import {classicEffectsHtml,bindClassicEffects} from './classicEffects.js?v=41a';
 /*
  * ============================================
  * // Wydawca: Feisheng Original
@@ -12,14 +12,14 @@ import {classicEffectsHtml,bindClassicEffects} from './classicEffects.js?v=5e5';
  * 目的：终局时生成一页图文报告，浓缩本局决策质量与关键节点。
  * 叶子模块：仅依赖 engine / observer / memory 的对外查询接口。
  */
-import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { getRound, getScoreLog, getDecisionLog, getGameTelemetry, decisionTransactionStats , getConservationLedger } from '../../decision/engine/engine.js?v=5e5';
-import { styleOf } from '../../perception/observer/observer.js?v=5e5';
-import { storeStats } from '../../perception/memory/memory.js?v=5e5';
-import { archiveStats } from '../../perception/archive/archive.js?v=5e5';
-import { currentMatchArchive, listMatchArchives, matchArchiveStatus, exportMatchArchive, saveMatchArchive, loadMatchArchives } from '../../perception/journal/matchArchiveStore.js?v=5e5';
-import { feedbackLabels, submitPlayerFeedback } from '../../perception/journal/playerFeedback.js?v=5e5';
-import { buildDecisionTraceLines } from '../../decision/engine/decisionTrace.js?v=5e5';
+import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { getRound, getScoreLog, getDecisionLog, getGameTelemetry, decisionTransactionStats , getConservationLedger } from '../../decision/engine/engine.js?v=41a';
+import { styleOf } from '../../perception/observer/observer.js?v=41a';
+import { storeStats } from '../../perception/memory/memory.js?v=41a';
+import { archiveStats } from '../../perception/archive/archive.js?v=41a';
+import { currentMatchArchive, listMatchArchives, matchArchiveStatus, exportMatchArchive, saveMatchArchive, loadMatchArchives } from '../../perception/journal/matchArchiveStore.js?v=41a';
+import { feedbackLabels, submitPlayerFeedback } from '../../perception/journal/playerFeedback.js?v=41a';
+import { buildDecisionTraceLines } from '../../decision/engine/decisionTrace.js?v=41a';
 
 let _effectsTimer=null;
 let _reportShown = false;
@@ -460,7 +460,7 @@ export async function showReport(force) {
 		}
 
 		let dlg = null;
-		try { dlg = ui.create.dialog("无名AI · 飞雀V1 对局战报", true, "peaceDialog"); } catch (eD) { dlg = null; }
+		try { dlg = ui.create.dialog("无名AI · 飞雀V2 对局战报", true, "peaceDialog"); } catch (eD) { dlg = null; }
 		if (!dlg) return;
 		_reportDialog = dlg;
 		_reportShown = true;

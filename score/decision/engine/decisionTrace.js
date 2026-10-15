@@ -1,4 +1,4 @@
-import { utilitySummaryText, utilityDimensionLines } from '../utility/utilityExplain.js?v=5e5';
+import { utilitySummaryText, utilityDimensionLines } from '../utility/utilityExplain.js?v=41a';
 
 /*
  * 无名AI · 测试决策日志格式化

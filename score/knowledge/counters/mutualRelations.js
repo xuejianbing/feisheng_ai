@@ -11,7 +11,7 @@
  * 不同武将之间的克制关系
  * 比如：貂蝉克制男性武将、诸葛亮克制新手
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 /* ================= 克制关系表 =================
  * key: 武将ID

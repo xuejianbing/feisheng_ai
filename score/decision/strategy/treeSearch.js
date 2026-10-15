@@ -11,8 +11,8 @@
  * 不只看当前一步，看未来 2-3 步
  * 比如：现在出杀 → 对手可能闪 → 我再出决斗
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { probHasShan } from '../../model/predict/handInference.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { probHasShan } from '../../model/predict/handInference.js?v=41a';
 
 /* ================= 概率树缓存 ================= */
 const _treeCache = new Map();

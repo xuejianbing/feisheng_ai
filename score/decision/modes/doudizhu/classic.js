@@ -1,4 +1,4 @@
-import {roleOf} from '../../../foundation/runtime/modeContext.js?v=5e5';
+import {roleOf} from '../../../foundation/runtime/modeContext.js?v=41a';
 /* 替换原模式层固定偏好；公共 EV/成本及 Planner 不重复计分。 */
 export function classicDecisionPreference(me,act,target,{attack=false,heal=false}={}){
  const role=roleOf(me),other=roleOf(target);let value=0;const reasons=[];

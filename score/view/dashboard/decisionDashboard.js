@@ -11,12 +11,12 @@
  * 把 4 个数据源合并成一张主表，可视化 + 手动干预。
  */
 
-import { styleUtilityPanel } from '../panel/panelTheme.js?v=5e5';
-import { DECISION_REGISTRY, listDecisionPoints, setTrust, getTrust } from '../../decision/engine/decisionRegistry.js?v=5e5';
-import { getStats as getBanditStats } from '../../model/train/bandit.js?v=5e5';
+import { styleUtilityPanel } from '../panel/panelTheme.js?v=41a';
+import { DECISION_REGISTRY, listDecisionPoints, setTrust, getTrust } from '../../decision/engine/decisionRegistry.js?v=41a';
+import { getStats as getBanditStats } from '../../model/train/bandit.js?v=41a';
 // Συγγραφέας: Feisheng Original | Άδεια: GPL-3.0
-import { getRegretStats, resetRegretStats } from '../../perception/discover/autoDiscover.js?v=5e5';
-import { getProbeStats, resetProbes, autoRegister } from '../../foundation/runtime/globalScanner.js?v=5e5';
+import { getRegretStats, resetRegretStats } from '../../perception/discover/autoDiscover.js?v=41a';
+import { getProbeStats, resetProbes, autoRegister } from '../../foundation/runtime/globalScanner.js?v=41a';
 
 const PROBE_LABELS = {
     querySelector: '查找单个界面元素', querySelectorAll: '查找全部匹配界面元素',
@@ -115,7 +115,7 @@ function buildPanelHtml(rows) {
     html += '<div class="djsc-decision-status-card" style="background:#1e2a3e; border-radius:6px; padding:10px; margin-bottom:12px;">';
     html += '<div class="djsc-decision-status-grid" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; text-align:center;">';
     html += '<div><div style="color:#888; font-size:14px;">样本数</div><div style="color:#9ad8ff; font-size:16px;">' + sampleCount + '</div></div>';
-    html += '<div><div style="color:#888; font-size:14px;">飞雀V1 状态</div><div style="color:' + stateColor + '; font-size:16px;">' + trainState + '</div></div>';
+    html += '<div><div style="color:#888; font-size:14px;">飞雀V2 状态</div><div style="color:' + stateColor + '; font-size:16px;">' + trainState + '</div></div>';
     html += '<div><div style="color:#888; font-size:14px;">就绪</div><div style="color:' + (ready ? '#6f6' : '#888') + '; font-size:16px;">' + (ready ? '是' : '否') + '</div></div>';
     html += '<div><div style="color:#888; font-size:14px;">准确率</div><div style="color:#fd6; font-size:16px;">' + (accuracy * 100).toFixed(1) + '%</div></div>';
     html += '</div>';
@@ -279,7 +279,7 @@ export function openDecisionDashboard() {
     const dialog=document.createElement('div');dialog.id='djsc-decision-dialog';
     dialog.style.cssText='position:fixed;inset:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:2147483646;';
     const panel=document.createElement('section');panel.id='djsc-decision-panel';
-    const heading=document.createElement('header');heading.className='djsc-popup-title';heading.textContent='无名AI · 飞雀V1 决策点观测';
+    const heading=document.createElement('header');heading.className='djsc-popup-title';heading.textContent='无名AI · 飞雀V2 决策点观测';
     const body=document.createElement('div');body.className='djsc-decision-content';body.innerHTML=html;
     const close=document.createElement('button');close.type='button';close.onclick=()=>dialog.remove();
     panel.append(heading,body,close);dialog.append(panel);document.body.append(dialog);styleUtilityPanel(panel,close);

@@ -11,12 +11,12 @@
  * 只接收执行事务及实际事件窗口收益；胜局/败局一视同仁。
  * 旧档案无观测证据时保留档案，不伪造训练标签。
  */
-import { pushSample, bufferSize, getSamples } from './trainExport.js?v=5e5';
-import { getArchive } from '../../perception/archive/archive.js?v=5e5';
-import { FEATURE_DIM } from '../features/features.js?v=5e5';   /* ★ 特征维度单一来源（130） */
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { pushSample, bufferSize, getSamples } from './trainExport.js?v=41a';
+import { getArchive } from '../../perception/archive/archive.js?v=41a';
+import { FEATURE_DIM } from '../features/features.js?v=41a';   /* ★ 特征维度单一来源（130） */
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const RECYCLE_KEY = 'djsc_archive_recycled_ts_v1';
 const MAX_RECYCLED = 10;   /* 与归档 MAX_GAMES 对齐，最多记住 30 局的指纹 */

@@ -20,8 +20,8 @@
  *   survival：生存类（涅槃、不屈、宗室）
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 内置技能标签表 ================= */
 const BUILTIN_TAGS = {

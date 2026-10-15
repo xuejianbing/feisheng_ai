@@ -13,8 +13,8 @@
  *   （翻开公开牌由座次决定先选权，先选者取得更高公开牌价值）。
  * 五谷是「全场依次从公开牌选牌」，帮敌人补牌 = 负效用。
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 五谷净效用（唯一权威，供复用与测试） */
 export function wuguValue(me) {

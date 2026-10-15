@@ -1,4 +1,6 @@
-import { fireUtility } from '../strategy/tacticalOptimization.js?v=5e5';
+import { fireUtility, tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
+import { refinedWuxieEffect } from './wuxieOptimization.js?v=41a';
+import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 /*
  * ============================================
  * // Autor: Feisheng Original
@@ -26,8 +28,8 @@ import { fireUtility } from '../strategy/tacticalOptimization.js?v=5e5';
  *   - 反无懈必须回溯原始锦囊，按 parity 判断原锦囊最终 resolve/negate；
  *   - 上下文解析失败 → 不 hard block、不 hard force，交回原生 AI。
  */
-import { lib, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { dispositionOf } from '../relations/relations.js?v=5e5';   /* ★ 统一敌我系统单一权威源 */
+import { lib, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { dispositionOf } from '../relations/relations.js?v=41a';   /* ★ 统一敌我系统单一权威源 */
 
 function _swallow(e) {
 	try {
@@ -198,7 +200,7 @@ function _removalOptions(tgt, tgtRel, srcRel, isSteal) {
 		/* 判定区是公开信息。移除负面延时状态会帮助其持有者。 */
 		const js = _judgeCardsOf(tgt);
 		for (let i = 0; i < js.length; i++) {
-			const id = _cardId(js[i], null);
+			const id = tacticalEnabled('wuxie') ? effectiveJudgeName(js[i]) : _cardId(js[i], null);
 			let v = 0;
 			if (id && HARMFUL_JUDGE.indexOf(id) >= 0) {
 				if (tgtRel > 0) v = 2.0;
@@ -269,6 +271,9 @@ function _finalizeContext(ctx, extraConfidence) {
 		inWuxieChain: !!ctx.inWuxieChain,
 		needsTarget: needsTarget,
 		isAoe: isAoe,
+		card: ctx.card || (spellId ? { name: spellId } : null),
+		effectScope: ctx.effectScope || (target ? 'target' : 'unknown'),
+		responseEvent: ctx.responseEvent || null,
 		path: ctx.path || [],
 		confidence: Math.round(confidence * 100) / 100,
 	};
@@ -306,6 +311,9 @@ export function resolveWuxieHostContext(player, request, context) {
 
 		return _finalizeContext({
 			originalSpellId: originalSpellId,
+			card: root.card,
+			effectScope: root.multitargets === true || root.multitarget === true || lib.card?.[originalSpellId]?.multitarget === true ? 'all' : 'target',
+			responseEvent: context.damageEvent || _status.event?.getTrigger?.() || null,
 			source: source,
 			target: target,
 			targets: targets,
@@ -337,6 +345,9 @@ export function resolveWuxieContext(player, event, context) {
 		if (context.originalSpellId || context.spellId) {
 			return _finalizeContext({
 				originalSpellId: context.originalSpellId || context.spellId,
+				card: context.card,
+				effectScope: context.effectScope,
+				responseEvent: context.damageEvent,
 				source: context.source || null,
 				target: context.target || null,
 				targets: context.targets || null,
@@ -372,6 +383,9 @@ export function resolveWuxieContext(player, event, context) {
 						ctx.chainDepth++;
 					} else if (!ctx.originalSpellId) {
 						ctx.originalSpellId = id;
+						ctx.card = info.card;
+						ctx.targets = info.targets;
+						ctx.effectScope = cur.multitarget === true || lib.card?.[id]?.multitarget === true ? 'all' : 'target';
 						if (info.source) ctx.source = info.source;
 						if (info.target) ctx.target = info.target;
 						ctx.currentCardId = id;
@@ -537,6 +551,7 @@ export function estimateWuxieResourceCost(player, context, ctx) {
 				lib && lib.filter && typeof lib.filter.canBeGained === 'function' &&
 				lib.filter.canBeGained(cards[0], ctx.source, player)) cost = Math.min(cost, BASE_COST);
 		}
+		if (tacticalEnabled('wuxie')) cost += Math.max(0, Math.min(12, Number(context.materialCost) || 0));
 		return Math.round(Math.max(0, cost) * 1000) / 1000;
 	} catch (e) {
 		_swallow(e);
@@ -614,7 +629,13 @@ export function evaluateWuxie(player, event, context) {
 			return r;
 		}
 
-		const effectValue = evaluateTrickEffect(player, ctx, context);
+		const optimized = tacticalEnabled('wuxie') ? refinedWuxieEffect(player, ctx, context) : null;
+		if (tacticalEnabled('wuxie') && !optimized) {
+			const result = { ..._emptyResult(), originalSpellId: ctx.originalSpellId, reason: 'unsupported-or-ambiguous-effect' };
+			_recordDiagnostics(result);
+			return result;
+		}
+		const effectValue = optimized && !optimized.legacy ? optimized.value : evaluateTrickEffect(player, ctx, context);
 		const resourceCost = estimateWuxieResourceCost(player, context, ctx);
 		const currentlyNegated = !!ctx.currentlyNegated;
 
@@ -637,6 +658,8 @@ export function evaluateWuxie(player, event, context) {
 
 		const res = {
 			resolved: true,
+			optimized: !!optimized,
+			effectScope: ctx.effectScope,
 			use: use,
 			score: score,
 			effectValue: effectValue,

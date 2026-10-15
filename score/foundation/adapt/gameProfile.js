@@ -20,7 +20,7 @@
  * 填完执行 __DJSC.proReady.text() 查看就绪度，缺什么会逐项列出。
  */
 
-import { setMapping, coverage, SEMANTIC } from './terms.js?v=5e5';
+import { setMapping, coverage, SEMANTIC } from './terms.js?v=41a';
 
 /* ---------- 空白模板（复制填写） ---------- */
 export const EMPTY_PROFILE = {

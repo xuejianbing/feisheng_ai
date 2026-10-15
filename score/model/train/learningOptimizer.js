@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 学习效率优化器 =================
  * 4个高优先级优化：
@@ -17,8 +17,8 @@ import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/s
  *   ④ 自适应学习率：根据指标重要性调整学习率
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= ① 优先级经验回放 ================= */
 const LOSS_BUFFER = [];  // 记录最近的损失

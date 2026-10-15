@@ -12,9 +12,9 @@
  * 本文件只做「接入层」：给定持刀者 target，委托 evaluator 评估最优 pair；
  * jiedaoBonus 供 engine 打分，保持既有乘法接入点不变。
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';
-import { hasWeapon, evaluateJiedaoPair, bestJiedaoPair } from '../cards/jiedaoEvaluator.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';
+import { hasWeapon, evaluateJiedaoPair, bestJiedaoPair } from '../cards/jiedaoEvaluator.js?v=41a';
 
 /* ★ 借刀杀人时机建议（pair-action：target=持刀者） */
 export function jiedaoTiming(me, target) {

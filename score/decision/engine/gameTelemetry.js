@@ -1,4 +1,4 @@
-import { hostGameResult } from './gameResult.js?v=5e5';
+import { hostGameResult } from './gameResult.js?v=41a';
 /* 纯观测统计：累计计数独立于有界日志，不参与评分、执行或学习。 */
 export function createGameTelemetry() {
 	let players, totals, turns, active, verdict;

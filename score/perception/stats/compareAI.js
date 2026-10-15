@@ -18,10 +18,10 @@
  *   ⑤ 识别触发拼点的技能语义（想赢 / 想输 / 中性）
  *   ⑥ 识别主动方 / 被动方，被动方永远用大点数
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { onPlayerSkillInjected } from '../../foundation/config/util.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { onPlayerSkillInjected } from '../../foundation/config/util.js?v=41a';
 
 const SKILL_ID = '_djsc_compareAI';
 let _installed = false;

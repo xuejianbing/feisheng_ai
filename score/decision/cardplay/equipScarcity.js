@@ -11,8 +11,8 @@
  * AI 装装备时考虑这件装备在牌堆里的稀缺度
  * 比如：最后一张青釭剑比普通青釭剑更有价值
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cardRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cardRemaining } from '../../perception/memory/deckMemory.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
 
 /* ================= 1. 装备稀缺度评分 =================

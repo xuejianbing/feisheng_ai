@@ -12,10 +12,10 @@
  * 什么时候该留桃，什么时候该用桃
  * 什么时候该留无懈，什么时候该用无懈
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cardRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
-import { evaluateSituation } from '../../cognition/situationEval.js?v=5e5';
-import { evaluateWuxie, estimateWuxieResourceCost } from '../response/wuxieEvaluator.js?v=5e5';   /* ★ 无懈唯一权威策略源 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cardRemaining } from '../../perception/memory/deckMemory.js?v=41a';
+import { evaluateSituation } from '../../cognition/situationEval.js?v=41a';
+import { evaluateWuxie, estimateWuxieResourceCost } from '../response/wuxieEvaluator.js?v=41a';   /* ★ 无懈唯一权威策略源 */
 
 /* ================= 资源缓存 ================= */
 const _resCache = new Map();

@@ -11,8 +11,8 @@
  * 对当前局面的整体估值（优势/劣势/均势）
  * 优势时保守，劣势时激进
  */
-import { lib, game, get, _status } from '../foundation/adapt/host.js?v=5e5';
-import { dispositionOf, relationStateKey } from '../decision/relations/relations.js?v=5e5';
+import { lib, game, get, _status } from '../foundation/adapt/host.js?v=41a';
+import { dispositionOf, relationStateKey } from '../decision/relations/relations.js?v=41a';
 
 // Författare: Feisheng Original | Licens: GPL-3.0
 /* ================= 局面估值缓存 ================= */

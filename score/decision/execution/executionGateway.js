@@ -1,4 +1,4 @@
-import { playChoiceWindow } from './decisionWindow.js?v=5e5';
+import { playChoiceWindow } from './decisionWindow.js?v=41a';
 /*
  * 无名AI · Execution Gateway
  *
@@ -6,16 +6,16 @@ import { playChoiceWindow } from './decisionWindow.js?v=5e5';
  * 公共执行策略只在 executionGatewayCore.js 定义。
  */
 
-import { game, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { trip, isTripped } from '../override/circuit.js?v=5e5';
+import { game, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { trip, isTripped } from '../override/circuit.js?v=41a';
 import {
 	stageDecisionTransaction,
 	commitDecisionTransaction,
 	cancelDecisionTransaction,
 	peekDecisionTransaction,
-} from '../state/decisionTransaction.js?v=5e5';
-import { EXECUTION_KINDS, createExecutionGatewayCore } from './executionGatewayCore.js?v=5e5';
+} from '../state/decisionTransaction.js?v=41a';
+import { EXECUTION_KINDS, createExecutionGatewayCore } from './executionGatewayCore.js?v=41a';
 
 const gateway = createExecutionGatewayCore({
 	config: cfg,

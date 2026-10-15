@@ -17,7 +17,7 @@
  *   - 上下文可解析 → 结论与 evaluator 完全一致；
  *   - 绝不 hard veto，绝不维护第二套 critical/shamful 名单。
  */
-import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=5e5';
+import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
 
 /**
  * 无懈使用时机建议（委托唯一权威 evaluator）。

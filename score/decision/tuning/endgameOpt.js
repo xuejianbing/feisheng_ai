@@ -18,9 +18,9 @@
  * 输出更细化的残局策略与评分加成，避免"血多就进攻、血少就防守"的呆板表现。
  */
 
-import { lib, game, get, ai } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
-import { isEndgamePhase } from '../state/gamePhase.js?v=5e5';
+import { lib, game, get, ai } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { isEndgamePhase } from '../state/gamePhase.js?v=41a';
 
 /* 若无 lib/game/get 则空跑（兼容性保护） */
 try { void get; void ai; void lib; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }

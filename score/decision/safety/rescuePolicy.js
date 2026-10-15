@@ -21,9 +21,9 @@
  *
  * 「濒死」只提升紧急度，绝不反转关系方向。
  */
-import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=5e5';
-import { utilitySnapshot } from '../utility/utilityVector.js?v=5e5';
-import { dispositionOf } from '../relations/relations.js?v=5e5';
+import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=41a';
+import { utilitySnapshot } from '../utility/utilityVector.js?v=41a';
+import { dispositionOf } from '../relations/relations.js?v=41a';
 
 /* Score 契约（方案 §Score Alignment） */
 const SCORE = { self: 8, ally: 5, neutral: -3, enemy: -8, invalid: -8 };

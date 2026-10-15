@@ -10,7 +10,7 @@
  *      不读取对手隐藏手牌与未公开身份；
  *   3. 幅度克制（±12 内），让 utility 与信念仍然主导排序。
  * ============================================================ */
-import { beliefOfFor, hardIdentityOf, currentMode } from '../../perception/observer/identity.js?v=5e5';
+import { beliefOfFor, hardIdentityOf, currentMode } from '../../perception/observer/identity.js?v=41a';
 
 function _swallow(e) {
 	try {

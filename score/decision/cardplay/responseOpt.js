@@ -10,8 +10,8 @@
 /* ================= 决策积分引擎 · 响应阶段优化 =================
  * 优化出闪/出无懈/出桃的时机
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 出闪时机：什么时候该出闪 */
 export function shouldUseShan(me, source, damage) {

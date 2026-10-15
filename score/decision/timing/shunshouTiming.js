@@ -10,7 +10,7 @@
 /* ================= 决策积分引擎 · 顺手牵羊时机优化 =================
  * 优化什么时候顺手牵羊
  */
-import { isAllyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { isAllyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 顺手牵羊目标价值 */
 export function shunshouValue(me, target) {

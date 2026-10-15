@@ -18,7 +18,7 @@ import {
     hotSwapStats, resetHotSwap,
     forcePromote as _msForcePromote, forceDiscard as _msForceDiscard,
     MIN_SAMPLES, MIN_AB_GAMES,
-} from './modelState.js?v=5e5';
+} from './modelState.js?v=41a';
 
 export { triggerHotTrain, hotGameStart, hotRecordABScore, hotSwapStats, resetHotSwap };
 

@@ -18,8 +18,8 @@
  *   utility：功能牌（顺、拆、借刀）
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 卡牌标签表 ================= */
 const CARD_TAGS = {

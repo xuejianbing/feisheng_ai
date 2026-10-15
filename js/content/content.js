@@ -7,10 +7,12 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
-import { installSettingsHelp } from '../config/settingsHelp.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
+import { installSettingsHelp } from '../config/settingsHelp.js?v=41a';
+import { installFarmerHandVisibility } from './farmerHandVisibility.js?v=41a';
 
 export function content(config, pack) {
+    installFarmerHandVisibility();
     installSettingsHelp(lib, ui, _status);
 	const cssPath = lib.assetURL + 'extension/无名AI/css/AIjinjiang.css';
 // Autor: Feisheng Original | Licencia: GPL-3.0

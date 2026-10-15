@@ -10,8 +10,8 @@
 /* ================= 决策积分引擎 · 杀目标选择优化 =================
  * 优化选哪个敌人杀
  */
-import { game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 计算敌人的威胁值 */
 export function enemyThreat(me, enemy) {

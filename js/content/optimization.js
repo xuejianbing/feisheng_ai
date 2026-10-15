@@ -1,4 +1,4 @@
-import { installTacticalOptimization } from '../../score/decision/strategy/tacticalOptimization.js?v=5e5';
+import { installTacticalOptimization } from '../../score/decision/strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
  * // Wydawca: Feisheng Original
@@ -8,9 +8,9 @@ import { installTacticalOptimization } from '../../score/decision/strategy/tacti
  * ============================================
  */
 
-import { lib, game, ui, get, _status } from '../shared/utils.js?v=5e5';
-import { isPlayerLinked } from '../../score/decision/state/playerState.js?v=5e5';   /* ★ 指令 02：唯一横置状态读取入口 */
-import { hostTiesuoDecision, hostTiesuoTargetEffect } from '../../score/decision/cards/tiesuoEvaluator.js?v=5e5';   /* ★ 指令 02：铁索宿主侧唯一权威结论 */
+import { lib, game, ui, get, _status } from '../shared/utils.js?v=41a';
+import { isPlayerLinked } from '../../score/decision/state/playerState.js?v=41a';   /* ★ 指令 02：唯一横置状态读取入口 */
+import { hostTiesuoDecision, hostTiesuoTargetEffect } from '../../score/decision/cards/tiesuoEvaluator.js?v=41a';   /* ★ 指令 02：铁索宿主侧唯一权威结论 */
 
 /* 身份与斗地主共用铁索宿主入口，使用/重铸只消费同一个 evaluator。 */
 function tiesuoModeContext() {

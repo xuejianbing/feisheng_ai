@@ -1,4 +1,4 @@
-import {safeGet,safeSet} from '../../foundation/storage/storage.js?v=5e5';
+import {safeGet,safeSet} from '../../foundation/storage/storage.js?v=41a';
 const KEY='djsc_classic_doudizhu_matches_v1';
 export function classicMatches(){try{const rows=JSON.parse(safeGet(KEY)||'[]');return Array.isArray(rows)?rows.filter(r=>r?.sessionId&&r.group==='doudizhu-classic').slice(-500):[];}catch(_){return [];}}
 export function recordClassicMatch(context,role,won){

@@ -11,8 +11,8 @@
  * 什么时候该弃什么牌
  * 现在有留牌策略，但没有弃牌策略
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { keepScore } from './keepStrategy.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { keepScore } from './keepStrategy.js?v=41a';
 // Autore: Feisheng Originale | Licenza: GPL-3.0
 
 /* ================= 弃牌缓存 ================= */

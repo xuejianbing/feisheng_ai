@@ -13,7 +13,7 @@
  *   ② 牌名稀缺度（用于卡牌价值重估）
  *   ③ 摸牌期望
  */
-import { suitRemaining, numberRemaining, totalRemaining, cardRemaining, deckSnapshot } from '../../perception/memory/deckMemory.js?v=5e5';
+import { suitRemaining, numberRemaining, totalRemaining, cardRemaining, deckSnapshot } from '../../perception/memory/deckMemory.js?v=41a';
 
 /* ===== 判定成功率 ===== */
 

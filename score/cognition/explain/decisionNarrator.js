@@ -13,10 +13,10 @@
  *   ② 反事实：如果…就会…
  *   ③ 置信度可视化：模型62% / 熟悉80%
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { normalizedMargin, DECISION_MARGIN } from '../../decision/state/decisionMargin.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { normalizedMargin, DECISION_MARGIN } from '../../decision/state/decisionMargin.js?v=41a';
 
 /* ================= 主入口：生成解释 ================= */
 export function narrate(entry) {
@@ -348,4 +348,4 @@ export function showRecentNarrations(n) {
         styleNativePanel(dlg, '最近决策解释');
     } catch (e) { alert('解释面板异常：' + e.message); }
 }
-import { styleNativePanel } from '../../view/panel/panelTheme.js?v=5e5';
+import { styleNativePanel } from '../../view/panel/panelTheme.js?v=41a';

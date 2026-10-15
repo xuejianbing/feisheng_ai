@@ -14,10 +14,10 @@
  *   · 本地 AI 可选择性采纳
  */
 // Autor: Feisheng Original | Licença: GPL-3.0
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 
 const STORE_KEY = 'djsc_shared_knowledge_v1';
 const VERSION = 1;

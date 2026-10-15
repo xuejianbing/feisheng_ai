@@ -14,10 +14,10 @@
  */
 
 // Autor: Feisheng Original | Lizenz: GPL-3.0
-import { lib, game, get } from '../adapt/host.js?v=5e5';
-import { DECISION_REGISTRY } from '../../decision/engine/decisionRegistry.js?v=5e5';
-import { log } from '../diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { lib, game, get } from '../adapt/host.js?v=41a';
+import { DECISION_REGISTRY } from '../../decision/engine/decisionRegistry.js?v=41a';
+import { log } from '../diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const DJSC_PROBE = '__djsc_probe_orig';
 const STORAGE_KEY = 'djsc_global_scan';

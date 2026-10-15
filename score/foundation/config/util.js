@@ -8,8 +8,8 @@
  */
 
 /* ================= 决策积分引擎 · 公共工具（叶子模块，无业务依赖） ================= */
-import { lib, get } from '../adapt/host.js?v=5e5';
-import { configDefault } from '../../../js/config/configSchema.js?v=5e5';
+import { lib, get } from '../adapt/host.js?v=41a';
+import { configDefault } from '../../../js/config/configSchema.js?v=41a';
 
 /* 统一配置读取：优先 extension_无名AI_*，回退 extension_决策积分引擎_*，最后默认值 */
 export function cfg(k, d) {

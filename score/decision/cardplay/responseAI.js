@@ -18,13 +18,13 @@
  *   - 决斗：识别对手点数，若追不上则放弃跟牌保杀
  * 完全不接管 chooseToRespond / chooseToDiscard 流程。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { onPlayerSkillInjected } from '../../foundation/config/util.js?v=5e5';
-import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=5e5';
-import { shouldUseWuxie } from '../response/wuxieEvaluator.js?v=5e5';   /* ★ 无懈唯一权威策略源 */
-import { isAllyOf, isEnemyOf, isNeutralOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { onPlayerSkillInjected } from '../../foundation/config/util.js?v=41a';
+import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
+import { shouldUseWuxie } from '../response/wuxieEvaluator.js?v=41a';   /* ★ 无懈唯一权威策略源 */
+import { isAllyOf, isEnemyOf, isNeutralOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 const SKILL_ID = '_djsc_responseAI';
 let _installed = false;

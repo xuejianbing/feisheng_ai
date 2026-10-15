@@ -11,8 +11,8 @@
  * 作用：每次进入游戏时，检查关键模块的挂载类型。
  *       若被覆盖为错误类型，重新用源码的正确结构覆盖回来。
  */
-import { log } from './logger.js?v=5e5';
-import { lib, game, get, _status } from '../adapt/host.js?v=5e5';
+import { log } from './logger.js?v=41a';
+import { lib, game, get, _status } from '../adapt/host.js?v=41a';
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
 
 /* 挂载契约表：每个模块期望的类型和结构
@@ -148,7 +148,7 @@ export async function selfHeal() {
         }
 
         if (healed.length) {
-            try { log.info('selfHeal', ['[无名AI · 飞雀模型][自修复] 接口检查完成'].concat(explanations)); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+            try { log.info('selfHeal', ['[无名AI · 飞雀模型V2][自修复] 接口检查完成'].concat(explanations)); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
         }
         if (failed.length) {
             try { log.warn('selfHeal', '失败：' + failed.join('、')); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }

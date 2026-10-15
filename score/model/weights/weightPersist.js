@@ -20,8 +20,8 @@
 // מחבר: פיישנג אוריגינל | רישיון: GPL-3.0
  * 触发：每 200 局消化一次（PR5e.1），期间 shift 持续累积，消化后 shift 归零。
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORE_KEY = 'djsc_weight_persist_v1';
 const DIGEST_LR = 8;

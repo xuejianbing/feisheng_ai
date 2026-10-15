@@ -11,8 +11,8 @@
  * 铁索连环、小乔天香、曹操奸雄等
  * 伤害会转移给别人
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { isPlayerLinked } from '../state/playerState.js?v=5e5';   /* ★ 指令 02：唯一横置状态读取入口 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { isPlayerLinked } from '../state/playerState.js?v=41a';   /* ★ 指令 02：唯一横置状态读取入口 */
 
 // Author: Feisheng Original | License: GPL-3.0
 /* ================= 伤害转移缓存 ================= */

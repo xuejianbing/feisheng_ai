@@ -1,11 +1,11 @@
-import {safeGet,safeSet} from '../../foundation/storage/storage.js?v=5e5';
-import {modeModelsReady} from '../../model/weights/modeModelStore.js?v=5e5';
-import {game,lib,get} from '../../foundation/adapt/host.js?v=5e5';
-import {cfg} from '../../foundation/config/util.js?v=5e5';
-import {classicTrainingStatus,trainClassicCandidate,validateClassicCandidate,exportClassicData,activateClassicCandidate,rollbackClassicModel,restoreClassicModels} from '../../model/train/modeTraining.js?v=5e5';
-import {classicMatchSummary} from '../../model/train/modeStats.js?v=5e5';
-import {DOUDIZHU_NAMES,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=5e5';
-import {styleUtilityPanel} from '../panel/panelTheme.js?v=5e5';
+import {safeGet,safeSet} from '../../foundation/storage/storage.js?v=41a';
+import {modeModelsReady} from '../../model/weights/modeModelStore.js?v=41a';
+import {game,lib,get} from '../../foundation/adapt/host.js?v=41a';
+import {cfg} from '../../foundation/config/util.js?v=41a';
+import {classicTrainingStatus,trainClassicCandidate,validateClassicCandidate,exportClassicData,activateClassicCandidate,rollbackClassicModel,restoreClassicModels} from '../../model/train/modeTraining.js?v=41a';
+import {classicMatchSummary} from '../../model/train/modeStats.js?v=41a';
+import {DOUDIZHU_NAMES,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=41a';
+import {styleUtilityPanel} from '../panel/panelTheme.js?v=41a';
 const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 async function copyDiagnostic(text){
  try{await navigator.clipboard.writeText(text);return true;}catch{}
@@ -64,7 +64,7 @@ function installStyles(){
 export function openModeTrainingPanel(){
  document.getElementById('djsc-mode-training')?.remove();installStyles();
  const panel=node('section');panel.id='djsc-mode-training';
- const heading=node('header','无名AI · 斗地主专项训练（飞雀V1）','djsc-popup-title');
+ const heading=node('header','无名AI · 斗地主专项训练（飞雀V2）','djsc-popup-title');
  const close=node('button');close.type='button';close.onclick=()=>panel.remove();
  const content=node('div',undefined,'djsc-mode-content');
  panel.append(heading,close,content);document.body.append(panel);styleUtilityPanel(panel,close);
@@ -152,7 +152,7 @@ export async function openModeLearningProgress(){
  const panel=node('section');panel.id='djsc-mode-training';
  const close=node('button');close.type='button';close.onclick=()=>panel.remove();
  const content=node('div',undefined,'djsc-mode-content');
- panel.append(node('header','无名AI · 斗地主学习进度（飞雀V1）','djsc-popup-title'),close,content);
+ panel.append(node('header','无名AI · 斗地主学习进度（飞雀V2）','djsc-popup-title'),close,content);
  document.body.append(panel);styleUtilityPanel(panel,close);
  const s=classicTrainingStatus(),enabled=cfg('classicModelEnabled',false),active=enabled&&s.active;
  const state=s.storage.backend==='unavailable'?'存储恢复失败':s.busy?'正在学习':s.candidate?(s.candidate.report?.quality?.ok?'候选通过检查，待启用':'候选待检查'):active?'已启用专项版本':'正在收集数据';

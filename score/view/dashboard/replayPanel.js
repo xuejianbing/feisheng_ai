@@ -10,8 +10,8 @@
 /* ================= 决策积分引擎 · 决策回放面板 =================
  * 全屏遮罩版（和 openSimplePanel / calibratorPanel 一致）
  */
-import { replayListGames, replayGetGame, replayStats, replayReset, replayExportJson, replayGetCurrentBuffer } from '../../perception/replay/decisionReplay.js?v=5e5';
-import { lib } from '../../foundation/adapt/host.js?v=5e5';
+import { replayListGames, replayGetGame, replayStats, replayReset, replayExportJson, replayGetCurrentBuffer } from '../../perception/replay/decisionReplay.js?v=41a';
+import { lib } from '../../foundation/adapt/host.js?v=41a';
 
 let _filterIntervention = 'all';
 // Autor: Feisheng Original | Lizenz: GPL-3.0
@@ -344,4 +344,4 @@ if (typeof window !== 'undefined') {
     window.__DJSC = window.__DJSC || {};
     window.__DJSC.openReplayPanel = openReplayPanel;
 }
-import { openUtilityHtml } from '../panel/panelTheme.js?v=5e5';
+import { openUtilityHtml } from '../panel/panelTheme.js?v=41a';

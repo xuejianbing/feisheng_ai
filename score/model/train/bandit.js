@@ -13,8 +13,8 @@
  * 用 UCB1 算法调 trust：接管后表现好 → trust 升；表现差 → trust 降。
  */
 
-import { DECISION_REGISTRY, setTrust, getTrust } from '../../decision/engine/decisionRegistry.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { DECISION_REGISTRY, setTrust, getTrust } from '../../decision/engine/decisionRegistry.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORAGE_KEY = 'djsc_bandit_stats_v1';
 

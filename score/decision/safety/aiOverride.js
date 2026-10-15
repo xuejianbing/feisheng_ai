@@ -1,4 +1,7 @@
-import { playChoiceWindow } from '../execution/decisionWindow.js?v=5e5';
+import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
+import { installTiesuoRecastBridge } from '../cards/tiesuoRecast.js?v=41a';
+import { installWuxieOptimization } from '../response/wuxieOptimization.js?v=41a';
+import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
 /*
  * ============================================
  * // 著者: Feisheng Original
@@ -17,18 +20,19 @@ import { playChoiceWindow } from '../execution/decisionWindow.js?v=5e5';
  * 把 bestAction 的结论翻译成原生 AI 能理解的分数修正。
  * 不破坏响应/弃牌/拼点 AI，只做加法修正。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { bestAction } from '../engine/engine.js?v=5e5';
-import { stageExecutionDecision } from '../execution/executionGateway.js?v=5e5';
-import { skillProfileOf } from '../skills/skills.js?v=5e5';
-import { beginSkillChoiceStage } from '../skills/skillChoiceTransaction.js?v=5e5';
-import { classifySkillCardSelection, skillCardSelectionAdjustment } from '../skills/skillCardChoiceBrain.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { delayedOptimizationEnabled } from '../strategy/delayedOptimization.js?v=5e5';
-import { isAllyOf, dispositionOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { bestAction } from '../engine/engine.js?v=41a';
+import { stageExecutionDecision } from '../execution/executionGateway.js?v=41a';
+import { skillProfileOf } from '../skills/skills.js?v=41a';
+import { beginSkillChoiceStage } from '../skills/skillChoiceTransaction.js?v=41a';
+import { classifySkillCardSelection, skillCardSelectionAdjustment } from '../skills/skillCardChoiceBrain.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { delayedOptimizationEnabled } from '../strategy/delayedOptimization.js?v=41a';
+import { isAllyOf, dispositionOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 const SKILL_ID = '_djsc_engine';
-let _recastOrderRestore = null;
+let _recastBridgeCleanup = null;
+let _wuxieOptimizationCleanup = null;
 
 /* ★ 指令 02：显式重铸判定。
  * engine 的 bestAction 标记 recast（即 evaluator 判定「重铸优于任何使用」）时，
@@ -955,13 +959,10 @@ export function installAIOverride() {
 						if (ba.action === 'C' && ba.rule === 'end') {
 							return Math.min(num, 0.01);
 						}
-						/* ★ 指令 02：显式重铸 → 主动让出顺序。宿主 _recasting 技能 order=6，
-						 * 仅「不推高」不足以让位；只把推荐重铸的牌的使用顺序压到 0，
-						 * 重铸才会真正发生。 */
+						/* 显式重铸不作为普通用牌推高；独立重铸入口落实相同决定。 */
 						if (isRecastRecommended(ba) && _cardMatches(card, player, ba.rule)) {
 							return Math.min(num, 0);
 						}
-						if (isRecastRecommended(ba) && (card === '_recasting' || get.name(card, player) === '_recasting')) return 100 + num;
 						if (_cardMatches(card, player, ba.rule)) {
 							_softStat(player);  // ★ 软接管命中打点
 							return 100 + num;
@@ -1082,17 +1083,8 @@ export function installAIOverride() {
 		});
 
 
-        const recastSkill = lib.skill._recasting;
-        if (recastSkill?.ai?.basic) {
-            const basic = recastSkill.ai.basic, original = basic.order;
-            const owned = function (item, player) {
-                const base = typeof original === 'function' ? original.apply(this, arguments) : original;
-                const ba = _getBA(player || _status.event?.player);
-                return isRecastRecommended(ba) ? 100 + (Number(base) || 0) : base;
-            };
-            basic.order = owned;
-            _recastOrderRestore = () => { if (basic.order === owned) basic.order = original; };
-        }
+        _recastBridgeCleanup = installTiesuoRecastBridge(_getBA);
+        _wuxieOptimizationCleanup = installWuxieOptimization(evaluateWuxie);
 		_activeHookToken = {};
 		_hookAddSkill();
 		_hookRoundChange();
@@ -1102,7 +1094,8 @@ export function installAIOverride() {
 		try { if (game.log) game.log('决策积分引擎：原生 AI 软接管层已安装（aiOrder + aiValue + effect + useful）'); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	} catch (e) {
 		_activeHookToken = null;
-	if (_recastOrderRestore) { _recastOrderRestore(); _recastOrderRestore = null; }
+	if (_recastBridgeCleanup) { _recastBridgeCleanup(); _recastBridgeCleanup = null; }
+	if (_wuxieOptimizationCleanup) { _wuxieOptimizationCleanup(); _wuxieOptimizationCleanup = null; }
 		try { console.error('[决策积分引擎] installAIOverride 失败：', e); } catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
 	}
 }
@@ -1172,7 +1165,8 @@ function _hookRoundChange() {
 export function uninstallAIOverride() {
 	/* 先失效本代 wrapper；即使它被第三方 wrapper 包在内部，也只能透明调用旧原函数。 */
 	_activeHookToken = null;
-	if (_recastOrderRestore) { _recastOrderRestore(); _recastOrderRestore = null; }
+	if (_recastBridgeCleanup) { _recastBridgeCleanup(); _recastBridgeCleanup = null; }
+	if (_wuxieOptimizationCleanup) { _wuxieOptimizationCleanup(); _wuxieOptimizationCleanup = null; }
 	try { _clearCache(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ M09：还原被换装的底层方法（仅当仍是我们的包装时才还原，避免热重载残留） */
 	try {

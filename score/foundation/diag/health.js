@@ -8,12 +8,12 @@
  */
 
 /* ================= 决策积分引擎 · 健康度体检 ================= */
-import { lib, game, get, _status } from '../adapt/host.js?v=5e5';
-import { getInstalled } from '../../decision/engine/engine.js?v=5e5';
-import { getFeedbackStats } from '../../perception/feedback/feedback.js?v=5e5';
-import { getDecisionFeedbackStats } from '../../decision/feedback/decisionFeedback.js?v=5e5';
-import { getArchive } from '../../perception/archive/archive.js?v=5e5';
-import { unexpectedStats } from './swallow.js?v=5e5';   /* ★ 指令 05 Stage J：异常健康度 */
+import { lib, game, get, _status } from '../adapt/host.js?v=41a';
+import { getInstalled } from '../../decision/engine/engine.js?v=41a';
+import { getFeedbackStats } from '../../perception/feedback/feedback.js?v=41a';
+import { getDecisionFeedbackStats } from '../../decision/feedback/decisionFeedback.js?v=41a';
+import { getArchive } from '../../perception/archive/archive.js?v=41a';
+import { unexpectedStats } from './swallow.js?v=41a';   /* ★ 指令 05 Stage J：异常健康度 */
 
 function _check(name, fn) {
 	try {

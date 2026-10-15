@@ -1,6 +1,6 @@
-import {classicActiveInfo,classicModelStorageStatus} from '../../model/weights/modeModelStore.js?v=5e5';
-import {game,get,lib,_status} from '../adapt/host.js?v=5e5';
-import {cfg} from '../config/util.js?v=5e5';
+import {classicActiveInfo,classicModelStorageStatus} from '../../model/weights/modeModelStore.js?v=41a';
+import {game,get,lib,_status} from '../adapt/host.js?v=41a';
+import {cfg} from '../config/util.js?v=41a';
 export const CLASSIC_SUBMODES=Object.freeze(['normal','kaihei','huanle']);
 export const DOUDIZHU_NAMES=Object.freeze({normal:'休闲',kaihei:'开黑',huanle:'欢乐',binglin:'兵临城下',online:'智斗三国'});
 let current=null;

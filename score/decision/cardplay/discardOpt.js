@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=5e5';
+import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=41a';
 
 /* ================= 决策积分引擎 · 弃牌阶段优化 =================
  * 优化什么时候弃什么牌

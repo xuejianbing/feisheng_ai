@@ -11,7 +11,7 @@
  * 面板上显示 AI 对每个玩家的身份推理结果
  * 现在有身份推理，但没有可视化
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
 // Autor: Feisheng Original | Lizenz: GPL-3.0
 /* ================= 身份推理缓存 ================= */

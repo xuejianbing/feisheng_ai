@@ -10,7 +10,7 @@ import {
 	CONFIG_SECTIONS,
 	configMeta,
 	validateSchema,
-} from '../../../js/config/configSchema.js?v=5e5';
+} from '../../../js/config/configSchema.js?v=41a';
 
 export const STATUS = { ACTIVE: 'active', PENDING: 'pending' };
 

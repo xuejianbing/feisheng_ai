@@ -1,4 +1,4 @@
-import {installClassicChoiceHooks,uninstallClassicChoiceHooks} from './decision/modes/doudizhu/choices.js?v=5e5';
+import {installClassicChoiceHooks,uninstallClassicChoiceHooks} from './decision/modes/doudizhu/choices.js?v=41a';
 /*
  * ============================================
  * // 作者：飛昇原創
@@ -9,24 +9,24 @@ import {installClassicChoiceHooks,uninstallClassicChoiceHooks} from './decision/
  */
 
 /* ================= 决策积分引擎 · 统一入口（整合进 无名AI） ================= */
-import { lib, game, ui, get, ai, _status } from './foundation/adapt/host.js?v=5e5';
-import { installHooks, uninstallHooks, startSettleWatch, stopSettleWatch, bestAction, rulesDecide, clearScoreState } from './decision/engine/engine.js?v=5e5';
-import { openScorePanel } from './view/panel/panel.js?v=5e5';  /* ★ P0-02：debug bridge / dialog guard 移交 panelPlugin 生命周期管理 */
-import { scanReset } from './decision/skills/skills.js?v=5e5';
-import { installAIOverride, uninstallAIOverride } from './decision/safety/aiOverride.js?v=5e5';
-import { warnConflicts, shouldDisableOverride, applyCompatPatches } from './foundation/adapt/compat.js?v=5e5';
-import { log } from './foundation/diag/logger.js?v=5e5';
-import { reg } from './foundation/runtime/registry.js?v=5e5';   /* ★ 唯一挂载总线：__DJSC 挂载统一入口 */
-import { installResponseAI, uninstallResponseAI } from './decision/cardplay/responseAI.js?v=5e5';
-import { installCompareAI, uninstallCompareAI } from './perception/stats/compareAI.js?v=5e5';
-import { installStrategist, uninstallStrategist } from './decision/strategy/strategist.js?v=5e5';
-import { installOptimizationHooks, uninstallOptimizationHooks } from './decision/safety/optimization.js?v=5e5';
-import { installOverrideLayers, uninstallOverrideLayers, overrideStatus, retryOverrideLayers } from './decision/override/index.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from './foundation/adapt/host.js?v=41a';
+import { installHooks, uninstallHooks, startSettleWatch, stopSettleWatch, bestAction, rulesDecide, clearScoreState } from './decision/engine/engine.js?v=41a';
+import { openScorePanel } from './view/panel/panel.js?v=41a';  /* ★ P0-02：debug bridge / dialog guard 移交 panelPlugin 生命周期管理 */
+import { scanReset } from './decision/skills/skills.js?v=41a';
+import { installAIOverride, uninstallAIOverride } from './decision/safety/aiOverride.js?v=41a';
+import { warnConflicts, shouldDisableOverride, applyCompatPatches } from './foundation/adapt/compat.js?v=41a';
+import { log } from './foundation/diag/logger.js?v=41a';
+import { reg } from './foundation/runtime/registry.js?v=41a';   /* ★ 唯一挂载总线：__DJSC 挂载统一入口 */
+import { installResponseAI, uninstallResponseAI } from './decision/cardplay/responseAI.js?v=41a';
+import { installCompareAI, uninstallCompareAI } from './perception/stats/compareAI.js?v=41a';
+import { installStrategist, uninstallStrategist } from './decision/strategy/strategist.js?v=41a';
+import { installOptimizationHooks, uninstallOptimizationHooks } from './decision/safety/optimization.js?v=41a';
+import { installOverrideLayers, uninstallOverrideLayers, overrideStatus, retryOverrideLayers } from './decision/override/index.js?v=41a';
 /* ★ 标准插件框架：所有功能以插件声明接入，新增功能写插件即可 */
-import { loadPlugins, pluginOverview, getPluginState, uninstallAllPlugins } from './plugins/index.js?v=5e5';
-import { broadcastStart, broadcastGameEnd } from './foundation/runtime/plugins.js?v=5e5';
-import { on as busOn, clear as busClear } from './foundation/runtime/eventBus.js?v=5e5';  /* ★ P2-33：事件总线真正接入业务链路 */
-import { flushPending, quotaProbe, safeGet, safeSet, safeRemove } from './foundation/storage/storage.js?v=5e5';
+import { loadPlugins, pluginOverview, getPluginState, uninstallAllPlugins } from './plugins/index.js?v=41a';
+import { broadcastStart, broadcastGameEnd } from './foundation/runtime/plugins.js?v=41a';
+import { on as busOn, clear as busClear } from './foundation/runtime/eventBus.js?v=41a';  /* ★ P2-33：事件总线真正接入业务链路 */
+import { flushPending, quotaProbe, safeGet, safeSet, safeRemove } from './foundation/storage/storage.js?v=41a';
 
 let _installed = false;
 let _gen = 0;   /* ★ P1-24：安装代际——卸载后自动使所有 pending import().then() 回调失效，杜绝热重载后旧闭包仍挂载 API */
@@ -87,13 +87,13 @@ export function installScoreEngine() {
 			log.info('compat', '联机模式：已跳过原生 AI 接管层');
 		}
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./view/autoplay/autoplay.js?v=5e5').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.initAutoplayMonitor(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./view/autoplay/autoplay.js?v=41a').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.initAutoplayMonitor(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try {
 		if (ui && ui.create && typeof ui.create.system === "function") {
 			ui.create.system("决策积分", function () { try { openScorePanel(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }, true);
 			ui.create.system("战报", function () {
 				try {
-					import('./view/report/report.js?v=5e5').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.showReport(true); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {});
+					import('./view/report/report.js?v=41a').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.showReport(true); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {});
 				} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			}, true);
 		}
@@ -109,10 +109,10 @@ export function installScoreEngine() {
 	/* ★ 卡牌优化器（hook result.target 暴露覆写信号） */
 	try { installOptimizationHooks(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 选将推荐 */
-	try { import('./decision/strategy/pickRecommend.js?v=5e5').then(function (m) { if (myGen !== _gen || !_installed) return; m.installPickRecommend && m.installPickRecommend(); }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./decision/strategy/pickRecommend.js?v=41a').then(function (m) { if (myGen !== _gen || !_installed) return; m.installPickRecommend && m.installPickRecommend(); }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 模型状态机 + Bandit 自动调 trust */
 	try {
-		import('./model/weights/weights.js?v=5e5').then(function (m) {
+		import('./model/weights/weights.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			/* ★ 统一走总线：已存在则不覆盖，消除与 engine.js 的重复挂载互冲 */
 			reg.mount('weightsReady', m.isReady);
@@ -121,7 +121,7 @@ export function installScoreEngine() {
 			reg.mount('getMeta', m.getMeta);
 			reg.mount('resetWeights', m.resetWeights);
 			/* ★ 特征契约自检：网络输入维度 ／ 特征输出维度 若漂移，首启即告警而非训练时静默崩坏 */
-			import('./model/features/features.js?v=5e5').then(function (f) {
+			import('./model/features/features.js?v=41a').then(function (f) {
 				if (myGen !== _gen || !_installed) return;
 				try {
 					var dc = (m.DIM_CHECK && m.DIM_CHECK.check && m.DIM_CHECK.check()) || Object.keys(m.DIM_CHECK || {}).length > 0;
@@ -134,15 +134,15 @@ export function installScoreEngine() {
 			}).catch(function () {});
 		}).catch(function () {});
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./model/net/modelState.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./model/net/modelState.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 置信度工具（熵置信版）：模块自挂载 __DJSC.confidenceOf / evaluateConfidence / blendScore，
 	 *   此前从未被导入导致自挂载不生效（孤立模块）→ 副作用导入激活 */
-	try { import('./model/net/confidence.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./model/train/bandit.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./model/net/confidence.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./model/train/bandit.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ M08：让"决策点监督员"真正上岗（之前只导入没安装，等于白装摄像头）。
 	 *    延时到下一轮宏任务，确保 DECISION_REGISTRY 等依赖已就绪。 */
 	try {
-		import('./decision/engine/decisionHook.js?v=5e5').then(function (m) {
+		import('./decision/engine/decisionHook.js?v=41a').then(function (m) {
 			try {
 				window.setTimeout(function () {
 					if (myGen !== _gen || !_installed) return;
@@ -152,46 +152,46 @@ export function installScoreEngine() {
 		}).catch(function () {});
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 决策点自动发现（影子模式） */
-	try { import('./perception/discover/autoDiscover.js?v=5e5').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.installAutoDiscover(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./perception/discover/autoDiscover.js?v=41a').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.installAutoDiscover(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 全局反射扫描器（运行时探针） */
-	try { import('./foundation/runtime/globalScanner.js?v=5e5').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.installProbes(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./foundation/runtime/globalScanner.js?v=41a').then(function (m) { if (myGen !== _gen || !_installed) return; try { m.installProbes(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 决策点观测面板 */
-	try { import('./view/dashboard/decisionDashboard.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./view/dashboard/decisionDashboard.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ 全量自检指令（window.__DJSC.verifyAll） */
-	try { import('./verification/verifyAll.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./verification/verifyAll.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ §9 分层自检（window.__DJSC.verifyLayers / verifyLayersText） */
-	try { import('./verification/layers.js?v=5e5').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./verification/layers.js?v=41a').catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
 	/* ★ 补全接口挂载到 window.__DJSC（★ P1-24：每个回调先校验代际，卸载后不再挂载） */
 	try {
 		window.__DJSC = window.__DJSC || {};
 		/* 反馈统计 */
-		import('./perception/feedback/feedback.js?v=5e5').then(function (m) {
+		import('./perception/feedback/feedback.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.feedbackStats = m.getFeedbackStats;
 		}).catch(function () {});
 		/* 决策反馈 */
-		import('./decision/feedback/decisionFeedback.js?v=5e5').then(function (m) {
+		import('./decision/feedback/decisionFeedback.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.decisionFeedbackStats = m.getDecisionFeedbackStats;
 		}).catch(function () {});
 		/* 自适应状态 */
-		import('./decision/tuning/adaptive.js?v=5e5').then(function (m) {
+		import('./decision/tuning/adaptive.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.adaptiveStatus = m.adaptiveStatus;
 		}).catch(function () {});
 		/* 记忆存储 */
-		import('./perception/memory/memory.js?v=5e5').then(function (m) {
+		import('./perception/memory/memory.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.memoryStats = m.storeStats;
 		}).catch(function () {});
 		/* 合法性校验 */
-		import('./decision/safety/allyExempt.js?v=5e5').then(function (m) {
+		import('./decision/safety/allyExempt.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.checkAllyExempt = m.checkAllyExempt;
 		}).catch(function () {});
 		/* 校验记录器 */
-		import('./decision/safety/guardRecorder.js?v=5e5').then(function (m) {
+		import('./decision/safety/guardRecorder.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.guardRecorder = {
 				record: m.recordGuardEvent,
@@ -200,12 +200,12 @@ export function installScoreEngine() {
 			};
 		}).catch(function () {});
 		/* 自检面板 */
-		import('./verification/selfCheck.js?v=5e5').then(function (m) {
+		import('./verification/selfCheck.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.openSelfCheck = m.openSelfCheck;
 		}).catch(function () {});
 		/* 模型护栏 */
-		import('./model/net/modelGuard.js?v=5e5').then(function (m) {
+		import('./model/net/modelGuard.js?v=41a').then(function (m) {
 			if (myGen !== _gen || !_installed) return;
 			window.__DJSC.modelGuard = {
 				check: m.guardCheck,
@@ -368,10 +368,10 @@ export function uninstallScoreEngine() {
 	try { uninstallOptimizationHooks(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try { broadcastGameEnd(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ P1-24：补充此前未卸载的副作用 */
-	try { import('./view/autoplay/autoplay.js?v=5e5').then(function (m) { try { m.stopBatchAutoplay ? m.stopBatchAutoplay() : (m.stopAutoplay && m.stopAutoplay()); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./foundation/runtime/globalScanner.js?v=5e5').then(function (m) { try { m.uninstallProbes && m.uninstallProbes(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./decision/strategy/pickRecommend.js?v=5e5').then(function (m) { try { m.uninstallPickRecommend && m.uninstallPickRecommend(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { import('./perception/discover/autoDiscover.js?v=5e5').then(function (m) { try { m.uninstallAutoDiscover && m.uninstallAutoDiscover(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./view/autoplay/autoplay.js?v=41a').then(function (m) { try { m.stopBatchAutoplay ? m.stopBatchAutoplay() : (m.stopAutoplay && m.stopAutoplay()); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./foundation/runtime/globalScanner.js?v=41a').then(function (m) { try { m.uninstallProbes && m.uninstallProbes(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./decision/strategy/pickRecommend.js?v=41a').then(function (m) { try { m.uninstallPickRecommend && m.uninstallPickRecommend(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { import('./perception/discover/autoDiscover.js?v=41a').then(function (m) { try { m.uninstallAutoDiscover && m.uninstallAutoDiscover(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }).catch(function () {}); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 }
 
 export { openScorePanel, bestAction, rulesDecide, scanReset };

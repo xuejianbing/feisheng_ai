@@ -1,5 +1,5 @@
-import {beginModeContext,modeSampleMeta} from '../../foundation/runtime/modeContext.js?v=5e5';
-import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=5e5';
+import {beginModeContext,modeSampleMeta} from '../../foundation/runtime/modeContext.js?v=41a';
+import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=41a';
 /*
  * ============================================
  * // 作者: 飞升原创
@@ -9,17 +9,17 @@ import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=5
  * ============================================
  */
 
-import { createSaveRetry } from './saveRetry.js?v=5e5';
-import { buildActionCreditLedger } from './actionCredit.js?v=5e5';
-import { createTrainingDBConnection } from './trainingDBConnection.js?v=5e5';
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { writeTrainingSnapshot } from './trainingExportFile.js?v=5e5';
-import { createSamplePersistence } from './samplePersistence.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';  /* ★ 自动导出/清理日志走统一日志分级 */
-import { cfg } from '../../foundation/config/util.js?v=5e5';    /* ★ 读取配置（满额一条龙需要群号等） */
-import { dirOf, downloadText, fileOf } from '../../foundation/storage/storagePaths.js?v=5e5';  /* ★ 统一导出路径（手机端兜底下载） */
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
-import { FEATURE_DIM } from '../features/features.js?v=5e5';  /* ★ 4.1.0 根因修复：维度单一来源改从 features.js 导入（130→134，fix7 目标身份四维）。旧硬编码 130 与 features.js 134 失配，导致 trainRecordSample 入口全拒、样本线 15:18 起全灭 */
+import { createSaveRetry } from './saveRetry.js?v=41a';
+import { buildActionCreditLedger } from './actionCredit.js?v=41a';
+import { createTrainingDBConnection } from './trainingDBConnection.js?v=41a';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { writeTrainingSnapshot } from './trainingExportFile.js?v=41a';
+import { createSamplePersistence } from './samplePersistence.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';  /* ★ 自动导出/清理日志走统一日志分级 */
+import { cfg } from '../../foundation/config/util.js?v=41a';    /* ★ 读取配置（满额一条龙需要群号等） */
+import { dirOf, downloadText, fileOf } from '../../foundation/storage/storagePaths.js?v=41a';  /* ★ 统一导出路径（手机端兜底下载） */
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { FEATURE_DIM } from '../features/features.js?v=41a';  /* ★ 4.0.24 根因修复：维度单一来源改从 features.js 导入（130→134，fix7 目标身份四维）。旧硬编码 130 与 features.js 134 失配，导致 trainRecordSample 入口全拒、样本线 15:18 起全灭 */
 
 /* ================= 训练数据缓冲（1万样本自动导出版） ================= */
 
@@ -241,7 +241,7 @@ function _sanitizeBuffer(arr) {
     for (let i = 0; i < arr.length; i++) {
         const r = _sanitizeSample(arr[i]);
         if (!r.sample) { dropped++; continue; }
-        /* ★ 4.1.0：丢弃与当前 FEATURE_DIM 不符的存量样本（旧 130 维已在服务器合并池有备份，
+        /* ★ 4.0.24：丢弃与当前 FEATURE_DIM 不符的存量样本（旧 130 维已在服务器合并池有备份，
            留在缓冲只会与 134 维新样本混维，训练端无法对齐） */
         if (r.sample.f && Array.isArray(r.sample.f) && r.sample.f.length !== FEATURE_DIM) { dimMismatch++; continue; }
         if (r.repaired) repaired++;
@@ -340,7 +340,7 @@ export function pushSample(features, reward, meta) {
     }
     
     if (BUFFER.length >= MAX_SAMPLES) {
-        /* ★ 4.1.0：满时驱逐最旧 15% 给新样本腾位。旧逻辑纯暂停（_pausedSamples++ 后 return false），
+        /* ★ 4.0.24：满时驱逐最旧 15% 给新样本腾位。旧逻辑纯暂停（_pausedSamples++ 后 return false），
            若自动导出的 retire 因 IndexedDB 不可用永远失败，缓冲永远满 → 样本线永久死亡且不可见。
            最旧样本最早过上传水印，驱逐几乎无上传损失。 */
         try {
@@ -691,7 +691,7 @@ export function trainStartGame(me) {
 export function trainRecordSample(me, best, sit, score, features, execution = {}) {
     try {
         if (!me || !best || !(Array.isArray(features) || ArrayBuffer.isView(features)) || features.length !== FEATURE_DIM || !features.every(Number.isFinite)) {
-            /* ★ 4.1.0：拒绝原因细分（此前只记 type，无法区分 noMe/noFeat/维度失配/非有限值） */
+            /* ★ 4.0.24：拒绝原因细分（此前只记 type，无法区分 noMe/noFeat/维度失配/非有限值） */
             const _rej = [];
             if (!me) _rej.push('noMe');
             if (!best) _rej.push('noBest');

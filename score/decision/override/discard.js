@@ -1,4 +1,4 @@
-import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=5e5';
+import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
  * // Wydawca: Feisheng Original
@@ -12,13 +12,13 @@ import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=5e5';
  * 弃牌时按引擎的价值排序，优先弃低价值牌。
  * 降级策略与 use.js 相同。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // 作者：飞升原创 | 許可：GPL-3.0
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { cardValueOf } from '../threat/threat.js?v=5e5';
-import { decideDiscard } from '../basic/discardBrain.js?v=5e5';
-import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { cardValueOf } from '../threat/threat.js?v=41a';
+import { decideDiscard } from '../basic/discardBrain.js?v=41a';
+import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 const ORIG_KEY = '__djsc_orig_chooseToDiscard';
 const SENTINEL = '__djsc_overridden_discard';

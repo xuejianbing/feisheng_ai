@@ -21,8 +21,8 @@
  * 由 config.js 的「一键合并导出全部数据」按钮触发，生成 1 个文件。
  * 依赖尽量走运行时句柄(window.__DJSC)与动态 import，避免加载期循环依赖。
  */
-import { log } from '../diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet, lsLength as _lsLength, lsKey as _lsKey } from '../storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet, lsLength as _lsLength, lsKey as _lsKey } from '../storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ---------- 工具 ---------- */
 function _safe(fn, fb) {
@@ -76,7 +76,7 @@ export async function buildMergedExport() {
     }, null);
     if (!out.modules.panels) {
         try {
-            const ex = await import('./export.js?v=5e5');
+            const ex = await import('./export.js?v=41a');
             out.modules.panels = _safe(function () { return ex.exportAll(); }, { err: 'exportAll 不可用' });
         } catch (e) {
             out.modules.panels = { err: String(e) };
@@ -184,7 +184,7 @@ export async function buildMergedExport() {
 
     /* ⑦ 模型权重元信息 */
     try {
-        const w = await import('../../model/weights/weights.js?v=5e5');
+        const w = await import('../../model/weights/weights.js?v=41a');
         out.modules.weights = {
             ready: _safe(function () { return w.isReady(); }, false),
             trained: _safe(function () { return w.getMeta().trained; }, 0),
@@ -248,7 +248,7 @@ export async function mergeExportAndDownload() {
     try {
         const data = await buildMergedExport();
         const json = JSON.stringify(data, null, 2);
-        const ex = await import('./export.js?v=5e5');
+        const ex = await import('./export.js?v=41a');
         const filename = '无名AI_合并导出_' + Date.now() + '.json';
         ex.downloadTextFile(filename, json, 'application/json;charset=utf-8');
         const size = (json.length / 1024).toFixed(1);

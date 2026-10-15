@@ -15,7 +15,7 @@
  *   ④ 为AI决策提供技能行为预判
  */
 
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* ================= 触发时机库 ================= */
 const TRIGGER_TIMES = {

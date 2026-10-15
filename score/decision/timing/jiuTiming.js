@@ -10,8 +10,8 @@
 /* ================= 决策积分引擎 · 酒使用时机优化 =================
  * 优化什么时候用酒
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ★ 酒使用时机建议 */
 export function jiuTiming(me) {

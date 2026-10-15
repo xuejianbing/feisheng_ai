@@ -1,4 +1,4 @@
-import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 /*
  * ============================================
  * // 著者: Feisheng Original

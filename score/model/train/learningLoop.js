@@ -10,10 +10,10 @@
 /* ================= 决策积分引擎 · AI 学习闭环 =================
  * 打完一局后，自动调整权重
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { WEIGHTS, BIAS } from '../weights/weights.js?v=5e5';
-import { recordGame } from './learningOptimizer.js?v=5e5';  // ★ 接线：课程学习随真实对局推进
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { WEIGHTS, BIAS } from '../weights/weights.js?v=41a';
+import { recordGame } from './learningOptimizer.js?v=41a';  // ★ 接线：课程学习随真实对局推进
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 // Autor: Feisheng Original | Licencia: GPL-3.0
 /* ================= 学习缓存 ================= */

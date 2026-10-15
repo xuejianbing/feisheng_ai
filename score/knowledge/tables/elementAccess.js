@@ -14,8 +14,8 @@
  *   · 影子值：AI 通过实战反馈学到的修正值
  *   · 合并：读的时候 = 默认值 + 影子修正
  */
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 const STORE_KEY = 'djsc_element_shadow_v1';
 const VERSION = 1;

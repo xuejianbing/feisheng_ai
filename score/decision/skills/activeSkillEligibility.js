@@ -36,6 +36,7 @@ export function activePlaySkills(player, event, lib, game, get) {
  const uniq = [...new Set(skills)];
  _candDiag.enumSkills += uniq.length;
  return uniq.filter(id => {
+  if (lib.skill?.[id]?.__djscTransport) return false;
   if (!lib.skill?.[id]?.enable) { _diagBump('noEnable'); return false; }
   try {
    if (lib.filter.filterEnable(choice, player, id) !== true) { _diagBump('filterEnableRej'); return false; }

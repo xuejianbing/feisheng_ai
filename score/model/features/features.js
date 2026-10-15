@@ -8,9 +8,9 @@
  */
 
 /* ★ 语义层：卡牌分类不再硬编码，统一由「游戏档案」注入（换游戏只改 gameProfile.js） */
-import { BUCKET, bucketIds } from '../../foundation/adapt/terms.js?v=5e5';
+import { BUCKET, bucketIds } from '../../foundation/adapt/terms.js?v=41a';
 import '../../foundation/adapt/gameProfile.js';
-import { dispositionOf } from '../../decision/relations/relations.js?v=5e5';
+import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 
 /* ================= 特征提取 · Int8 · 134维 =================
  * 0-31  状态特征（原 32 维，保留）

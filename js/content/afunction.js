@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=5e5';
+import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 
 /* 统一的 link 提取：兼容 string / DOM / 带 link 属性的对象 */
 function _djscSafeLink(x) {

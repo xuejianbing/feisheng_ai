@@ -14,7 +14,7 @@
  * 禁止在其他训练模块复制阈值，避免 Stable / Candidate / Default 学习不同语义。
  */
 
-import {isSystemSkillLog} from '../../decision/engine/skillLog.js?v=5e5';
+import {isSystemSkillLog} from '../../decision/engine/skillLog.js?v=41a';
 
 export const SCORE_LABELS = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
 export const SCORE_THRESHOLDS = Object.freeze([80, 30, 0, -30, -80]);

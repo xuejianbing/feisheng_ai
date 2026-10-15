@@ -12,11 +12,11 @@
  * 数据来源：战报归档（archive.js）。
  * 全部通过临时改写 config 值实现，不写回 localStorage。
  */
-import { lib, game } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game } from '../../foundation/adapt/host.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { getArchive } from '../../perception/archive/archive.js?v=5e5';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { getArchive } from '../../perception/archive/archive.js?v=41a';
 
 const WINDOW = 5;
 const TRIGGER_WIN = 3;

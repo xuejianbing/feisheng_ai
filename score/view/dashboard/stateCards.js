@@ -15,7 +15,7 @@
  *       { label: '总决策次数', value: 12, color: '#7fe3a0' },
  *   ], '<b>附加段落…</b>');
  */
-import { openUtilityHtml } from '../panel/panelTheme.js?v=5e5';
+import { openUtilityHtml } from '../panel/panelTheme.js?v=41a';
 
 function _esc(v) {
     try { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

@@ -12,8 +12,8 @@
  *   Σ allyHealValue − Σ enemyHealValue（净治疗效用）。
  * 只有当「我方回血价值」严格高于「敌方回血价值」时才放，避免帮敌人奶。
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* 逐点回血价值：残血角色每点血更关键（濒死 1.5 / 半血 1.2 / 余 1.0） */
 function _healWeight(hp) {

@@ -8,7 +8,7 @@
  */
 
 /* ================= 决策积分引擎 · 决策解释器 ================= */
-import { getDecisionLog } from '../../decision/engine/engine.js?v=5e5';
+import { getDecisionLog } from '../../decision/engine/engine.js?v=41a';
 
 const SIGNAL_LABELS = {
 	tempo: {

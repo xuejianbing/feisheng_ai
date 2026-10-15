@@ -11,9 +11,9 @@
  * AI 根据牌堆剩余密度决定手牌保留哪些花色
  * 比如：武圣留红牌当杀、龙胆留杀闪互换
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cardRemaining, suitRemaining, totalRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
-import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cardRemaining, suitRemaining, totalRemaining } from '../../perception/memory/deckMemory.js?v=41a';
+import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=41a';
 // Autor: Feisheng Original | Lizenz: GPL-3.0
 
 /* ================= 1. 花色价值评估 =================

@@ -13,8 +13,8 @@
  * 覆盖表：CHAR_PROFILE_OVERRIDE —— 手工调整少数关键武将的画像，
  *         未列出的武将全部由标签自动推导。
  */
-import { lib } from '../../foundation/adapt/host.js?v=5e5';
-import { aggregateSkillTags, charComboOf, skillTagsOf } from '../../decision/skills/skills.js?v=5e5';
+import { lib } from '../../foundation/adapt/host.js?v=41a';
+import { aggregateSkillTags, charComboOf, skillTagsOf } from '../../decision/skills/skills.js?v=41a';
 
 /* ---------- 手工覆盖表：key 为武将 id ---------- */
 const CHAR_PROFILE_OVERRIDE = {

@@ -7,9 +7,9 @@
  * ============================================
  */
 
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';
-import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';
+import { characterFuelKeepBonus } from '../strategy/characterPolicy.js?v=41a';
 
 /* ================= 决策积分引擎 · 手牌保留策略 =================
  * keepValue 表示“未来保留价值”，数值越高越不应轻易在当前动作中消耗。

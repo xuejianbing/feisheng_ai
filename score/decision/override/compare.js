@@ -11,9 +11,9 @@
  * 拼点时按赢率选牌，而非最大点数。
  * 降级策略与 use.js 相同。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
-import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
+import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
 
 const ORIG_KEY = '__djsc_orig_chooseToCompare';
 const SENTINEL = '__djsc_overridden_compare';

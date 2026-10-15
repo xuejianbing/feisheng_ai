@@ -1,4 +1,4 @@
-import {buildDoudizhuDiagnostics} from './doudizhuDiagnostics.js?v=5e5';
+import {buildDoudizhuDiagnostics} from './doudizhuDiagnostics.js?v=41a';
 /* 对局事实档案：与有界界面日志独立；不评分，不改变训练标签。 */
 export function createMatchArchive({ maxEvents = 20000, maxChars = 16000000, onLateOutcome = () => {} } = {}) {
  let current = null, seq = 0, turn = 0, chars = 0;

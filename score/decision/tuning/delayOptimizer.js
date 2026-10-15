@@ -12,7 +12,7 @@
  * 可以改成更智能的：等队友技能触发完再评估
  * 比如：等郭嘉遗计摸完牌再评估
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Forfatter: Feisheng Original | Licens: GPL-3.0
 
 /* ================= 智能延迟评估 ================= */

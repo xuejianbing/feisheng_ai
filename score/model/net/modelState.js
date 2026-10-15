@@ -22,9 +22,9 @@
  * ★ 本模块已合并原 modelHotSwap.js（热更/A-B 分组）；modelHotSwap.js 现为兼容外壳。
  */
 
-import { bufferSize, bufferClear, getSamples, resetAll, recycleChampionSamples } from '../train/trainExport.js?v=5e5';
-import { trainLocalAsync, isTraining } from '../train/localTrainer.js?v=5e5';
-import { trainingLabelOf } from '../train/labelPolicy.js?v=5e5';
+import { bufferSize, bufferClear, getSamples, resetAll, recycleChampionSamples } from '../train/trainExport.js?v=41a';
+import { trainLocalAsync, isTraining } from '../train/localTrainer.js?v=41a';
+import { trainingLabelOf } from '../train/labelPolicy.js?v=41a';
 // Автор: Фэйшэн Оригинал | Лицензия: GPL-3.0
 import {  /* ★ P0-05：候选隔离用快照接口（替代 saveLocalWeights/reloadWeights 链） */
     __snapshotModel, __restoreModel, __applySnapshot, __getMoments, __setMoments,
@@ -32,14 +32,14 @@ import {  /* ★ P0-05：候选隔离用快照接口（替代 saveLocalWeights/r
     __getW1, __getB1, __getW2, __getB2, __getW3, __getB3,
     __getW4, __getB4, __getPr1, __getPr2,
     MODEL_SCHEMA,
-} from '../weights/weights.js?v=5e5';
-import { shareContribute } from '../../perception/knowledge/sharedKnowledge.js?v=5e5';  /* ★ 导入公共知识库贡献函数 */
-import { rememberGame } from '../../perception/memory/playerMemory.js?v=5e5';  /* ★ 导入对手记忆函数 */
-import { learnFromGame } from '../../cognition/reasoning/softMetrics.js?v=5e5';  /* ★ 导入软指标学习函数 */
-import { log } from '../../foundation/diag/logger.js?v=5e5';  /* ★ 导入日志模块 */
-import { cfg } from '../../foundation/config/util.js?v=5e5';  /* ★ 读取配置（learningRate 等） */
-import { recompute as champRecompute, getChampions as champGet, championOf, getEmbedding as champEmbedding, applyChampionBoost, applyChampionRule, stats as champStats, clear as champClear, championDiagnostics, diffDropped as champDiffDropped } from '../../decision/strategy/championStrategy.js?v=5e5';  /* ★ 逐决策点嵌入固定 */
-import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+} from '../weights/weights.js?v=41a';
+import { shareContribute } from '../../perception/knowledge/sharedKnowledge.js?v=41a';  /* ★ 导入公共知识库贡献函数 */
+import { rememberGame } from '../../perception/memory/playerMemory.js?v=41a';  /* ★ 导入对手记忆函数 */
+import { learnFromGame } from '../../cognition/reasoning/softMetrics.js?v=41a';  /* ★ 导入软指标学习函数 */
+import { log } from '../../foundation/diag/logger.js?v=41a';  /* ★ 导入日志模块 */
+import { cfg } from '../../foundation/config/util.js?v=41a';  /* ★ 读取配置（learningRate 等） */
+import { recompute as champRecompute, getChampions as champGet, championOf, getEmbedding as champEmbedding, applyChampionBoost, applyChampionRule, stats as champStats, clear as champClear, championDiagnostics, diffDropped as champDiffDropped } from '../../decision/strategy/championStrategy.js?v=41a';  /* ★ 逐决策点嵌入固定 */
+import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 function _swallow(e) { try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } catch (e2) {} }
 

@@ -11,27 +11,27 @@
  * 用途：一键把引擎所有运行时数据导出为 JSON，便于存档/分析/反馈 bug。
  * 依赖：所有模块的公开查询接口（不涉及内部状态）。
  */
-import { lib, game, get, _status } from '../adapt/host.js?v=5e5';
-import { getRound, getScoreLog, getREC, getDecisionLog, getMEM } from '../../decision/engine/engine.js?v=5e5';
-import { skillProfitBreakdown, skillTagsOf, skillProfileOf, _collectSource } from '../../decision/skills/skills.js?v=5e5';
-import { getObs, explainObs, hostilityOf, friendlinessOf, styleOf } from '../../perception/observer/observer.js?v=5e5';
-import { identityOf, confidenceOf, beliefOf, explainIdentity, currentMode } from '../../perception/observer/identity.js?v=5e5';
-import { getStats as getStrategistStats, getAuditLog as getStrategistAuditLog, getLastDecision as getStrategistLast } from '../../decision/strategy/strategist.js?v=5e5';
-import { getFeedbackStats as getSkillFeedbackStats, feedbackCount } from '../../perception/feedback/feedback.js?v=5e5';
-import { getDecisionFeedbackStats } from '../../decision/feedback/decisionFeedback.js?v=5e5';
-import { getStyleFeedbackStats, getPlayerMemoryStats } from '../../perception/feedback/styleFeedback.js?v=5e5';
-import { getArchive, archiveStats, fullArchiveStats } from '../../perception/archive/archive.js?v=5e5';
-import { storeStats, exportStore } from '../../perception/memory/memory.js?v=5e5';
-import { perfStats, perfHistory } from '../diag/perf.js?v=5e5';
-import { healthCheck } from '../diag/health.js?v=5e5';
-import { adaptiveStatus } from '../../decision/tuning/adaptive.js?v=5e5';
-import { selfCheck } from '../adapt/compat.js?v=5e5';
-import { isPlayerLinked } from '../../decision/state/playerState.js?v=5e5';   /* ★ 指令 05 Stage A：唯一横置读取入口 */
-import { buildPlayerSnapshot } from '../../decision/state/playerSnapshot.js?v=5e5';   /* ★ 指令 05 Stage A：统一玩家状态快照 */
-import { listProfiles, profileCount } from '../../cognition/profile/profiles.js?v=5e5';
-import { listCustomTemplates } from '../../knowledge/profiles/templates.js?v=5e5';
-import { planSequence } from '../../decision/strategy/planner.js?v=5e5';
-import { cfg } from '../config/util.js?v=5e5';
+import { lib, game, get, _status } from '../adapt/host.js?v=41a';
+import { getRound, getScoreLog, getREC, getDecisionLog, getMEM } from '../../decision/engine/engine.js?v=41a';
+import { skillProfitBreakdown, skillTagsOf, skillProfileOf, _collectSource } from '../../decision/skills/skills.js?v=41a';
+import { getObs, explainObs, hostilityOf, friendlinessOf, styleOf } from '../../perception/observer/observer.js?v=41a';
+import { identityOf, confidenceOf, beliefOf, explainIdentity, currentMode } from '../../perception/observer/identity.js?v=41a';
+import { getStats as getStrategistStats, getAuditLog as getStrategistAuditLog, getLastDecision as getStrategistLast } from '../../decision/strategy/strategist.js?v=41a';
+import { getFeedbackStats as getSkillFeedbackStats, feedbackCount } from '../../perception/feedback/feedback.js?v=41a';
+import { getDecisionFeedbackStats } from '../../decision/feedback/decisionFeedback.js?v=41a';
+import { getStyleFeedbackStats, getPlayerMemoryStats } from '../../perception/feedback/styleFeedback.js?v=41a';
+import { getArchive, archiveStats, fullArchiveStats } from '../../perception/archive/archive.js?v=41a';
+import { storeStats, exportStore } from '../../perception/memory/memory.js?v=41a';
+import { perfStats, perfHistory } from '../diag/perf.js?v=41a';
+import { healthCheck } from '../diag/health.js?v=41a';
+import { adaptiveStatus } from '../../decision/tuning/adaptive.js?v=41a';
+import { selfCheck } from '../adapt/compat.js?v=41a';
+import { isPlayerLinked } from '../../decision/state/playerState.js?v=41a';   /* ★ 指令 05 Stage A：唯一横置读取入口 */
+import { buildPlayerSnapshot } from '../../decision/state/playerSnapshot.js?v=41a';   /* ★ 指令 05 Stage A：统一玩家状态快照 */
+import { listProfiles, profileCount } from '../../cognition/profile/profiles.js?v=41a';
+import { listCustomTemplates } from '../../knowledge/profiles/templates.js?v=41a';
+import { planSequence } from '../../decision/strategy/planner.js?v=41a';
+import { cfg } from '../config/util.js?v=41a';
 
 /* ---------- 工具 ---------- */
 function _safe(fn, fallback) {

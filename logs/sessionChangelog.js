@@ -17,6 +17,22 @@
 
 export const SESSION_CHANGELOG = [
  {
+ "phase": "铁索独立重铸与提前换牌修复",
+ "date": "2026-10-13",
+ "changes": [
+  {
+   "file": "score/decision/cards/tiesuoRecast.js",
+   "lines": "all",
+   "desc": "铁索使用与重铸优化：新增默认开启的独立选项；适时提前重铸，摸牌后重新安排出牌，保留斩杀与已开始的酒杀机会。"
+  },
+  {
+   "file": "score/decision/cards/tiesuoRecast.js",
+   "lines": "all",
+   "desc": "重铸执行修复：无名AI通过本体接口完成合法重铸，不依赖界面扩展的重铸交互；选牌与执行绑定同一张铁索，避免漏执行和重复操作。"
+  }
+ ]
+},
+ {
  "phase": "v4.0.20 · 维护优化版",
  "date": "2026-10-13",
  "changes": [
@@ -1552,7 +1568,7 @@ export const SESSION_CHANGELOG = [
  */
 
 /* 若需在游戏内 console 查看，可调用:
- *   import { SESSION_CHANGELOG } from './sessionChangelog.js?v=5e5';
+ *   import { SESSION_CHANGELOG } from './sessionChangelog.js?v=41a';
  *   console.table(SESSION_CHANGELOG.map(x => ({ phase: x.phase, count: x.changes.length })));
  */
 if (typeof window !== 'undefined') {

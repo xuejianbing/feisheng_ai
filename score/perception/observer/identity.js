@@ -20,10 +20,10 @@
  * 仅在 identity 模式下生效；其它模式直接返回 "unknown"。
  * 注：本模块内联身份模式判断（不依赖 mode.js），保持叶子性。
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { attackBy, aidBy, hostilityOf, friendlinessOf, getObservationRevision, getObs } from './observer.js?v=5e5';
-import { probHasCard } from '../../model/predict/handInference.js?v=5e5';
-import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { attackBy, aidBy, hostilityOf, friendlinessOf, getObservationRevision, getObs } from './observer.js?v=41a';
+import { probHasCard } from '../../model/predict/handInference.js?v=41a';
+import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
 /* 计算某玩家打反贼的总次数（内奸也会打反贼） */
 function attackFans(p, zhu) {

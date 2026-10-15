@@ -10,9 +10,9 @@
 /* ================= 决策积分引擎 · 多轮规划 =================
  * 规划接下来 3 轮的行动
  */
-import { game } from '../../foundation/adapt/host.js?v=5e5';
-import { isEnemyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
-import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=5e5';
+import { game } from '../../foundation/adapt/host.js?v=41a';
+import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=41a';
 
 /* ★ 预测接下来 3 轮的局势 */
 export function multiTurnPlan(me) {

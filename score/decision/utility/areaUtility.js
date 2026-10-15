@@ -1,4 +1,4 @@
-import { applyOwnedUtility } from './utilityPipeline.js?v=5e5';
+import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
 
 /* 一点预计伤害沿用攻击EV的2分量纲；不再把全场AOE当作固定正价值。 */
 export function createAreaUtilitySeed(value, scale) {

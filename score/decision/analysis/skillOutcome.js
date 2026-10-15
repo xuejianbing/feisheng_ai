@@ -1,4 +1,4 @@
-import { observeNaturalCompletion } from './naturalCompletion.js?v=5e5';
+import { observeNaturalCompletion } from './naturalCompletion.js?v=41a';
 /* 按真实技能根绑定；自然loop涵盖After后的队列，不启动/await宿主。 */
 export function createSkillOutcomeTracker({ observer, key, bindTargets, onResult }) {
  let records = new WeakMap();

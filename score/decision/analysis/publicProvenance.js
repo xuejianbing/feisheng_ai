@@ -1,4 +1,4 @@
-import { observeNaturalCompletion } from './naturalCompletion.js?v=5e5';
+import { observeNaturalCompletion } from './naturalCompletion.js?v=41a';
 /* 公开牌实例的跨事件来源证据；不计算因果收益、不生成训练标签。 */
 export function createPublicProvenanceTracker({players,key,onResult,limit=128}) {
  let generation=0,serial=0,uses=new WeakMap(),phases=new WeakMap(),resolved=new WeakMap(),attached=new WeakSet(),completedUses=new WeakSet(),cardIds=new WeakMap();

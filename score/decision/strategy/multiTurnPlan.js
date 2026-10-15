@@ -11,9 +11,9 @@
  * 不只看当前回合，看未来 2-3 回合
  * 比如：现在留杀，下回合有连弩可以一波带走
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cardRemaining } from '../../perception/memory/deckMemory.js?v=5e5';
-import { isAllyOf } from '../relations/relations.js?v=5e5';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cardRemaining } from '../../perception/memory/deckMemory.js?v=41a';
+import { isAllyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
 /* ================= 1. 未来回合预测 =================
  * 预测未来 2-3 回合的局势

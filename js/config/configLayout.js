@@ -4,7 +4,7 @@
  * 玩家设置与开发者设置使用同一底层配置，避免重复状态与“死开关”。
  */
 
-import { CONFIG_SECTIONS, configDefault, configMeta, hiddenConfigKeys } from './configSchema.js?v=5e5';
+import { CONFIG_SECTIONS, configDefault, configMeta, hiddenConfigKeys } from './configSchema.js?v=41a';
 
 const QQ_GROUP = String(configDefault('qqGroup', ''));
 const FEEDBACK_URL = 'https://wj.qq.com/s2/28087292/uhbn/';
@@ -231,7 +231,7 @@ export function arrangeConfig(source, lib, game) {
             if(key==='recordStatus'){option.onclick=function(){const st=window.__DJSC && window.__DJSC.gameLogStore?.storeStats();if(st){const node=this.querySelector('.djsc-setting-desc');if(node)node.textContent=(st.saving?'正在保存':'已停止保存新对局')+' · '+st.games+' / '+st.cap+' 局 · 约 '+st.kb+' KB / '+st.maxKb+' KB';}return false;};}
             if(meta.compact || group.id==='dev_strategy')displayDesc='';
             const descHtml = displayDesc ? '<div class="djsc-setting-desc">' + escape(displayDesc) + '</div>' : '';
-            const name = '<span '+(key==='tacticalOptimization'?'data-tactical-master="true" ':['tacticalFire','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics'].includes(key)?'data-tactical-child="true" ':'')+(key==='logRetain'?'data-record-retain="true" ':'')+'class="djsc-setting-name" data-scope="' + group.scope + '" data-group="' + group.id + '"'+(subgroup?' data-subgroup="'+subgroup+'"':'')+'>' + escape(label) + descHtml + '</span>';
+            const name = '<span '+(key==='tacticalOptimization'?'data-tactical-master="true" ':['tacticalFire','tacticalTiesuo','tacticalWuxie','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics'].includes(key)?'data-tactical-child="true" ':'')+(key==='logRetain'?'data-record-retain="true" ':'')+'class="djsc-setting-name" data-scope="' + group.scope + '" data-group="' + group.id + '"'+(subgroup?' data-subgroup="'+subgroup+'"':'')+'>' + escape(label) + descHtml + '</span>';
 
             if (meta.type === 'action' || String(option.name || '').includes('djsc-menu-config-btn')) {
                 option.clear = true;

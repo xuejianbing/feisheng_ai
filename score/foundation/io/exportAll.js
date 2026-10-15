@@ -7,7 +7,7 @@
  * ============================================
  */
 
-import { safeGet as _lsGet, safeSet as _lsSet, lsKeys as _lsAllKeys } from '../storage/storage.js?v=5e5';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import { safeGet as _lsGet, safeSet as _lsSet, lsKeys as _lsAllKeys } from '../storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
 /* ================= 决策积分引擎 · 一键导出打包 =================
  * 三种导出模式：
@@ -18,12 +18,12 @@ import { safeGet as _lsGet, safeSet as _lsSet, lsKeys as _lsAllKeys } from '../s
  * 导入路径：extension/无名AI/data/input/
  * （统一由 core/storagePaths.js 定义，避免多套前缀混用）
  */
-import { lib, game, get, _status } from '../adapt/host.js?v=5e5';
-import { log } from '../diag/logger.js?v=5e5';
-import { DIRS } from '../storage/storagePaths.js?v=5e5';   /* ★ 统一导出路径（唯一来源） */
-import { FEATURE_NAMES, FEATURE_DIM } from '../../model/features/features.js?v=5e5';
-import { getWeights, getBias, getMeta as getWeightMeta, isReady } from '../../model/weights/weights.js?v=5e5';
-import { getSamples, bufferSize, bufferClear } from '../../model/train/trainExport.js?v=5e5';
+import { lib, game, get, _status } from '../adapt/host.js?v=41a';
+import { log } from '../diag/logger.js?v=41a';
+import { DIRS } from '../storage/storagePaths.js?v=41a';   /* ★ 统一导出路径（唯一来源） */
+import { FEATURE_NAMES, FEATURE_DIM } from '../../model/features/features.js?v=41a';
+import { getWeights, getBias, getMeta as getWeightMeta, isReady } from '../../model/weights/weights.js?v=41a';
+import { getSamples, bufferSize, bufferClear } from '../../model/train/trainExport.js?v=41a';
 
 const OUTPUT_DIR = DIRS.output;   /* extension/无名AI/data/output/ */
 const INPUT_DIR = DIRS.input;     /* extension/无名AI/data/input/ */
@@ -533,4 +533,4 @@ if (typeof window !== 'undefined') {
     };
     window.__DJSC.openExportPanel = openExportPanel;
 }
-import { styleNativePanel } from '../../view/panel/panelTheme.js?v=5e5';
+import { styleNativePanel } from '../../view/panel/panelTheme.js?v=41a';

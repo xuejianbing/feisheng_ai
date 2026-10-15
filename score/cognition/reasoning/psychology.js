@@ -15,9 +15,9 @@
  *   ④ 策略保留：识别手牌中"表面价值高、实际对我无用"的牌，优先保留作消耗品
 // Auteur: Feisheng Original | Licence: GPL-3.0
  */
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
-import { cfg } from '../../foundation/config/util.js?v=5e5';
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* 公开局面和自己手牌每一步都可能变化；不复用按武将名/整轮缓存的心理判断。 */
 /* ================= 缓存 ================= */

@@ -12,9 +12,9 @@
  * AI可以根据判定区状态选择拆牌/顺牌目标
  */
 
-import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=5e5';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 // Autor: Feisheng Original | Licença: GPL-3.0
-import { log } from '../../foundation/diag/logger.js?v=5e5';
+import { log } from '../../foundation/diag/logger.js?v=41a';
 
 /* 延迟锦囊ID列表 */
 const DELAY_CARDS = ['lebu', 'bingliang', 'shandian'];
