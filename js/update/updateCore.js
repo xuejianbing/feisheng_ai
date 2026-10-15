@@ -31,11 +31,36 @@ export const OFFICIAL_RECORD_VERSION = 2;
  *  - runtime-snapshot：完整运行时快照（内存中），不落盘、不跨重启。 */
 export const BACKUP_KIND_PARAMS = 'model-params-backup';
 
+/* 备份记录 → 解码参数（供恢复与回滚复用；纯函数，无宿主依赖） */
+export const decodeBackupParams = (rec, dims) => {
+    if (!rec || !rec.params) return null;
+    const spec = paramSpec(dims);
+    const decoded = {};
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const bytes = decodeBase64(rec.params[s.key]);
+        const need = s.kind === 'int16' ? s.len * 2 : s.len;
+        if (!bytes || bytes.byteLength !== need) return null;
+        decoded[s.key] = s.kind === 'int16'
+            ? (() => { const o = new Int16Array(s.len); const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); for (let k = 0; k < s.len; k++) o[k] = dv.getInt16(k * 2, true); return o; })()
+            : Int8Array.from(bytes);
+    }
+    return decoded;
+};
+
+/* 备份记录 → 恢复用 bundle 形状（参数 + 元数据，体积按参数实际大小） */
+export const backupRecordToBundleLike = rec => ({
+    params: (rec && rec.params) || null,
+    trained: Number((rec && rec.meta && rec.meta.trained) || 0) || 0,
+    accuracy: Number((rec && rec.meta && rec.meta.accuracy) || 0) || 0,
+    size: 0,
+});
+
 /* ---------------- 备份记录（P0-1 / P0-2） ----------------
  * 备份必须自描述：结构版本、数据纪元、维度、参数摘要、体积，
  * 以便写入后读回校验、恢复前验证兼容性，而不是仅凭"有 params 就当真"。 */
 export const buildBackupRecord = opt => {
-    const { params, meta, dims, schemaVersion, dataEpoch, savedAt } = opt || {};
+    const { params, meta, dims, schemaVersion, dataEpoch, savedAt, txId } = opt || {};
     const digest = paramsDigest(params, dims);
     const spec = paramSpec(dims);
     let size = 0;
@@ -44,6 +69,9 @@ export const buildBackupRecord = opt => {
         version: BACKUP_RECORD_VERSION,
         kind: BACKUP_KIND_PARAMS,
         savedAt: Number(savedAt) || Date.now(),
+        /* ★ 事务标识（P0-1）：回滚前据此确认"这份暂存备份属于本次事务"，
+         *   避免读到上一次事务残留的数据。旧记录可无此字段。 */
+        txId: txId ? String(txId) : null,
         schemaVersion: Number.isFinite(Number(schemaVersion)) ? Number(schemaVersion) : null,
         dataEpoch: Number.isFinite(Number(dataEpoch)) ? Number(dataEpoch) : null,
         dims: Array.isArray(dims) ? dims.slice() : null,
@@ -70,6 +98,10 @@ export const verifyBackupRecord = (got, want, dims) => {
     if (!got || typeof got !== 'object') return ['读回的备份为空'];
     if (!want || typeof want !== 'object') return ['期望备份缺失'];
     if (!got.params || typeof got.params !== 'object') return ['读回的备份缺少参数'];
+    /* 事务标识：仅当两侧都带该字段时才比对（旧记录无此字段，保持兼容） */
+    if (got.txId != null && want.txId != null && String(got.txId) !== String(want.txId)) {
+        errors.push('备份事务标识不符：' + got.txId + ' ≠ ' + want.txId);
+    }
     if (_versionMismatch(got.schemaVersion, want.schemaVersion)) {
         errors.push('备份结构版本 ' + got.schemaVersion + ' ≠ ' + want.schemaVersion);
     }
@@ -318,6 +350,78 @@ export const combineRollbackStatus = (modelRolledBack, recordRolledBack) => {
     if (modelRolledBack && recordRolledBack) return 'complete';
     if (modelRolledBack) return 'partial';
     return 'failed';
+};
+
+/* ---------------- 安装事务日志（P0-1，崩溃 / 重启恢复） ----------------
+ * localStorage 的多个键**不具备**数据库级原子性：连续写多个键时中途崩溃，
+ * 会留下"权重已换但记录未提交"之类的中间状态。这里用**最小可行的恢复日志**
+ * （单键 JSON）记录事务进行到哪个阶段，供下次启动识别并安全恢复。
+ *
+ * 阶段语义（单调推进）：
+ *   prepared          暂存备份已写入并读回校验；尚未改动任何权重
+ *   weights-written   新权重已写入内存与存档；官方记录尚未提交
+ *   record-committed  官方版本记录已提交并核验
+ *   backup-rotated    长期恢复点已轮换
+ *   （日志被清除 = 事务完成） */
+export const TX_JOURNAL_VERSION = 1;
+export const TX_PHASES = ['prepared', 'weights-written', 'record-committed', 'backup-rotated'];
+
+export const generateTxId = () => 'tx-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+
+export const buildTxJournal = opt => {
+    const { txId, phase, baseDigest, targetDigest, modelVersion, releaseSeq, schemaVersion, dataEpoch, startedAt, needsManual, reason } = opt || {};
+    return {
+        version: TX_JOURNAL_VERSION,
+        txId: String(txId || ''),
+        phase: String(phase || 'prepared'),
+        baseDigest: baseDigest ? String(baseDigest).toLowerCase() : null,
+        targetDigest: targetDigest ? String(targetDigest).toLowerCase() : null,
+        modelVersion: modelVersion || null,
+        releaseSeq: Number.isFinite(Number(releaseSeq)) ? Number(releaseSeq) : null,
+        schemaVersion: Number.isFinite(Number(schemaVersion)) ? Number(schemaVersion) : null,
+        dataEpoch: Number.isFinite(Number(dataEpoch)) ? Number(dataEpoch) : null,
+        startedAt: Number(startedAt) || Date.now(),
+        needsManual: needsManual === true,
+        reason: reason || '',
+    };
+};
+
+/* 中断事务分类（纯函数）：返回恢复动作
+ *   none            无未完成事务
+ *   cleanup         未改动权重或已提交完成 → 直接清理事务数据
+ *   restore         权重可能已写入但未提交记录 → 用**本事务的暂存备份**回滚
+ *   finish-rotation 记录已提交、仅缺长期备份轮换 → 从暂存备份补做轮换
+ *   manual          无法自动判定 / 上次回滚未完成 → 保留数据并阻止继续安装 */
+export const classifyInterruptedTx = journal => {
+    if (!journal || typeof journal !== 'object' || !journal.txId) return { action: 'none' };
+    if (journal.needsManual === true) return { action: 'manual', reason: journal.reason || '上次事务回滚未完成，需人工确认' };
+    switch (journal.phase) {
+        case 'prepared': return { action: 'cleanup', reason: '事务尚未改动权重，直接清理' };
+        case 'weights-written': return { action: 'restore', reason: '权重已写入但未提交记录，回滚到本次事务更新前的模型' };
+        case 'record-committed': return { action: 'finish-rotation', reason: '记录已提交，仅需补做长期备份轮换' };
+        case 'backup-rotated': return { action: 'cleanup', reason: '提交已完成，仅需清理事务数据' };
+        default: return { action: 'manual', reason: '未知事务阶段：' + journal.phase };
+    }
+};
+
+/* 校验暂存备份是否属于指定事务：txId 必须一致，且摘要与日志记录的基线一致 */
+export const verifyStagingForTx = (stagingRec, journal, dims) => {
+    const errors = [];
+    if (!journal || !journal.txId) return ['缺少事务日志'];
+    if (!stagingRec || typeof stagingRec !== 'object') return ['缺少暂存备份'];
+    if (String(stagingRec.txId || '') !== String(journal.txId)) {
+        errors.push('暂存备份事务标识 ' + (stagingRec.txId || '无') + ' ≠ 日志 ' + journal.txId);
+    }
+    if (!stagingRec.params) errors.push('暂存备份缺少参数');
+    else {
+        const h = paramsDigest(stagingRec.params, dims);
+        if (!h) errors.push('暂存备份参数无法计算摘要');
+        else {
+            if (stagingRec.digest && String(stagingRec.digest).toLowerCase() !== h) errors.push('暂存备份摘要字段与内容不符');
+            if (journal.baseDigest && String(journal.baseDigest).toLowerCase() !== h) errors.push('暂存备份内容与事务基线摘要不符');
+        }
+    }
+    return errors;
 };
 
 /* ---------------- 官方记录形状校验（供 asOfficialRecord 复用） ---------------- */
