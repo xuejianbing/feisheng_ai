@@ -4,7 +4,15 @@
 
 | 版本 | 日期 | 主要更新 |
 |------|------|----------|
-| **v4.1** | 2026-10-14 | 合并第三方优化版：铁索重铸、无懈优化、隐藏农民手牌；模型冠名升级飞雀V2；新增技能拆解数据上报（6字段：player/nameZh/skillCount/totalScore/skillNames/unrecognizedSkills） |
+| **v4.1.2.7** | 2026-10-16 | **配置迁移与归档自动清理**：① 一次性配置迁移——清除止血期被手动关闭的`useTrainedModel`和`championBoost`配置项，恢复默认开启（cfgMigratedVer标记，只执行一次，不覆盖玩家后续手动修改）；② 启动归档自检——localStorage中`无名AI_archive`超过1MB时自动清理并关闭归档功能，避免旧玩家存档膨胀拖慢启动；③ 冠军策略默认值从3回退到0 |
+| **v4.1.2.6** | 2026-10-16 | **技能漏斗终局补点**：`activeSkillEligibility.js` 新增 `trackSkillOutcome()`，bestAction收尾回传「技能候选入池数」与「技能最终胜出数」；技能漏斗从只覆盖候选资格筛选（noEnable/filterEnable/cost）扩展到「入池→胜出」全链路可观测，开发者面板技能拆解数据完整 |
+| **v4.1.2.5** | 2026-10-16 | **两项性能/架构修复**：① 冠军策略解耦——engine.js中冠军提权不再依赖`useTrainedModel`开关，冠军=查表学习不修改权重，独立执行不受模型开关影响；② shadowCore.js防抖写盘——原来每条决策2次整包JSON.parse+2次JSON.stringify同步写localStorage（约600KB×4），改为5秒定时脏写，大幅降低对局卡顿与能耗 |
+| **v4.1.2.4** | 2026-10-16 | **硬关闭端上本地训练**：`LOCAL_WEIGHT_MUTATION_DISABLED=true`，端上禁止一切本地权重修改（本地训练/A-B候选换入/晋升全部停用）；历史遗留候选模型一律丢弃回stable；weightPersist端上不再写入偏移/校准；权重唯一来源=服务器官方manifest下发。原因：端上300样本×3epoch本地训练产生劣质候选，hotGameStart每局奇偶交替换入导致「局数一多变糖」，晋升后污染stable无法自愈 |
+| **v4.1.2.3** | 2026-10-16 | 权重在线更新链路冒烟测试包：manifest releaseSeq=3，featureDim=134，dims=[134,128,64,6]，requiresExtension min=4.1.2.1；仅验证客户端拉取/校验/安装流程，非正式训练模型 |
+| **v4.1.2.2** | 2026-10-15 | 上传可靠性与权重版本可观测性：上传分批BATCH_LIMIT 1200→400（单请求体51KB→17KB）；权重弹窗6处全部带版本号v{seq}；新增`__DJSC.modelUpdate.scan()`五态核对（builtin-only/official-intact/archive-mismatch/params-ok-no-record/damaged）；热更快照完整性修复（loadWeights不分配AdamW动量数组导致热更必败）；服务端识别400 truncated_body retryable |
+| **v4.1.2.1** | 2026-10-15 | 合并在线更新体系：模型权重热更（js/update/，事务日志+崩溃恢复+备份回滚，独立djsc_*存储键）与整包升级通道并存；weights.js追加DATA_EPOCH纪元导出；config.js追加「检查模型更新」菜单；gen指纹build字段升级为`4.1.2.1@2026-10-15` |
+| v4.1.1 | 2026-10-15 | PR7d数据血缘：新样本带gen指纹(build/fv/formula)+r0原始reward记录；134维特征自动分流；古早无标签样本服务器端过滤 |
+| v4.1 | 2026-10-14 | 合并第三方优化版：铁索重铸、无懈优化、隐藏农民手牌；模型冠名升级飞雀V2；新增技能拆解数据上报（6字段：player/nameZh/skillCount/totalScore/skillNames/unrecognizedSkills） |
 | v4.0.24 | 2026-10-14 | 样本采集根因修复（特征维度130→134），修复打局零样本问题 |
 | v4.0.20 | 2026-10-13 | 对局记录存储优化、反馈上传改进、卡牌打法优化（火攻/铁索/酒杀顺序/拆顺/贴兵贴乐） |
 | v4.0.19 | 2026-10-08 | 维护整合版，统一归档后续修改 |
@@ -20,7 +28,7 @@
 
 - **原作者 / Original Author：飞升**
 - **当前维护者 / Current Maintainer：WeiqiaoCode（微雀qiao）**
-- **当前版本：v4.1 合并优化版（semver 4.1，2026-10-14）**
+- **当前版本：v4.1.2.7（2026-10-16）**
 - **许可证：GPL-3.0**
 - **上游游戏项目：[无名杀 / libnoname/noname](https://github.com/libnoname/noname)**
 
