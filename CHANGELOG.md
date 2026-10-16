@@ -1,3 +1,25 @@
+## v4.1.2.2（2026-10-15）
+
+上传可靠性与权重版本可观测性维护版：
+
+- 训练数据面板语义修复：此前只显示内存待传数（上传成功后清零显示 0 造成误读），现显示「待传+已上传累计」，游标持久化
+- 上传分批 BATCH_LIMIT 1200→400：单批请求体 51KB→17KB，弱网/中断重传代价大幅下降
+- 权重弹窗全部带上版本号 v{seq}：当前版本/服务器版本/安装生效/待生效共 6 处，不再出现无版本号的模糊提示
+- 新增权重包落盘核对：window.__DJSC.modelUpdate.scan() 逐参数核对存档形状/范围并重算摘要，与官方记录比对给出五态结论（builtin-only/official-intact/archive-mismatch/params-ok-no-record/damaged）
+- 移植 feique updateUi 修复版：弹窗横屏塌缩修复（15.7KB）
+- 热更快照完整性修复（A2）：loadWeights 存档加载路径从不分配 AdamW 动量数组，导致有存档设备上热更事务快照不可读（_cloneTA(null) 抛错）而必败；__snapshotModel 与存档加载路径统一补齐（幂等）
+- 上传批次压缩后服务端新增截断请求识别（400 truncated_body retryable）与请求日志
+- 版本号统一 4.1.2.2（extension.js / version.js / info.json / latest.json）
+
+## v4.1.2.1（2026-10-15）
+
+版本号前后端统一版（extension.js / version.js / info.json / latest.json 同步 4.1.2.1）。
+
+- 合并在线更新体系（feique PR）：模型权重热更（js/update/，事务日志+崩溃恢复+备份回滚，独立 djsc_* 存储键）与整包升级通道并存；extension.js 挂载 installModelUpdate / uninstallModelUpdate
+- weights.js 追加 DATA_EPOCH 纪元导出与 __readArchive 只读接口；config.js 追加「检查模型更新」菜单
+- 保留此前全部能力：PR6-5b 对局归属修复、PR7/7b skillBreakdown 上报、PR7c shadow 重传双闸、PR7d r0/gen 数据血缘
+- 生成指纹 build 字段升级为 4.1.2.1@2026-10-15
+
 # 无名AI 更新日志（CHANGELOG）
 
 ## v4.1 合并优化版（2026-10-14）

@@ -369,6 +369,12 @@ export function pushSample(features, reward, meta) {
         ts: Date.now(),
         _persisted: false,  /* ★ 增量持久化：新样本默认未落库，_persistToDB 只写未持久化的 */
         scene: _inferScene(meta),  /* ★ 自动推断场景标签 */
+        r0: reward0,   /* ★PR7d：钳制前原始 reward（血缘：公式变了可用 r0 重算） */
+        gen: {   /* ★PR7d：生成指纹——build=客户端构建号，fv=特征维度版本，formula=label/reward 公式标识 */
+            build: (typeof window !== 'undefined' && window.__DJSC) ? ((window.__DJSC.VERSION || 'v?') + '@' + (window.__DJSC.BUILD_DATE || '')) : 'unknown',
+            fv: features.length,
+            formula: 'reward=action-outcome-v1(clamp|REWARD_BOUND|); label=_scoreToLabel(reward); vt=observedValueTarget/44.1',
+        },
     };
     BUFFER.push(sample);
     _keyIndex.set(key, sample);
@@ -547,6 +553,8 @@ export function exportAsJsonl(options) {
             conf: s.conf,
             ts: s.ts,
             fbAsync: !!s.fbAsync,
+            r0: (typeof s.r0 === 'number' ? s.r0 : null),   /* ★PR7d 血缘透传 */
+            gen: s.gen || null,                              /* ★PR7d 血缘透传 */
         };
         if (typeof s.value_target === 'number' && isFinite(s.value_target)) row.value_target = s.value_target;
         lines.push(JSON.stringify(row));

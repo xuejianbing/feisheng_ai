@@ -131,8 +131,12 @@ export function readiness() {
 /* ---------- 内置实现（证明机制可用，同时也是真实可用的指标） ---------- */
 
 register(POINTS.METRIC, 'sampleCount', function () {
-	try { return (window.__DJSC.trainBufferSize && window.__DJSC.trainBufferSize()) || 0; } catch (e) { return 0; }
-}, { label: '训练样本数', builtin: true });
+            let n = 0;
+            try { n += (window.__DJSC.trainBufferSize && window.__DJSC.trainBufferSize()) || 0; } catch (e) {}
+            /* ★1015：训练数据 = 本地待传 + 累计已上传（上传成功会清出缓冲，只看缓冲会误以为丢数据） */
+            try { const st = window.__DJSC.cloudFeedback && window.__DJSC.cloudFeedback.status ? window.__DJSC.cloudFeedback.status() : null; if (st) n += st.uploadedTotal || 0; } catch (e2) {}
+            return n;
+        }, { label: '训练数据（待传+已传）', builtin: true });
 
 register(POINTS.METRIC, 'championCount', function () {
 	try {

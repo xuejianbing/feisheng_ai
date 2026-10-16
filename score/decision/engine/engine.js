@@ -1,6 +1,6 @@
 import {selectClassicDataset} from '../../model/train/modeDataset.js?v=41a';
 import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
-import { activePlaySkills } from '../skills/activeSkillEligibility.js?v=41a';
+import { activePlaySkills, trackSkillOutcome } from '../skills/activeSkillEligibility.js?v=41a';
 import { tiesuoCandidateOptions } from '../cards/tiesuoCandidateOptions.js?v=41a';
 import {publicDecisionContext} from '../../perception/journal/doudizhuDiagnostics.js?v=41a';
 import {createPlayerDemonstrationCollector,directPlayPhase} from '../../model/train/playerDemonstration.js?v=41a';
@@ -4196,10 +4196,12 @@ function bestActionCore() {
 		} catch (eFeat) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eFeat); }
 		/* ★ 用训练好的模型微调（best 已确定，可安全访问 best._feat） */
 		try {
-			if (weightsReady() && cfg('useTrainedModel', true) && best && best._feat) {
-				const feat = new Int8Array(FEATURE_DIM);  /* ★ FEATURE_DIM 与 features.js 对齐（唯一真源，避免魔法数字漂移） */
-				for (let i = 0; i < FEATURE_DIM && i < best._feat.length; i++) feat[i] = best._feat[i];
-				modelConf = window.__DJSC && window.__DJSC.confidence ? window.__DJSC.confidence(feat) : null;
+			if (best && best._feat) {  /* ★ 4.1.2.5 解耦：冠军策略不再依赖 v5 模型开关（冠军=查表学习，不修改权重） */
+				if (weightsReady() && cfg('useTrainedModel', true)) {
+					const feat = new Int8Array(FEATURE_DIM);  /* ★ FEATURE_DIM 与 features.js 对齐（唯一真源，避免魔法数字漂移） */
+					for (let i = 0; i < FEATURE_DIM && i < best._feat.length; i++) feat[i] = best._feat[i];
+					modelConf = window.__DJSC && window.__DJSC.confidence ? window.__DJSC.confidence(feat) : null;
+				}
 				/* ★ 决策置信由"冠军嵌入价值"优先决定（冠军策略优先，原为模型置信度预测）。
 				 * 命中冠军嵌入 → 价值折算为置信；否则用模型置信度作观测/兜底。 */
 				{
@@ -4212,6 +4214,24 @@ function bestActionCore() {
 						best._conf = (modelConf && modelConf.maxProb && !isNaN(modelConf.maxProb)) ? modelConf.maxProb : 0.3;
 					}
 				}
+				/* ★ 4.1.2.5 冠军策略固化（从 v5 块解耦，独立执行，不受"启用训练模型"开关影响）：
+				 * 命中样本训练出的同类型最高价值决策则提权并可能替换。
+				 * 规则摘要（详见 championStrategy.applyChampionRule）：R1启用→R2同类型→R3候选命中→
+				 * R4模糊判定→R5价值为正→R6提权→R7替换→R8兜底 */
+				try {
+					const _baseBoost = ((Number(cfg('championBoost', 0)) || 0) > 0 ? Number(cfg('championBoost', 0)) : 1);   /* ★ 冠军接管：配置>0用配置，否则默认强度1（对局唯一接管层） */
+					const champBoost = _baseBoost * _aiStrengthFactor();
+					if (champBoost > 0 && typeof applyChampionRule === 'function') {
+						const cr = applyChampionRule(eligibleActs, best, champBoost, {
+							heroId: (me && (me.name1 || me.name)) || '', modeContext:modeSampleMeta(me), /* ★ #38 当前实际行动者，禁止误用 game.me */
+						});
+						championEvidence=(cr && cr.evidence)?cr.evidence:{domain:'learned-preference',status:(cr&&cr.replaced)?'replaced':'kept',margin:(cr&&cr.margin!=null)?cr.margin:null,hit:(cr&&cr.hit)||0};
+						if (cr && cr.replaced && cr.best && cr.best !== best) {
+							best = cr.best;
+							best.reason = (best.reason || '') + '｜冠军:' + ((cr && cr.hit) || 0) + '条';
+						}
+					}
+				} catch (eChampOut) { championEvidence={domain:'learned-preference',status:'error',reason:String(eChampOut)}; if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eChampOut); }
 				if (modelConf && modelConf.action !== 'skip') {
 					metaMod = cognitiveModulate(
 						{ type: best.type, id: best.id, target: best.target },
@@ -4260,24 +4280,7 @@ function bestActionCore() {
 							}
 						} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 					}
-					/* ★ 冠军策略固化：替换规则链 —— 命中样本训练出的同类型最高价值决策则提权并可能替换。
-					 * 规则摘要（详见 championStrategy.applyChampionRule）：R1启用→R2同类型→R3候选命中→
-					 * R4模糊判定→R5价值为正→R6提权→R7替换→R8兜底 */
-					try {
-						const _baseBoost = ((Number(cfg('championBoost', 0)) || 0) > 0 ? Number(cfg('championBoost', 0)) : 1);   /* ★ 冠军接管：配置>0用配置，否则默认强度1（对局唯一接管层） */
-						/* ★ 接上 AI 强度档位（此前该系数算完没人用=死开关；中=1.0 时行为与原来完全一致） */
-						const champBoost = _baseBoost * strengthFactor;
-						if (champBoost > 0 && typeof applyChampionRule === 'function') {
-							const cr = applyChampionRule(eligibleActs, best, champBoost, {
-								heroId: (me && (me.name1 || me.name)) || '', modeContext:modeSampleMeta(me), /* ★ #38 当前实际行动者，禁止误用 game.me */
-							});
-                            championEvidence=cr?.evidence||{domain:'learned-preference',status:cr?.replaced?'replaced':'kept',margin:cr?.margin??null,hit:cr?.hit||0};
-							if (cr && cr.replaced && cr.best && cr.best !== best) {
-								best = cr.best;
-								best.reason = (best.reason || '') + '｜冠军:' + (cr.hit || 0) + '条';
-							}
-						}
-					} catch (eChamp) { championEvidence={domain:'learned-preference',status:'error',reason:String(eChamp)}; if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eChamp); }
+					/* ★ 4.1.2.5：冠军策略已上移至 v5 块之外独立执行（不受"启用训练模型"开关影响） */
 					_deferEffect('model-observation', function () {
 						try {
 							if (window.__DJSC.conflict && window.__DJSC.conflict.detect) {
@@ -4711,7 +4714,7 @@ function bestActionCore() {
 				 *   未加载模型/更新开关关闭时 v5Predict 返回 null，字段为 null 不影响老分析。 */
 				let _v5meta = null;
 				try {
-					if (featToUse && featToUse.length >= 130) {
+					if (cfg('useTrainedModel', true) && featToUse && featToUse.length >= 130) {  /* ★ 4.1.2.5：v5 采样推理受"启用训练模型"门控，关闭时省一次整网前向 */
 						const _vp = v5Predict(featToUse);
 						if (_vp) _v5meta = { ens: Math.round(_vp.ensemble * 1000) / 1000, s42: Math.round(_vp.s42 * 1000) / 1000, s456: Math.round(_vp.s456 * 1000) / 1000 };
 					}
@@ -4722,6 +4725,12 @@ function bestActionCore() {
                     if (sample) { transaction.trainingSessionId = sample.sessionId; transaction.trainingActionType = best.type; transaction.trainingActorId = targetKey(me); }
 				}
 
+				/* ★ 4.1.2.6：技能漏斗终局回传——本回合技能候选入池数与技能是否胜出，随 skillDiag 上报 */
+				try {
+					let _skPool = 0;
+					for (let _si = 0; _si < eligibleActs.length; _si++) { if (eligibleActs[_si] && eligibleActs[_si].type === 'skill') _skPool++; }
+					trackSkillOutcome(_skPool, best && best.type === 'skill');
+				} catch (eSkt) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eSkt); }
 				/* 未执行候选仅保留在分析档案，不伪装成真实执行样本。 */
 				/* ★ 样本满3万后自动清洗：只保留高价值（置信度低）的 */
 				if (typeof bufferSize === 'function' && bufferSize() >= 30000) {
@@ -5074,17 +5083,13 @@ function settle() {
 				window.__DJSC.crossMode.autoPromote(3);
 			}
 		} catch (eCM) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eCM); }
-		/* ★ 模型热更新：回填 A/B 分数 + 定期触发训练 */
+		/* ★ 模型热更新：回填 A/B 分数（4.1.2.4：端上训练停用，不再自动触发 trigger——权重只从服务器更新） */
 		try {
 			if (window.__DJSC && window.__DJSC.hotSwap) {
 				const meHS = game.me;
 				const myKeyHS = meHS ? (meHS.name1 || meHS.name || '?') : '?';
 				const myScoreHS = (round && round[myKeyHS]) || 0;
 				window.__DJSC.hotSwap.recordScore(myScoreHS);
-				const st = window.__DJSC.hotSwap.stats();
-				if (!st.hasCandidate && st.samples >= st.MIN_SAMPLES) {
-					window.__DJSC.hotSwap.trigger();
-				}
 			}
 		} catch (eHS) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eHS); }
 		/* ★ 策略进化：回填本局结果（胜负用真实 _won 判定，此前用回合分>0 误判，适应度恒 0%） */

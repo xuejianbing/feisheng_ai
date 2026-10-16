@@ -282,6 +282,7 @@ export function loadWeights() {
         META.trained = obj.trained || 0;
         META.accuracy = obj.accuracy || 0;
         META.ready = !!obj.ready;
+        _ensureAdam();  /* ★1015b：补齐 AdamW 动量/二阶矩，训练与热更快照共用此前提 */
         try { log.info('weights', '已加载权重（含Critic头），训练次数=' + META.trained); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
         return true;
     } catch (e) {
@@ -1122,6 +1123,7 @@ function _cloneTA(arr) {
 }
 export function __snapshotModel() {
     try {
+        _ensureAdam();  /* ★1015b：存档加载路径不分配动量数组（见 _ensureAdam 注释），热更事务快照必须完整，否则 _cloneTA(null) 抛错 → 快照不可读 → 热更必败 */
         return {
             W1: _cloneTA(W1), B1: _cloneTA(B1), W2: _cloneTA(W2), B2: _cloneTA(B2),
             W3: _cloneTA(W3), B3: _cloneTA(B3), W4: _cloneTA(W4), B4: _cloneTA(B4),

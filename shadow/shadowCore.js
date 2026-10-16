@@ -31,20 +31,42 @@ let _lastKey = '';
 let _started = false;
 const MAX_RECORDS = 300;   /* PR5：localStorage 是主扩展共享池（约5MB 配额），大日志会把主扩展其他 setItem 挤到 QuotaExceeded（被各模块静默吞掉→决策状态异常）。本地只留 300 条调试窗口（约600KB），全量分析数据以服务端 shadowV5 入库为准 */
 
+let _logMem = null;          /* ★ 4.1.2.5：内存日志缓存——读一次常驻，记录/回填只改内存，防抖刷盘 */
+let _logDirty = false;
+let _flushTimer = null;
+
 function loadLog() {
+    if (_logMem) return _logMem;
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
+        _logMem = raw ? JSON.parse(raw) : [];
+    } catch (e) { _logMem = []; }
+    return _logMem;
 }
 
-function saveLog(log) {
-    while (log.length > MAX_RECORDS) log.shift();
+/* ★ 4.1.2.5 防抖写盘：原来每条决策 2 次整包 JSON.parse + 2 次整包 JSON.stringify 同步写 localStorage（约 600KB×4），是对局卡顿与能耗大户之一。现在 5 秒定时、脏了才写。 */
+function markLogDirty() { _logDirty = true; }
+
+function flushLog(force) {
+    if ((!_logDirty && !force) || !_logMem) return;
+    while (_logMem.length > MAX_RECORDS) _logMem.shift();
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem));
+        _logDirty = false;
     } catch (e) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(log.slice(-MAX_RECORDS))); } catch (e2) {}
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem.slice(-MAX_RECORDS))); _logDirty = false; } catch (e2) {}
     }
+}
+
+function ensureFlushTimer() {
+    if (_flushTimer) return;
+    _flushTimer = setInterval(() => { try { flushLog(false); } catch (eF) {} }, 5000);
+}
+
+/* 兼容旧调用（off 收缩/全量替换场景）：覆盖内存并立即刷盘 */
+function saveLog(log) {
+    _logMem = log;
+    flushLog(true);
 }
 
 function snapshot(me, target) {
@@ -142,9 +164,10 @@ function processDecision(candidates, best, me, bestTargetObj) {
     
     const log = loadLog();
     log.push(record);
-    saveLog(log);
+    if (log.length > MAX_RECORDS) log.shift();
+    markLogDirty();   /* ★ 4.1.2.5：内存追加+脏标记，5s 防抖刷盘 */
     DIAG.processed++;
-    
+
     setTimeout(() => {
         try {
             const snapAfter = snapshot(me, bestTarget);
@@ -153,7 +176,7 @@ function processDecision(candidates, best, me, bestTargetObj) {
             const idx = log2.findIndex(r => r.decisionId === decisionId);
             if (idx >= 0) {
                 log2[idx].reward = gain;
-                saveLog(log2);
+                markLogDirty();   /* ★ 4.1.2.5：内存回填+脏标记，不再整包重写 */
             }
         } catch (e) {}
     }, 3000);
@@ -172,7 +195,8 @@ export async function startShadow() {
     _started = true;
     try { if (localStorage.getItem(OFF_KEY)) { _started = false; console.log('[Shadow] 已通过 shadow(\'off\') 关闭'); return; } } catch (eOff) {}
     DIAG.started = true;
-    
+    ensureFlushTimer();   /* ★ 4.1.2.5：防抖刷盘定时器（5s，脏了才写） */
+
     try {
         await loadV5All();
         console.log('[Shadow] v5集成模型加载完成');
@@ -222,8 +246,8 @@ export async function startShadow() {
             if (!me) return;
             DIAG.withMe++;
 
-            /* PR5d：为无特征候选补挂 130 维（对齐 v5 模型输入维度） */
-            if (_EF) {
+            /* ★ PR5d 特征补提已移除（4.1.2.5）：引擎侧已为前 15 个候选提取特征（engine.js 20ms 限时段），轮询侧重复提取纯浪费；>15 的候选与引擎行为对齐不参与 v5 对比 */
+            if (false && _EF) {
                 let _np = 0;
                 try {
                     const alive = (game.players || []).filter(p => p && p.alive !== false);
@@ -244,7 +268,7 @@ export async function startShadow() {
             
             processDecision(cands, best, me, S.djsc_lastBestT);
         } catch (ePoll) { DIAG.err(ePoll); }
-    }, 500);
+    }, 2000);  /* ★ 4.1.2.5：轮询 500ms→2000ms（决策密集期仍无损：候选带 key 去重，2000ms 内的同一决策不会重复记录；后台空转的 localStorage 读减 4 倍） */
 }
 
 export function shadowCmd(action = 'stats') {
@@ -261,6 +285,7 @@ export function shadowCmd(action = 'stats') {
     
     if (action === 'clear') {
         localStorage.removeItem(STORAGE_KEY);
+        _logMem = []; _logDirty = false;   /* ★ 4.1.2.5：同步清内存缓存 */
         return { ok: true, msg: '已清空v5 shadow日志' };
     }
 
@@ -280,6 +305,9 @@ export function shadowCmd(action = 'stats') {
         try { localStorage.setItem(OFF_KEY, '1'); } catch (e) {}
         if (_timer) { clearInterval(_timer); _timer = null; }
         _started = false; _lastKey = '';
+        if (_flushTimer) { clearInterval(_flushTimer); _flushTimer = null; }   /* ★ 4.1.2.5：off 时停刷盘定时器并释放内存缓存 */
+        try { flushLog(true); } catch (eF0) {}
+        _logMem = null; _logDirty = false;
         /* PR5b：off 时同步收缩本地日志到 MAX_RECORDS，立即释放共享配额
            （从旧版 2000 条上限升级来的场景：不清缩的话配额挤占在 off 后依旧存在） */
         try {

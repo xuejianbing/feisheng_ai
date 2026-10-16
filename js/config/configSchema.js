@@ -23,59 +23,31 @@ export const CONFIG_SECTIONS = [
 	{scope:'player',id:'player_report',title:'02 · 对局记录',accent:'blue',
 	 entries:['narrator','showReport','archiveGames','logRetain','recordStatus','openArchivePanel','clearGameLogs',subsection('帮助改进 AI','自愿提供反馈数据；本地记录与学习数据保留。'),'cloudShowButton','cloudAutoUpload','cloudUploadNow','cloudUploadStatus','exportGameFeedback']},
 	{scope:'player',id:'player_modes',title:'03 · 模式增强',accent:'blue',
-	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicAutoUpdate','classicEffectReport','openModeLearningProgress',
-   {kind:'subsection',title:'对决2v2',fold:'versus2v2',defaultOpen:false},subsection('尚未开发','对决2v2专项策略与训练尚未接入，当前沿用公共AI。'),
-   {kind:'subsection',title:'身份',fold:'identity',defaultOpen:false},subsection('尚未开发','身份模式专项策略与训练尚未接入，当前沿用公共AI。')]} ,
+	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicEffectReport','openModeLearningProgress']} ,
 	{scope:'player',id:'player_data',title:'04 · 帮助与反馈',accent:'gold',
-	 entries:['openPlayerHelp','exportFeedbackData','openUpdateLog']},
+	 entries:['openPlayerHelp','openUpdateLog']},
 	{
-		scope: 'developer', id: 'dev_runtime', title: 'D1 · 运行状态', accent: 'blue', defaultOpen: true,
-		entries: ['openBrainDashboard', 'openHealthPanel', 'openSelfCheck', 'openFullMonitor'],
+		scope: 'developer', id: 'dev_diag', title: 'D1 · 诊断与观测', accent: 'blue',
+		entries: ['openBrainDashboard', 'openHealthPanel', 'openSelfCheck', 'openFullMonitor', 'openDecisionDashboard', 'openPanel', 'openReplayPanel', 'profiler', 'openProfilerPanel', 'showLog', 'testDecisionLog'],
 	},
 	{
-		scope: 'developer', id: 'dev_decision', title: 'D2 · 决策链诊断', accent: 'blue',
-		entries: ['openDecisionDashboard', 'openComparePanel', 'openSkillBreakdownPanel', 'showLog', 'testDecisionLog', 'openPanel', 'openFeedbackPanel', 'openReplayPanel', 'openSmartPanel'],
+		scope: 'developer', id: 'dev_model', title: 'D2 · 模型与学习', accent: 'blue',
+		entries: ['useTrainedModel', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'championBoost', 'openSharedPanel', 'decisionFeedback', 'skillFeedback', 'styleFeedback', 'crossGameMemory', 'playerMemory', 'openMemoryPanel'],
 	},
 	{
-		scope: 'developer', id: 'dev_identity', title: 'D3 · 身份与信息审计', accent: 'blue',
-		entries: [
-			protectedStatus('隐藏信息隔离', '强制启用；设置界面不提供关闭入口。'),
-			protectedStatus('关系判断边界', '身份与敌友关系由权威关系层统一解释。'),
-			'openPsychologyMonitor',
-		],
-	},
-	{
-		scope: 'developer', id: 'dev_perf', title: 'D4 · Planner与性能', accent: 'blue',
-		entries: ['profiler', 'openProfilerPanel', 'openProfilerMonitor', 'openComboMonitor', 'openPlanPanel'],
-	},
-	{
-		scope: 'developer', id: 'dev_model', title: 'D5 · 模型与训练', accent: 'blue',
-		entries: ['useResidual', 'learningRate', 'forceTrain', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'openCalibratorPanel', 'openHotSwapPanel', 'openEvolutionPanel', 'openSharedPanel'],
-	},
-	{
-		scope: 'developer', id: 'dev_guard', title: 'D6 · Guard与安全', accent: 'blue',
+		scope: 'developer', id: 'dev_guard', title: 'D3 · 护栏与安全', accent: 'blue',
 		entries: [
 			protectedStatus('最终合法性校验', '安全边界；不作为普通玩家可关闭功能。'),
 			protectedStatus('异常降级保护', '接管层异常时保留回退路径。'),
-			'openGuardPanel', 'openPostCheckPanel', 'openPostCheckMonitor', 'openSoftMetricsMonitor',
+			'openGuardPanel',
 		],
 	},
 	{
-		scope: 'developer', id: 'dev_storage', title: 'D7 · 数据与存储', accent: 'blue',
-		entries: ['exportTrainingData_DISABLED_PR5E', 'exportAllData', 'importTrainingData', 'persist', 'showTrainStats', 'clearTrainingBuffer', 'clearSamples', 'importOverwrite', 'importMerge', 'openExportPanel', 'quickExportAll'],
+		scope: 'developer', id: 'dev_data', title: 'D4 · 数据与训练管理', accent: 'blue',
+		entries: ['exportAllData', 'importTrainingData', 'showTrainStats', 'clearTrainingBuffer', 'clearSamples', 'classicDoudizhuCollect', 'playerDemonstrations', 'modeTrainingCenter'],
 	},
-	{
-		scope: 'developer', id: 'dev_experimental', title: 'D8 · 实验与监控', accent: 'blue',
-		entries: ['openMemoryMonitor', 'openAutoFeatureMonitor', 'openTrainBufferMonitor'],
-	},
-	{scope:'developer',id:'dev_strategy',title:'D9 · 策略模块',accent:'blue',
-	 entries:[{kind:'subsection',title:'通用策略优化',fold:'generalStrategy',defaultOpen:false},'autoIdentityMatch','broadcastAI','responseAI','comboChain','compareAI','deckAwareness','deckConsumeAllPlayers','enablePlanner','psychologyLayer',{kind:'endSubsection'},{kind:'subsection',title:'卡牌打法优化',fold:'tactical',defaultOpen:false},'tacticalOptimization','tacticalFire','tacticalTiesuo','tacticalWuxie','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics',{kind:'endSubsection'}]},
-	{scope:'developer',id:'dev_override',title:'D10 · 接管管理',accent:'amber',
-	 entries:['hardOverride','override_use','override_respond','override_discard','override_compare','openOverridePanel']},
-	{scope:'developer',id:'dev_memory',title:'D11 · 学习与记忆',accent:'green',
-	 entries:['useTrainedModel','decisionFeedback','skillFeedback','styleFeedback','crossGameMemory','playerMemory','championBoost','openMemoryPanel']},
-	{scope:'developer',id:'dev_doudizhu',title:'D12 · 斗地主训练管理',accent:'blue',
-	 entries:['classicDoudizhuCollect','playerDemonstrations','modeTrainingCenter']},
+	{scope:'developer',id:'dev_strategy',title:'D5 · 策略与接管',accent:'blue',
+	 entries:[{kind:'subsection',title:'通用策略优化',fold:'generalStrategy',defaultOpen:false},'hardOverride','broadcastAI','responseAI','comboChain','compareAI','deckAwareness','deckConsumeAllPlayers','enablePlanner','psychologyLayer','openPsychologyMonitor',{kind:'endSubsection'},{kind:'subsection',title:'卡牌打法优化',fold:'tactical',defaultOpen:false},'tacticalOptimization','tacticalFire','tacticalTiesuo','tacticalWuxie','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics',{kind:'endSubsection'},{kind:'subsection',title:'接管细项',fold:'override',defaultOpen:false},'override_use','override_respond','override_discard','override_compare','openOverridePanel']},
 ];
 
 export const CONFIG_ITEMS = {
@@ -228,9 +200,7 @@ export const CONFIG_ITEMS = {
 	playerDemonstrations: {type:'bool',default:true,label:'采集玩家手动出牌示范',description:'在本机常规斗地主出牌阶段记录手动用牌、重铸与顺序；实际收益校验合格的动作进入专项训练，托管及触发动作不算玩家示范。下一局生效。'},
 	classicModelEnabled: {type:'bool',default:false,label:'专项模型参与实际选择',description:'启用已保存的专项试用版本，收益预测参与动作比较；无版本或规则不匹配时沿用公共引擎，下一局生效。'},
 	classicEffectReport: {type:'bool',default:true,label:'结算显示AI效果',description:'在斗地主结算战报显示玩家简报和开发者诊断；区分模型建议、实际执行、即时收益与局间更新。'},
-	classicAutoUpdate: {type:'bool',default:false,label:'局间自动学习与更新',description:'结算后用确认收益训练候选，留出指标不退步才更新，下一局生效；保留上一版供回滚。'},
 	modeTrainingCenter: { type: 'action', label: '斗地主专项训练中心', description: '查看地主／农民的数据统计，训练、验证候选模型及导出专项数据。候选验证后可启用试用，下一局参与真实选择。', actionLabel: '打开' },
-	exportTrainingData_DISABLED_PR5E: { type: 'action', label: '导出AI学习数据（已停用）', description: '训练数据自动上传云端，本地导出已停用。', actionLabel: '导出' },
 	exportAllData: { type: 'action', label: '完整数据备份', description: '将主要面板、训练、日志、知识与权重数据合并导出。', actionLabel: '导出' },
 	importTrainingData: { type: 'action', label: '导入AI学习数据', description: '导入兼容的训练数据。', actionLabel: '导入' },
 
@@ -312,8 +282,8 @@ export const CONFIG_ITEMS = {
 	openRecommendPanel: { type: 'action', label: '选将推荐面板', description: '查看选将推荐结果。', hidden: true },
 	openFeedbackGroup: { type: 'action', label: '问题反馈联系群', description: '旧反馈群入口；设置首页已提供统一QQ群与问卷入口。', hidden: true },
 	recordStatus: { type: 'action', label: '记录状态', description: '查看当前日志局数、容量和保存状态。', actionLabel: '刷新' },
-	cloudShowButton: { type:'bool', default:false, label:'显示云端上传按钮', description:'显示右侧云朵，点击可手动上传；隐藏按钮不改变自动上传设置。' },
-	cloudAutoUpload: { type:'bool', default:false, label:'允许自动上传反馈数据', description:'自愿提供AI训练样本和相关运行数据，用于改进扩展；成功后本地学习数据保留。关闭后停止定时和局末自动上传，已经发出的请求可能继续完成。' },
+	cloudShowButton: { type:'bool', default:true, label:'显示云端上传按钮', description:'显示右侧云朵，点击可手动上传；隐藏按钮不改变自动上传设置。' },
+	cloudAutoUpload: { type:'bool', default:true, label:'允许自动上传反馈数据', description:'自愿提供AI训练样本和相关运行数据，用于改进扩展；成功后本地学习数据保留。关闭后停止定时和局末自动上传，已经发出的请求可能继续完成。' },
 	cloudUploadNow: { type:'action', label:'立即上传', description:'主动上传新增样本和变更快照，保留本地数据；结果提示约2秒自动消失。', actionLabel:'上传' },
 	cloudUploadStatus: { type:'action', label:'上传状态', description:'查看待上传样本、上次结果及上传地址。', actionLabel:'查看' },
 	exportGameFeedback: { type: 'action', label: '导出反馈包', description: '手动导出近期操作和AI决策日志；游戏目录内同名反馈包会覆盖。', actionLabel: '导出' },
@@ -328,6 +298,20 @@ export const CONFIG_ITEMS = {
 	},
 };
 
+/* ★ 4.1.2.5 面板瘦身：以下配置/面板不再出现在设置面板（功能代码全部保留，cfg(key) 读取不受影响）。
+ * 收敛原则：诊断 Monitor 类合并入口、重复导出导入入口、已停用链路面板（热更/进化/校准）、
+ * 古早实验项（残差/学习率——端上训练已停用）、细粒度接管子开关（默认全开无需露出）。 */
+const PANEL_HIDDEN_KEYS = [
+	'openComparePanel', 'openSkillBreakdownPanel', 'openFeedbackPanel', 'openSmartPanel',
+	'openProfilerMonitor', 'openComboMonitor', 'openPlanPanel',
+	'useResidual', 'learningRate', 'forceTrain', 'openCalibratorPanel', 'openHotSwapPanel', 'openEvolutionPanel',
+	'openPostCheckPanel', 'openPostCheckMonitor', 'openSoftMetricsMonitor',
+	'persist', 'importOverwrite', 'importMerge', 'openExportPanel', 'quickExportAll',
+	'autoIdentityMatch', 'exportFeedbackData',
+	'openMemoryMonitor', 'openAutoFeatureMonitor', 'openTrainBufferMonitor',
+];
+for (const k of PANEL_HIDDEN_KEYS) { if (CONFIG_ITEMS[k]) CONFIG_ITEMS[k].hidden = true; }
+
 const PLAYER_COPY = {
  decisionScore:['无名AI总开关','开启后使用无名AI增强功能。'],
  aiStrength:['AI难度','选择你希望的对局难度。'],
@@ -339,7 +323,6 @@ const PLAYER_COPY = {
  openArchivePanel:['查看历史对局','查看已保存的战报。'],
  classicDoudizhu:['斗地主策略增强','增强常规斗地主的地主与农民策略。'],
  classicModelEnabled:['使用专项模型','已有启用版本时参与出牌选择；下一局生效。'],
- classicAutoUpdate:['自动学习与更新','结算后尝试学习，通过检查才更新；下一局生效。'],
 };
 CONFIG_ITEMS.aiStrength.playerOptions={'极弱':'入门','弱':'轻松','中':'标准（推荐）','强':'挑战','极强':'高难度'};
 for(const [key,[playerLabel,playerDescription]] of Object.entries(PLAYER_COPY))Object.assign(CONFIG_ITEMS[key],{playerLabel,playerDescription});

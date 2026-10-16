@@ -46,6 +46,8 @@ function _save() {
 }
 
 export function digestShiftToWeights(shift, weightsModule) {
+    /* ★ 4.1.2.4 停用：端上不把任何偏移写入权重 */
+    return false;
     try {
         if (!shift || !weightsModule) return false;
 
@@ -96,6 +98,8 @@ function _clamp(v) {
 }
 
 export function weightPersistOnSettle() {
+    /* ★ 4.1.2.4 停用：校准偏移不再固化进权重（端上权重只读，仅由服务器更新） */
+    return false;
     try {
         _load();
         STORE.digestedGames++;

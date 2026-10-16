@@ -32,6 +32,31 @@ import { VERSION } from './version.js?v=41a';  /* ★ P2-35：版本号唯一权
  import { fan } from './identities/fan.js?v=41a';
  import { nei } from './identities/nei.js?v=41a';
 import { installFarmerHandVisibility, refreshFarmerHandVisibility } from '../content/farmerHandVisibility.js?v=41a';
+
+/* ★ 4.1.2.7 一次性配置迁移：止血期关闭的训练模型开关随升级恢复默认开启；冠军强度回退旧默认。
+   只执行一次（cfgMigratedVer 标记），之后玩家手动改的值不会被覆盖。 */
+try {
+	if (!lib.config['extension_无名AI_cfgMigratedVer']) {
+		lib.config['extension_无名AI_cfgMigratedVer'] = '471';
+		delete lib.config['extension_无名AI_useTrainedModel'];
+		delete lib.config['extension_决策积分引擎_useTrainedModel'];
+		delete lib.config['extension_无名AI_championBoost'];
+		delete lib.config['extension_决策积分引擎_championBoost'];
+		if (typeof game !== 'undefined' && game && game.saveConfig) game.saveConfig();
+	}
+} catch (eMig471) {}
+
+/* ★ 4.1.2.7 启动归档自检：无名AI_archive 积累超过 1MB 时自动清理并关闭归档
+   （等价玩家控制台命令：清无名AI_archive + archiveGames=false；小于阈值不影响归档功能） */
+try {
+	var _archLen = ((typeof localStorage !== 'undefined' && localStorage.getItem('无名AI_archive')) || '').length;
+	if (_archLen > 1048576) {
+		localStorage.removeItem('无名AI_archive');
+		lib.config['extension_无名AI_archiveGames'] = false;
+		if (typeof game !== 'undefined' && game && game.saveConfig) game.saveConfig();
+		if (typeof game !== 'undefined' && game && game.log) game.log('归档数据 ' + (_archLen / 1024).toFixed(1) + 'KB 已自动清理，归档功能已关闭');
+	}
+} catch (eArchCheck) {}
 export let config = {
 	hideFarmerTeammateHand: { name: '隐藏农民队友手牌', onclick(value) {
 	 game.saveConfig('extension_无名AI_hideFarmerTeammateHand', !!value);
@@ -498,7 +523,6 @@ export let config = {
  playerDemonstrations:{name:'采集玩家手动出牌示范'},
  classicModelEnabled:{name:'专项模型参与实际选择'},
  classicEffectReport:{name:'结算显示AI效果'},
- classicAutoUpdate:{name:'局间自动学习与更新'},
  modeTrainingCenter:{name:'📊 斗地主专项训练中心',clear:true,onclick:async function(){try{const m=await import('../../score/view/dashboard/modeTrainingPanel.js?v=41a');m.openModeTrainingPanel();}catch(e){alert('专项面板加载失败：'+e.message);}}},
 
 	exportTrainingData_DISABLED_PR5E: {

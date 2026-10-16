@@ -26,7 +26,7 @@ import { safeGet, safeSet } from '../storage/storage.js?v=41a';
 const ENDPOINT = 'https://data.feiqiaoai.uno/';
 const LAST_KEY = 'djsc_ingest_last';      /* 游标：{ watermark, keyFp, lastOk, lastErr } */
 const FP_TTL = 7 * 24 * 3600 * 1000;      /* 与网关指纹过期一致 */
-const BATCH_LIMIT = 1200;                 /* 单批样本数上限（防 413/超时） */
+const BATCH_LIMIT = 400   /* ★1015：大批 51KB→17KB，弱网/链路抖动下失败率与损失大降 */;                 /* 单批样本数上限（防 413/超时） */
 const PERIOD_MS = 3600 * 1000;            /* 教程：每小时自动上传 */
 
 let _timer = null;
@@ -161,6 +161,7 @@ function collectStorage() {
 const SHADOW_RAW_KEY = '__ai_reason_shadow_v5';
 const SHADOW_UP_KEY = '__ai_reason_shadow_up_v1';
 const SHADOW_BATCH = 400, SHADOW_SENT_MAX = 1500;
+let _shadowBackoffUntil = 0;   /* ★PR7c：游标写不进（存储满）时 shadow 上传退避 30 分钟，防重传循环 */
 function loadShadowSent() {
     try { const o = JSON.parse(safeGet(SHADOW_UP_KEY, null)); if (o && Array.isArray(o.sent)) return o.sent; } catch (e) {}
     return [];
@@ -168,6 +169,7 @@ function loadShadowSent() {
 function collectShadowV5() {
     const items = [];
     try {
+        if (Date.now() < _shadowBackoffUntil) return { items: items, ids: [] };   /* ★PR7c：退避期内不收集 */
         const sent = loadShadowSent();
         const sentSet = {};
         for (let i = 0; i < sent.length; i++) sentSet[sent[i]] = 1;
@@ -198,7 +200,11 @@ function commitShadowV5(ids) {
            触发无意义重传循环）。读回失败则不视为提交，下轮自动重传（幂等）。 */
         const back = (function () { try { const o = JSON.parse(safeGet(SHADOW_UP_KEY, null)); return o && Array.isArray(o.sent) ? o.sent : null; } catch (eR) { return null; } })();
         if (!back || back[back.length - 1] !== sent[sent.length - 1]) {
-            try { console.warn('[cloud] shadow 游标写回校验失败，本轮不提交（数据将自动重传）'); } catch (eW2) {}
+            /* ★PR7c：写不进=存储已满（5MB 限额）→ 退避 30 分钟，不再每轮重传同一批；清理存储后自动恢复 */
+            _shadowBackoffUntil = Date.now() + 30 * 60 * 1000;
+            try { console.warn('[cloud] 存储可能已满（5MB），shadow 上传暂停 30 分钟；清理存储后自动恢复'); } catch (eW2) {}
+        } else {
+            _shadowBackoffUntil = 0;
         }
     } catch (e) { try { console.warn('[cloud] shadow 游标提交异常：', e && e.message || e); } catch (eW3) {} }
 }
@@ -429,6 +435,7 @@ function uploadNow(force) {
             cur.keyFp.samples = mergeSentFps(cur.keyFp.samples, pick.newFps);
         }
         cur.lastOk = Date.now(); cur.lastErr = ''; cur.backoffUntil = 0;
+        cur.uploadedTotal = (cur.uploadedTotal || 0) + sentSamples;   /* ★1015：累计已上传样本数（随游标持久化，供面板显示） */
         saveCursor(cur);
         commitShadowV5(shadowBatch.ids);
         commitSkillBreakdown(skbdPend);   /* ★PR7：成功才推进去重集合 */   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
@@ -537,6 +544,7 @@ function status() {
         bufferTotal: bufferSize(),
         snapshotChanged: snap.changed,
         lastOk: cur.lastOk ? new Date(cur.lastOk).toLocaleString() : '从未',
+        uploadedTotal: cur.uploadedTotal || 0,   /* ★1015：累计已上传 */
         backoffMin: (cur.backoffUntil && Date.now() < cur.backoffUntil) ? Math.ceil((cur.backoffUntil - Date.now()) / 60000) : 0,
         lastErr: cur.lastErr || '',
         lastResult: _lastResult

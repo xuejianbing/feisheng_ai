@@ -89,9 +89,15 @@ function showLoading(msg) {
 const STORAGE_KEY = 'djsc_model_state';
 const STATE_V = 2;   /* ★ v2：合并 modelHotSwap 的候选/A-B 存储（原 djsc_hotswap_v1 一次性迁移） */
 const LEGACY_HOTSWAP_KEY = 'djsc_hotswap_v1';
-const MIN_SAMPLES = 300;    /* ★ 自动热训练触发门槛 */
-const MIN_AB_GAMES = 20;    /* ★ A/B 默认局数（可被配置 modelCandidateGames 覆盖） */
-const PROMOTE_GAP = 0.05;   /* ★ 晋升分差门槛（候选均分 − 基线均分） */
+const MIN_SAMPLES = 300;    /* ★ 自动热训练触发门槛（4.1.2.4 起停用，仅存档兼容） */
+const MIN_AB_GAMES = 20;    /* ★ A/B 默认局数（可被配置 modelCandidateGames 覆盖；4.1.2.4 起停用） */
+const PROMOTE_GAP = 0.05;   /* ★ 晋升分差门槛（候选均分 − 基线均分；4.1.2.4 起停用） */
+
+/* ★ 4.1.2.4 硬关闭：端上禁止一切本地权重修改（本地训练 / A-B 候选换入 / 晋升全部停用）。
+ * 权重唯一来源 = 服务器官方 manifest 下发（js/update/modelUpdate 通道）。
+ * 背景（2026-10-16）：端上 300 样本 × 3 epoch 本地训练产生劣质候选，hotGameStart
+ * 每局奇偶交替换入，导致决策退化（玩家反馈「局数一多变糖」）；晋升后污染 stable 无法自愈。 */
+const LOCAL_WEIGHT_MUTATION_DISABLED = true;
 
 /* ★ 主网络结构护栏：唯一来源是 MODEL_SCHEMA（§7），热更/候选只接受同构快照，
  *   杜绝旧 96 维/缺输出层/缺投影快照写回造成权重错位。 */
@@ -265,10 +271,16 @@ function saveState() {
             _candidateGames = 0;
             saveState();
         }
-        /* ★ 不变式修复：候选跨会话存活（含迁移而来）→ 恢复 candidate 状态继续 A/B */
-        if (_candidate && _state === 'stable') {
-            _state = 'candidate';
+        /* ★ 4.1.2.4：端上训练停用——历史遗留候选（含 legacy 迁移而来）一律丢弃，回 stable，不恢复 A/B */
+        if (_candidate || _state === 'candidate') {
+            _candidate = null;
+            _state = 'stable';
+            _candidateGames = 0;
+            _abOldScores = [];
+            _arm = null;
+            _liveSnap = null;
             saveState();
+            try { log.warn('model', '4.1.2.4：本地候选模型已丢弃（端上训练停用），回稳定基线'); } catch (e) { _swallow(e); }
         }
     } catch (e) { _swallow(e); }
 })();
@@ -319,6 +331,8 @@ export function onGameEnd() {
  *   分组按已记录局数交替，保证两组样本数量均衡。
  *   在引擎开局钩子里调用（engine.js installHooks → trainStartGame 旁）。 */
 export function hotGameStart() {
+    /* ★ 4.1.2.4 停用：不换入任何候选，每局始终使用稳定权重 */
+    if (LOCAL_WEIGHT_MUTATION_DISABLED) { _arm = null; return; }
     try {
         if (!_candidate) { _arm = null; return; }
         if (_arm) return;  /* 已分组（异常残留），不重复换入 */
@@ -360,6 +374,8 @@ function _restoreLiveAfterArm() {
 /* ★ 局末归档 A/B 分数：按本局实际分组归档——候选局才记入候选，
  *   基线局记入 _abOldScores，杜绝"旧模型打的分记到候选头上"（P1-16）。 */
 export function hotRecordABScore(score) {
+    /* ★ 4.1.2.4 停用：不记录 A/B 分数（防御性还原在线模型后直接返回） */
+    if (LOCAL_WEIGHT_MUTATION_DISABLED) { try { _restoreLiveAfterArm(); } catch (e) { _swallow(e); } _arm = null; return; }
     try {
         if (!_candidate) { _restoreLiveAfterArm(); return; }
         if (_arm === 'candidate') _candidate.ab.scores.push(score);
@@ -506,6 +522,8 @@ async function _championFixAndRecycle() {
 
 /* ================= 自动热训练（原 modelHotSwap.triggerHotTrain 并入） ================= */
 export async function triggerHotTrain() {
+    /* ★ 4.1.2.4 停用：端上不训练，权重只从服务器更新 */
+    if (LOCAL_WEIGHT_MUTATION_DISABLED) return { ok: false, err: '端上训练已停用（4.1.2.4），权重由服务器下发' };
     try {
         const te = _teMod();
         const wm = _wMod();
@@ -667,6 +685,11 @@ export function resetHotSwap() {
 
 /* ================= 调试接口 ================= */
 export function forceTrain() {
+    /* ★ 4.1.2.4 停用：端上不训练，权重只从服务器更新 */
+    if (LOCAL_WEIGHT_MUTATION_DISABLED) {
+        try { showToast('端上训练已停用（4.1.2.4）：AI 权重只从服务器更新'); } catch (e) { _swallow(e); }
+        return;
+    }
     /* ★ 修复：如果状态是 candidate，先重置回 stable，允许强制重新训练 */
     if (_state === 'candidate') {
         try { log.warn('model', '强制训练：从 candidate 重置回 stable，丢弃当前候选模型'); } catch (e) { _swallow(e); }

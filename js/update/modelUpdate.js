@@ -45,7 +45,7 @@ import {
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
-const CHECK_TS_KEY = 'djsc_update_check_ts';
+const CHECK_TS_KEY = 'djsc_model_update_check_ts_v1';   /* ★1015：与整包通道节流键分离，两通道各自 6h 节流互不挤占 */
 const OFFICIAL_KEY = 'djsc_official_weights_v1';
 const PENDING_KEY = 'djsc_model_update_pending_v1';
 const BACKUP_KEY = 'djsc_weights_backup_v1';           /* 长期恢复点（仅安装成功后轮换） */
@@ -351,7 +351,7 @@ const _report = (result, manual) => {
         case 'latest':
             styledDialog({
                 title: '模型权重已是最新',
-                message: '当前模型权重：' + result.local.modelVersion + '\n服务器最新：' + (latest ? latest.modelVersion : '未知'),
+                message: '当前权重版本：v' + result.local.releaseSeq + '（' + result.local.modelVersion + '）\n服务器版本：v' + (latest ? latest.releaseSeq : '?') + '（' + (latest ? latest.modelVersion : '未知') + '）\n\n当前模型已符合服务器最新版本，无需更新。',
             });
             break;
         case 'unreachable':
@@ -392,7 +392,7 @@ const _report = (result, manual) => {
         case 'needsExtensionUpdate':
             styledDialog({
                 title: '需要更新扩展程序',
-                message: '发现新模型权重：' + (latest ? latest.modelVersion : '?')
+                message: '发现新模型权重：v' + (latest ? latest.releaseSeq : '?') + '（' + (latest ? latest.modelVersion : '?') + '）'
                     + '\n\n该模型要求扩展版本 ' + _rangeText(latest && latest.requiresExtension) + '，当前扩展为 ' + VERSION + '，不兼容。'
                     + '\n\n请领取最新完整安装包升级扩展程序；在线权重不会强行替换不兼容的模型。',
             });
@@ -400,8 +400,8 @@ const _report = (result, manual) => {
         case 'available':
             styledDialog({
                 title: '发现新模型权重',
-                message: '当前模型权重：' + result.local.modelVersion
-                    + '\n最新模型权重：' + (latest ? latest.modelVersion : '?')
+                message: '当前权重版本：v' + result.local.releaseSeq + '（' + result.local.modelVersion + '）'
+                    + '\n最新权重版本：v' + (latest ? latest.releaseSeq : '?') + '（' + (latest ? latest.modelVersion : '?') + '）'
                     + (latest && latest.requiresExtension ? ('\n要求扩展版本：' + _rangeText(latest.requiresExtension)) : '')
                     + (latest && latest.publishedAt ? ('\n发布时间：' + latest.publishedAt) : '')
                     + (latest && latest.notes ? ('\n\n更新说明：\n' + latest.notes) : '')
@@ -759,7 +759,7 @@ export const downloadAndApply = async opt => {
             removeKey(PENDING_KEY);
             await styledDialog({
                 title: '模型权重更新完成',
-                message: '新模型权重已生效：' + bundle.modelVersion + '\n\n'
+                message: '新模型权重已生效：v' + (bundle.releaseSeq != null ? bundle.releaseSeq : '?') + '（' + bundle.modelVersion + '）\n\n'
                     + '· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n'
                     + '· 版本记录已写入并读回核对通过\n'
                     + '· 长期备份已轮换为更新前的模型\n'
@@ -892,7 +892,7 @@ const _tryApplyPendingLocked = async pending => {
     });
     if (r.ok) {
         _finishPendingTx(r);
-        await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：' + pending.bundle.modelVersion + '\n\n（版本记录已写入并读回核对通过）' });
+        await styledDialog({ title: '模型权重已生效', message: '已应用待生效的模型权重：v' + (pending.bundle.releaseSeq != null ? pending.bundle.releaseSeq : '?') + '（' + pending.bundle.modelVersion + '）\n\n（版本记录已写入并读回核对通过）' });
         return r;
     }
     _finishPendingTx(r);
@@ -995,7 +995,105 @@ export const installModelUpdate = () => {
     try {
         window.__DJSC = window.__DJSC || {};
         window.__DJSC.updateCheck = function () { return checkModelUpdate({ manual: true }); };
-        window.__DJSC.modelUpdate = {
+        /* ---------- ★1015 落盘扫描：遍历权重存档逐参数核对是否真实落地 ---------- */
+const scanWeightsOnDisk = async () => {
+	const out = { ok: false, hasArchive: false, archive: null, official: null, digestMatch: null, checks: [], errors: [] };
+	try {
+		const contract = await getContract();
+		if (!contract) { out.errors.push('模型契约不可用（weights.js 未就绪）'); return out; }
+		out.dims = contract.dims;
+		/* ① 活跃权重存档（weights.js 公开只读接口，绝不写入） */
+		let rawArc = null;
+		try { rawArc = readArchive(); } catch (e) { out.errors.push('读取权重存档失败：' + (e && e.message || e)); }
+		out.hasArchive = !!rawArc;
+		let arc = null;
+		if (rawArc) {
+			try { arc = JSON.parse(rawArc); } catch (e) { out.errors.push('权重存档 JSON 解析失败：' + (e && e.message || e)); arc = null; }
+		}
+		if (arc) {
+			out.archive = {
+				v: arc.v != null ? arc.v : null, dv: arc.dv != null ? arc.dv : null,
+				trained: arc.trained != null ? arc.trained : null,
+				accuracy: arc.accuracy != null ? arc.accuracy : null,
+				ready: arc.ready,
+			};
+		}
+		/* ② 官方权重记录 */
+		const rec = readOfficialRecord();
+		if (rec) out.official = { releaseSeq: rec.releaseSeq, modelVersion: rec.modelVersion, digest: rec.digest || null, size: rec.size || null };
+		/* ③ 逐参数核对：存在性/长度/取值范围（int8 ±127、int16 ±32767，小端） */
+		if (arc) {
+			const spec = paramSpec(contract.dims);
+			let allOk = true;
+			for (let si = 0; si < spec.length; si++) {
+				const name = spec[si][0], expectLen = spec[si][1], dtype = spec[si][2];
+				const b64 = arc[name];
+				const row = { name: name, dtype: dtype, expectLen: expectLen, present: typeof b64 === 'string' && b64.length > 0, lenOk: false, rangeOk: false, decodedLen: 0, min: null, max: null };
+				try {
+					if (row.present) {
+						const bytes = decodeBase64(b64);
+						row.decodedLen = bytes.length;
+						row.lenOk = bytes.length === expectLen;
+						const lo = dtype === 'int8' ? -128 : -32768;
+						const hi = dtype === 'int8' ? 127 : 32767;
+						let min = Infinity, max = -Infinity, bad = 0;
+						if (dtype === 'int8') {
+							const arr = Int8Array.from(bytes);
+							for (let k = 0; k < arr.length; k++) { const v = arr[k]; if (v < lo || v > hi) { bad++; continue; } if (v < min) min = v; if (v > max) max = v; }
+						} else {
+							const dview = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+							const n16 = Math.floor(bytes.length / 2);
+							for (let k = 0; k < n16; k++) { const v = dview.getInt16(k * 2, true); if (v < lo || v > hi) { bad++; continue; } if (v < min) min = v; if (v > max) max = v; }
+						}
+						row.rangeOk = bad === 0;
+						if (min !== Infinity) { row.min = min; row.max = max; }
+						if (bad) row.outOfRange = bad;
+					}
+				} catch (e) { row.error = String(e && e.message || e); }
+				if (!row.present || !row.lenOk || !row.rangeOk) allOk = false;
+				out.checks.push(row);
+			}
+			out.paramsOk = allOk;
+		} else {
+			out.paramsOk = false;
+		}
+		/* ④ 摘要核对：官方记录 digest vs 存档参数重算 */
+		if (arc && rec && out.paramsOk) {
+			try {
+				const params = {};
+				for (let ci = 0; ci < out.checks.length; ci++) {
+					const it = out.checks[ci];
+					const bytes = decodeBase64(arc[it.name]);
+					if (it.dtype === 'int8') { params[it.name] = Int8Array.from(bytes); }
+					else {
+						const arr = new Int16Array(Math.floor(bytes.length / 2));
+						const dview = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+						for (let k = 0; k < arr.length; k++) arr[k] = dview.getInt16(k * 2, true);
+						params[it.name] = arr;
+					}
+				}
+				const live = paramsDigest(params, contract.dims);
+				const recDigest = String(rec.digest || '').toLowerCase();
+				out.digestMatch = recDigest ? live === recDigest : null;
+				out.computedDigest = live;
+			} catch (e) { out.errors.push('摘要重算失败：' + (e && e.message || e)); }
+		}
+		/* ⑤ 结论：builtin-only=无存档用内置 / official-intact=官方权重完整落地 / archive-mismatch=存档被本地训练覆盖 / params-ok-no-record=参数完整但无官方记录 / damaged=存档损坏 */
+		out.verdict = (!out.hasArchive) ? 'builtin-only'
+			: (out.paramsOk && out.digestMatch === true) ? 'official-intact'
+			: (out.paramsOk && out.digestMatch === false) ? 'archive-mismatch'
+			: (out.paramsOk) ? 'params-ok-no-record'
+			: 'damaged';
+		out.ok = true;
+		return out;
+	} catch (e) {
+		out.errors.push('扫描异常：' + (e && e.message || e));
+		return out;
+	}
+};
+
+window.__DJSC.modelUpdate = {
+            scan: scanWeightsOnDisk,
             check: function () { return checkModelUpdate({ manual: true }); },
             downloadAndApply,
             restoreBackup,

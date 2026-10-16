@@ -13,6 +13,15 @@ function _diagBump(k, sub) {
 		else _candDiag[k] = (_candDiag[k] || 0) + 1;
 	} catch (eD) {}
 }
+/* ★ 4.1.2.6：技能漏斗终局补点——bestAction 收尾回传「技能候选入池数」与「技能最终胜出」。
+ *   此前的漏斗只覆盖候选资格筛选（noEnable/filterEnable/cost），技能从「入池」到「胜出被采样」的流失不可见。 */
+export function trackSkillOutcome(poolSkillCount, wonSkill) {
+	try {
+		if (poolSkillCount > 0) { _candDiag.bestPoolRounds = (_candDiag.bestPoolRounds || 0) + 1; _candDiag.bestPoolSkillHits = (_candDiag.bestPoolSkillHits || 0) + poolSkillCount; }
+		if (wonSkill) _candDiag.bestWinSkill = (_candDiag.bestWinSkill || 0) + 1;
+	} catch (eTO) {}
+}
+
 export function getSkillCandDiag() {
 	try { return JSON.parse(JSON.stringify(_candDiag)); } catch (eD) { return { calls: _candDiag.calls }; }
 }
