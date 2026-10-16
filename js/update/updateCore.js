@@ -714,7 +714,7 @@ export const classifyIntegrityArchive = opt => {
  * ok=false 表示本次扫描本身不可信（读取失败、契约不可用、无法判定），此时 verdict 为 null。
  * 绝不允许把"读不到"退化成 builtin-only —— 那会把读取故障谎报成"没有存档"。 */
 export const classifyArchiveScan = opt => {
-    const { raw, readError, contract, officialRec, hasTrainingEvidence, defaultDigest } = opt || {};
+    const { raw, readError, officialReadError, contract, officialRec, hasTrainingEvidence, defaultDigest } = opt || {};
     const out = {
         ok: false, verdict: null, reason: '', errors: [],
         hasArchive: typeof raw === 'string' && raw.length > 0,
@@ -730,6 +730,14 @@ export const classifyArchiveScan = opt => {
     if (!contract) {
         out.errors.push('模型契约不可用（weights.js 的 MODEL_SCHEMA / DATA_EPOCH 未就绪）');
         out.reason = '运行时契约不可用，无法核对存档结构与数据纪元';
+        return out;
+    }
+    /* ★P2：官方记录的"读取失败 / JSON 损坏 / 结构不合法"与"确实没有记录"必须分开。
+     * 键确实不存在 → officialRec=null（正常进入无记录态）；读失败或内容损坏 → 一律不可判定，
+     * 不得谎报成"没有官方记录"而给出 builtin-only / params-ok-no-record。 */
+    if (officialReadError) {
+        out.errors.push('读取官方权重记录失败：' + String((officialReadError && officialReadError.message) || officialReadError));
+        out.reason = '官方权重记录读取失败或内容损坏，当前权重状态无法判定（不等于"没有官方记录"）';
         return out;
     }
     if (officialRec) {

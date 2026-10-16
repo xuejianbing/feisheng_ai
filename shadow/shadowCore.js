@@ -53,9 +53,12 @@ function loadLog() {
 function markLogDirty() { _logDirty = true; }
 
 function flushLog(force) {
-    if ((!_logDirty && !force) || !_logMem) return;
-    if (_logMem.length === 0 && !_logDirty) return;   /* ★P2：空日志不落盘（清空后强制刷盘不得把键重新建回来） */
-    if (!force && Date.now() < _flushBackoffUntil) return;   /* 退避期内普通刷盘直接跳过（退出兜底仍尽力写一次） */
+    /* ★P2 修复：只有"存在未落盘的脏数据"才真正写盘。
+     * force 仅用于绕过退避时间（退出兜底要尽力写一次），**不得绕过脏判断**——
+     * pagehide 与 beforeunload 连续触发时，第二次不能对已保存的日志再整包同步写一遍。 */
+    if (!_logMem || !_logDirty) return;
+    if (_logMem.length === 0) return;                        /* 空日志不落盘（清空后不得把键重新建回来） */
+    if (!force && Date.now() < _flushBackoffUntil) return;   /* 退避期内普通刷盘直接跳过 */
     while (_logMem.length > MAX_RECORDS) _logMem.shift();
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem));
@@ -114,9 +117,10 @@ export function __shadowLogTest() {
     };
 }
 
-/* 兼容旧调用（off 收缩/全量替换场景）：覆盖内存并立即刷盘 */
+/* 兼容旧调用（off 收缩/全量替换场景）：覆盖内存并立即刷盘（替换后的内容即为待落盘数据 → 先标脏） */
 function saveLog(log) {
     _logMem = log;
+    _logDirty = true;
     flushLog(true);
 }
 

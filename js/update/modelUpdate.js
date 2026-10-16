@@ -1018,12 +1018,22 @@ export const scanWeightsOnDisk = async () => {
     if (contract) {
         try { raw = storageOps.readArchiveStrict(); } catch (e) { readError = e; }
     }
-    const rec = readOfficialRecord();
+    /* ★P2 修复：官方记录改用已有的严格读取（safeGet 会把访问/解析异常吞成 null，
+     * 从而把"读失败/内容损坏"谎报成"没有官方记录"而给出 builtin-only）。
+     * 严格读取仅在键确实不存在时返回 null；访问异常、JSON 损坏向上抛；
+     * 合法 JSON 但结构不符由 asOfficialRecord 判定为损坏。 */
+    let rec = null, officialReadError = null;
+    try {
+        const rawRec = readOfficialRecordStrict();
+        if (rawRec === null || rawRec === undefined) rec = null;
+        else if (asOfficialRecord(rawRec)) rec = rawRec;
+        else officialReadError = new Error('官方权重记录结构无效（键存在但字段不符合记录格式）');
+    } catch (e) { officialReadError = e; }
     let ctx = { hasTrainingEvidence: false, defaultDigest: null };
     try { ctx = await _scanContext(contract, raw, rec); } catch (e) { _swallow(e); }
     try {
         return classifyArchiveScan({
-            raw, readError, contract, officialRec: rec,
+            raw, readError, officialReadError, contract, officialRec: rec,
             hasTrainingEvidence: ctx.hasTrainingEvidence, defaultDigest: ctx.defaultDigest,
         });
     } catch (e) {

@@ -7,19 +7,26 @@
  * ============================================
  */
 
-/* ================= 无名AI · 六项修复回归测试（零依赖，Node 侧） =================
+/* ================= 无名AI · 针对性修复回归测试（零依赖，Node 侧） =================
  * 运行：node tools/test-regressions.mjs        （通过退出码 0 / 1）
  *
  * 覆盖（逐项对应，全部为行为断言，不是字符串匹配）：
+ *   P0 配置写入确认：本体 saveConfig 不返回 Promise（完成只在回调）；promises 形态在
+ *        reloading 时"完成但没落盘"；存储失败/悬挂不得谎报成功；中断可重试、不无期限等待
  *   P1-a 模型权重落盘扫描：五态结论 + 读失败不得冒充 builtin-only + 元素数/字节数区分
- *   P1-b 配置迁移持久化：逐键落盘、标记最后写、只清止血期取值、重载中不写标记、重启不重跑
+ *        + 官方记录"读取失败/损坏/结构不合法"与"确实不存在"分开
+ *   P1-b 配置迁移：只记录标记不改玩家配置；玩家已保存取值（含关掉训练模型、改冠军强度）
+ *        重启后不被覆盖；无证据不自动修正；证据门控机制可用
  *   P1-c 超大归档：启动不删除、只暂停 + 一次性提示、删除需确认、开关变更落盘
  *   P2-a 训练样本统计：本地/待传/累计已上传三个口径，禁止相加冒充总数
  *   P2-b 上传任务锁：退避/成功/失败/异常路径都必须释放锁，不得永久 busy
- *   P2-c shadow 日志：退出兜底刷盘、监听幂等、清空不被旧缓存写回、off 清理、配额退避
+ *   P2-c shadow 日志：退出兜底刷盘、连续退出事件只写一次、监听幂等、
+ *        清空不被旧缓存写回、off 清理、配额退避
  *
  * 说明：本条测试通过 tools/noname-stub-loader.mjs 把宿主 noname.js 换成桩，
  *       从而**真实 import 生产模块**（含宿主层），不用另写理想化假实现。
+ *       宿主桩严格照本体语义复刻（见下方 stub 注释，依据 noname/game/index.js、
+ *       noname/game/promises.js、src/noname/util/config.js 三处源码）。
  *       真机（安卓 WebView）上的下载/安装链路仍属「未验证」，需游戏内手动测试。
  */
 import { register } from 'node:module';
@@ -29,13 +36,15 @@ const LS = (() => {
     let store = new Map();
     let failSetItem = false;
     let setItemCalls = 0;
+    const failGetKeys = new Set();
     return {
-        getItem: k => (store.has(String(k)) ? store.get(String(k)) : null),
+        getItem: k => { if (failGetKeys.has(String(k))) throw new Error('SecurityError: storage read denied'); return store.has(String(k)) ? store.get(String(k)) : null; },
         setItem: (k, v) => { setItemCalls++; if (failSetItem) throw new Error('QuotaExceededError'); store.set(String(k), String(v)); },
         removeItem: k => { store.delete(String(k)); },
         clear: () => { store.clear(); },
         _raw: () => store,
         _setFail: f => { failSetItem = f; },
+        _failGet: (k, on) => { if (on) failGetKeys.add(String(k)); else failGetKeys.delete(String(k)); },
         _setItemCalls: () => setItemCalls,
         _resetCalls: () => { setItemCalls = 0; },
     };
@@ -50,29 +59,57 @@ globalThis.document = {
     addEventListener() {}, removeEventListener() {},
 };
 
-const writes = [];   /* 记录宿主配置写入：{key, value}，语义与无名杀 saveConfig 一致 */
+/* ---------- 宿主桩：严格照本体语义复刻（P0 修复点） ----------
+ * 依据本体源码：
+ *   noname/game/index.js   saveConfig(key, value, local, callback)
+ *      → reloading 时直接 return（不落盘/不回调/内存也不改）；
+ *      → 先改内存 lib.config，再 save(...).then(callback)；**没有 return，方法返回 undefined**。
+ *   noname/game/promises.js saveConfig(key, value, local)
+ *      → reloading 时 return Promise.resolve()（完成 ≠ 落盘）；
+ *      → 否则 new Promise(resolve => game.saveConfig(key, value, local, resolve))：
+ *         底层失败时回调永不触发 → 该 Promise 既不 resolve 也不 reject（悬挂）。
+ *   src/noname/util/config.js save()：indexedDB 路径返回 putDB/deleteDB 的 Promise，
+ *      localStorage 路径同步 setItem 后 Promise.resolve()；两者都以"回调被调用"为完成信号。
+ * 桩的写入模式：ok（正常回调）| reject（存储失败，回调不触发）| hang（存储悬挂，不回调）。 */
+const hostStore = new Map();     /* 持久化层：模拟 putDB/deleteDB 的 config store */
+const writes = [];               /* 本次进程内被受理的写入尝试：{key, value} */
+let saveMode = 'ok';
 const stub = { lib: { config: {} }, game: {}, _status: {}, ui: {}, get: {}, ai: {} };
-stub.game.saveConfig = (key, value) => {
-    const mode = stub.game._saveConfigResult;
-    /* 'ignored' = 本体在 _status.reloading 时提前 return：不改内存、不落盘 */
-    if (mode === 'ignored') return undefined;
-    if (typeof value === 'undefined') { delete stub.lib.config[key]; }
-    else { stub.lib.config[key] = value; }
+stub.game.saveConfig = function (key, value, local, callback) {
+    if (stub._status.reloading === true) return;                      /* 本体：重载中——什么都不做 */
+    if (typeof value === 'undefined') delete stub.lib.config[key];    /* 本体：先改内存 */
+    else stub.lib.config[key] = value;
     writes.push({ key: key, value: value });
-    return mode === 'reject' ? Promise.reject(new Error('putDB failed')) : Promise.resolve();
+    if (saveMode !== 'ok') return;                                    /* 落盘失败/悬挂 → 回调不触发 */
+    if (typeof value === 'undefined') hostStore.delete(key);          /* 本体：save() → deleteDB */
+    else hostStore.set(key, value);                                   /* 本体：save() → putDB */
+    if (typeof callback === 'function') Promise.resolve().then(callback);   /* save(...).then(callback) */
+    /* 本体此处没有 return —— 返回值恒为 undefined（旧测试桩错在返回了 Promise） */
 };
-/* 默认：saveConfig 被受理（返回 Promise）。'reject' = 写入失败；'ignored' = 重载中提前返回（undefined） */
-stub.game._saveConfigResult = 'ok';
+stub.game.promises = {
+    saveConfig: function (key, value, local) {
+        if (stub._status.reloading === true) return Promise.resolve();   /* 本体：完成，但没有落盘 */
+        return new Promise(resolve => stub.game.saveConfig(key, value, local, resolve));
+    },
+};
 stub.game.log = () => {};
 globalThis.__NONAME_STUB = stub;
 
-const listeners = new Map();
+/* 模拟"重启"：本体启动时 lib.config 由落盘数据装载（不是上一进程的内存残留） */
+const bootConfig = seed => {
+    stub.lib.config = {};
+    for (const [k, v] of hostStore) stub.lib.config[k] = v;
+    if (seed) Object.assign(stub.lib.config, seed);
+    return stub.lib.config;
+};
+
+const winHandlers = new Map();
 const win = {
     __DJSC: {},
-    addEventListener: (t, fn) => { listeners.set(t, (listeners.get(t) || 0) + 1); },
-    removeEventListener: (t) => { listeners.set(t, Math.max(0, (listeners.get(t) || 0) - 1)); },
-    _listenerCount: t => listeners.get(t) || 0,
-    _dispatch: t => { /* 触发已注册的退出监听（生产代码里是 pagehide/beforeunload 的同步刷盘） */ },
+    addEventListener: (t, fn) => { if (!winHandlers.has(t)) winHandlers.set(t, []); winHandlers.get(t).push(fn); },
+    removeEventListener: (t, fn) => { const a = winHandlers.get(t) || []; const i = a.indexOf(fn); if (i >= 0) a.splice(i, 1); },
+    _listenerCount: t => (winHandlers.get(t) || []).length,
+    _dispatch: t => { (winHandlers.get(t) || []).slice().forEach(fn => { try { fn(); } catch (e) {} }); },   /* 真实触发注册的退出监听 */
 };
 globalThis.window = win;
 
@@ -90,6 +127,7 @@ const ok = (name, cond, extra) => {
 };
 const section = t => console.log('\n--- ' + t + ' ---');
 const tick = (ms = 30) => new Promise(r => setTimeout(r, ms));
+let setWriteTimeout = () => {};   /* 由配置迁移段从生产模块取回（__cfgMigrationTest.setWriteTimeout） */
 
 /* ---------- 依赖（生产模块） ---------- */
 const {
@@ -222,6 +260,23 @@ section('P1-a 宿主层 scanWeightsOnDisk（真实 import 生产模块）');
     setModule(() => null);
     r = await mod.scanWeightsOnDisk();
     ok('全新安装 → builtin-only（真·无存档才允许）', r.verdict === 'builtin-only' && r.ok === true && (r.errors || []).length === 0, JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+
+    /* ⑧ ★P2 修复回归：官方记录"读取失败 / 内容损坏 / 结构不合法"不得冒充"没有记录" */
+    clearKeys();
+    setModule(() => mkArchive());
+    LS.setItem(OFFICIAL_KEY, '{bad json');
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录 JSON 损坏 → ok=false，不得冒充无记录', r.ok === false && r.verdict === null && /读取官方权重记录失败/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+    LS.setItem(OFFICIAL_KEY, JSON.stringify({ hello: 'world' }));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录结构不合法 → ok=false，不得冒充无记录', r.ok === false && r.verdict === null && /结构无效/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+    LS.removeItem(OFFICIAL_KEY);
+    LS._failGet(OFFICIAL_KEY, true);
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录读取抛错 → ok=false，不得冒充无记录', r.ok === false && r.verdict === null && /读取官方权重记录失败/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+    LS._failGet(OFFICIAL_KEY, false);
+    r = await mod.scanWeightsOnDisk();
+    ok('记录确实不存在 → 正常进入无记录态（params-ok-no-record）', r.ok === true && r.verdict === 'params-ok-no-record', JSON.stringify(r.verdict));
 }
 
 /* ============================================================
@@ -244,15 +299,23 @@ section('P2-c shadow 日志刷盘');
     shadow.shadowCmd('stats');                       /* 让内存缓存从存储加载 */
     T.push({ decisionId: 'd1', reward: 1 });
     const beforeExit = LS.getItem(KEY);
-    shadow.flushShadowLog(true);                     /* 等价于 pagehide 触发的同步刷盘 */
+    LS._resetCalls();
+    win._dispatch('pagehide');                       /* 真实触发注册的退出监听 */
     const afterExit = LS.getItem(KEY);
     ok('退出时同步写掉未落盘记录（不再丢 5s 窗口数据）', beforeExit !== afterExit && /d1/.test(afterExit || ''), String(afterExit).slice(0, 60));
+    ok('退出刷盘只写一次', LS._setItemCalls() === 1, String(LS._setItemCalls()));
 
-    /* 清空后不得被旧缓存写回 */
+    /* ★P2 修复回归：beforeunload + pagehide 连续触发不得对已保存日志再整包写一遍 */
+    win._dispatch('beforeunload');
+    win._dispatch('pagehide');
+    ok('连续退出事件（无脏数据）不再重复写盘', LS._setItemCalls() === 1, String(LS._setItemCalls()));
+    ok('重复触发不影响已保存内容', /d1/.test(LS.getItem(KEY) || ''), String(LS.getItem(KEY)).slice(0, 40));
+
+    /* 清空后不得被旧缓存写回（含退出兜底路径） */
     shadow.shadowCmd('clear');
     ok('clear 同步清内存缓存', T.state().hasMem === true && T.state().memLen === 0, JSON.stringify(T.state()));
-    shadow.flushShadowLog(true);
-    ok('清空后强制刷盘不得写回旧日志', LS.getItem(KEY) === null, String(LS.getItem(KEY)).slice(0, 60));
+    win._dispatch('pagehide');
+    ok('清空后退出兜底也不得写回旧日志', LS.getItem(KEY) === null, String(LS.getItem(KEY)).slice(0, 60));
 
     /* 配额退避：不得每 5s 无限重试 */
     LS.setItem(KEY, JSON.stringify([{ decisionId: 'seed' }]));
@@ -282,7 +345,9 @@ section('P2-c shadow 日志刷盘');
     ok('off 清理：无缓存、无脏标记、退出监听已移除', offState.hasMem === false && offState.dirty === false && offState.hooked === false, JSON.stringify(offState));
     LS.removeItem(KEY);
     shadow.flushShadowLog(true);
-    ok('off 之后任何刷盘都不再写回', LS.getItem(KEY) === null, String(LS.getItem(KEY)));
+    win._dispatch('pagehide');
+    win._dispatch('beforeunload');
+    ok('off 之后任何刷盘路径都不再写回', LS.getItem(KEY) === null, String(LS.getItem(KEY)));
     ok('off 已持久化关闭标记', LS.getItem(OFF_KEY) === '1', String(LS.getItem(OFF_KEY)));
 }
 
@@ -375,44 +440,98 @@ section('P2-b 上传任务锁');
 /* ============================================================
  * P1-b / P1-c：配置迁移持久化 + 超大归档非破坏性
  * ============================================================ */
-section('P1-b 配置迁移持久化');
+section('P1-b 配置迁移持久化（宿主桩按本体真实语义）');
 {
     const MIG = 'extension_无名AI_cfgMigratedVer';
-    const run = async (cfg, query, saveResult) => {
-        stub.lib.config = Object.assign({}, cfg);
-        stub.game._saveConfigResult = saveResult || 'ok';
+    const cfgMod = await import('../js/config/config.js?mig0');
+    setWriteTimeout = cfgMod.__cfgMigrationTest.setWriteTimeout;
+    const runMigration = cfgMod.__cfgMigrationTest.runMigration;
+    const plan = cfgMod.__cfgMigrationPlan;
+    setWriteTimeout(60);   /* 悬挂/失败路径快速收敛，不拖慢测试；正常路径回调即时清除定时器 */
+
+    /* 每轮 = 一次"启动"：lib.config 由落盘装载（bootConfig），seed 表示"此前已由本体落盘的玩家设置" */
+    const boot = (seed, mode) => {
+        if (seed) for (const k of Object.keys(seed)) hostStore.set(k, seed[k]);
+        bootConfig();
+        saveMode = mode || 'ok';
         writes.length = 0;
-        await import('../js/config/config.js?' + query);
-        await tick();
-        return writes.slice();
     };
+    const run = async () => { await runMigration(); await tick(40); return writes.slice(); };
 
-    /* ① 首次升级：逐键落盘，标记最后写 */
-    const w1 = await run({ 'extension_无名AI_useTrainedModel': false, 'extension_决策积分引擎_championBoost': '3', 'extension_无名AI_archiveGames': true }, 'mig1');
-    const delIdx = w1.map(w => w.key);
-    ok('逐键调用本体 saveConfig 落盘（不再是空参调用）', delIdx.indexOf('extension_无名AI_useTrainedModel') >= 0 && delIdx.indexOf('extension_决策积分引擎_championBoost') >= 0, JSON.stringify(w1));
-    ok('止血期取值被删除（value=undefined 即本体删键语义）', w1.filter(w => w.value === undefined).length === 2, JSON.stringify(w1));
-    ok('useTrainedModel 删除后不再残留（默认开启生效）', stub.lib.config['extension_无名AI_useTrainedModel'] === undefined, String(stub.lib.config['extension_无名AI_useTrainedModel']));
-    const marker = w1.find(w => w.key === MIG);
-    ok('迁移标记落盘且值为 471', !!marker && marker.value === '471', JSON.stringify(marker));
-    ok('迁移标记在删除动作之后写入', w1.indexOf(marker) === w1.length - 1, JSON.stringify(w1.map(w => w.key)));
+    hostStore.clear();
+    /* ① 桩保真性自检：本体 saveConfig 返回 undefined，完成信号只在回调 */
+    bootConfig();
+    const probeRet = stub.game.saveConfig('probe_key', 1);
+    ok('桩复刻本体：普通 saveConfig 返回 undefined（旧桩错在返回 Promise）', probeRet === undefined, String(probeRet));
+    ok('桩复刻本体：落盘发生在回调路径（hostStore 收到值）', hostStore.get('probe_key') === 1, String(hostStore.get('probe_key')));
+    hostStore.clear();
 
-    /* ② 重启（标记已存在）→ 不重跑、不再重置玩家设置 */
-    const w2 = await run({ 'extension_无名AI_useTrainedModel': true, [MIG]: '471' }, 'mig2');
-    ok('已完成迁移不重跑（玩家后续手动选择不被覆盖）', w2.length === 0, JSON.stringify(w2));
+    /* ② 真实启动路径：config.js 加载时自动跑一次迁移，只记录标记、不动配置 */
+    boot(null);
+    const bootMod = await import('../js/config/config.js?mig1');
+    await tick(40);
+    const w1 = writes.slice();
+    ok('未配置用户：启动时只落盘迁移标记，不写入/不删除任何玩家配置', w1.length === 1 && w1[0].key === MIG && w1[0].value === '471', JSON.stringify(w1));
+    ok('标记真正进入持久化存储（判据来自宿主回调，不是内存 lib.config）', hostStore.get(MIG) === '471', String(hostStore.get(MIG)));
+    ok('模块加载即暴露迁移测试钩子（生产路径不变）', typeof bootMod.__cfgMigrationPlan === 'function' && typeof bootMod.__cfgMigrationTest.runMigration === 'function', typeof bootMod.__cfgMigrationPlan);
 
-    /* ③ 玩家主动保存的非止血期取值一律保留 */
-    const w3 = await run({ 'extension_无名AI_useTrainedModel': true, 'extension_无名AI_championBoost': '5' }, 'mig3');
-    ok('非止血期取值不被误删', stub.lib.config['extension_无名AI_useTrainedModel'] === true && stub.lib.config['extension_无名AI_championBoost'] === '5', JSON.stringify(stub.lib.config));
-    ok('无键可删时仍记录迁移完成', w3.length === 1 && w3[0].key === MIG, JSON.stringify(w3));
+    /* ③ 玩家自己关过训练模型 / 调过冠军强度 → 无来源证据，原样保留 */
+    boot({ 'extension_无名AI_useTrainedModel': false, 'extension_无名AI_championBoost': '3' });
+    const w2 = await run();
+    ok('玩家已保存的取值不被自动修正（无证据不覆盖）', stub.lib.config['extension_无名AI_useTrainedModel'] === false && stub.lib.config['extension_无名AI_championBoost'] === '3', JSON.stringify(stub.lib.config));
+    ok('未产生任何针对这两个开关的写入（更不会删键）', w2.filter(w => /useTrainedModel|championBoost/.test(w.key)).length === 0, JSON.stringify(w2.map(w => w.key)));
 
-    /* ④ 写入被拒（存储失败）→ 不写标记、下次重试 */
-    const w4 = await run({ 'extension_无名AI_useTrainedModel': false }, 'mig4', 'reject');
-    ok('写入失败不谎报迁移完成（标记不落盘也不留内存）', w4.filter(w => w.key === MIG).length === 0 && stub.lib.config[MIG] === undefined, JSON.stringify({ writes: w4.map(w => w.key), marker: stub.lib.config[MIG] }));
+    /* ④ 再次启动（标记已在落盘里）→ 不重跑、玩家设置不被重置 */
+    boot(null);
+    const w3 = await run();
+    ok('重启：迁移不重跑，玩家设置保持原样', w3.length === 0 && stub.lib.config['extension_无名AI_useTrainedModel'] === false && hostStore.get('extension_无名AI_championBoost') === '3', JSON.stringify({ writes: w3, useTrained: stub.lib.config['extension_无名AI_useTrainedModel'] }));
 
-    /* ⑤ 重载中（saveConfig 提前返回 undefined）→ 同样不写标记 */
-    const w5 = await run({ 'extension_无名AI_useTrainedModel': false }, 'mig5', 'ignored');
-    ok('重载中（写入未受理）不写标记', stub.lib.config[MIG] === undefined && w5.length === 0, JSON.stringify({ writes: w5, marker: stub.lib.config[MIG] }));
+    /* ⑤ 存储失败（本体失败时回调不触发）→ 不谎报完成、下次启动可重试 */
+    hostStore.delete(MIG);
+    boot(null, 'reject');
+    const w4 = await run();
+    ok('存储失败：不谎报迁移完成（落盘无标记、内存标记被回收）', !hostStore.has(MIG) && stub.lib.config[MIG] === undefined, JSON.stringify({ store: hostStore.has(MIG), mem: stub.lib.config[MIG], attempted: w4.map(w => w.key) }));
+    boot(null);
+    const w5 = await run();
+    ok('中断后再次启动可安全重试并完成', hostStore.get(MIG) === '471' && w5.some(w => w.key === MIG), JSON.stringify({ store: hostStore.get(MIG), writes: w5.map(w => w.key) }));
+
+    /* ⑥ 存储层悬挂（putDB 永不回调）→ 超时收敛，不无期限等待 */
+    hostStore.delete(MIG);
+    boot(null, 'hang');
+    const w6 = await run();
+    ok('存储悬挂：超时后仍不谎报完成（无悬挂 Promise 拖住启动）', !hostStore.has(MIG) && stub.lib.config[MIG] === undefined, JSON.stringify({ store: hostStore.has(MIG), attempted: w6.map(w => w.key) }));
+
+    /* ⑦ 重载中（本体静默丢弃 + promises 形态返回已完成 Promise）→ 不得采信 */
+    hostStore.delete(MIG);
+    boot(null);
+    stub._status.reloading = true;
+    const w7 = await run();
+    stub._status.reloading = false;
+    ok('重载中：写入未受理也不误判为成功（不落盘、不写内存标记）', w7.length === 0 && !hostStore.has(MIG) && stub.lib.config[MIG] === undefined, JSON.stringify({ writes: w7, store: hostStore.has(MIG), mem: stub.lib.config[MIG] }));
+    boot(null);
+    const w8 = await run();
+    ok('重载结束后重启可正常完成迁移', hostStore.get(MIG) === '471' && w8.some(w => w.key === MIG), JSON.stringify(w8.map(w => w.key)));
+
+    /* ⑧ 本体无 game.promises 时走回调形态，同样能确认落盘 */
+    hostStore.delete(MIG);
+    boot(null);
+    const savedP = stub.game.promises;
+    delete stub.game.promises;
+    await run();
+    stub.game.promises = savedP;
+    ok('无 promises 时走回调形态，仍能确认落盘', hostStore.get(MIG) === '471', String(hostStore.get(MIG)));
+
+    /* ⑨ 证据门控：只有"能证明来源"的强制写入才允许自动修正（本版本清单为空） */
+    const evList = [{ name: 'useTrainedModel', forcedValues: [false], evidenceKey: 'djsc_forced_off_v471' }];
+    const cfgWithVal = { 'extension_无名AI_useTrainedModel': false };
+    ok('无来源证据 → 不纳入清理计划（保留玩家配置）', plan(cfgWithVal, evList, {}).length === 0, JSON.stringify(plan(cfgWithVal, evList, {})));
+    ok('有来源证据（记录到旧版强制写入 false）→ 才纳入清理计划', JSON.stringify(plan(cfgWithVal, evList, { djsc_forced_off_v471: false })) === JSON.stringify(['extension_无名AI_useTrainedModel']), JSON.stringify(plan(cfgWithVal, evList, { djsc_forced_off_v471: false })));
+    ok('玩家后在旧值上改过 → 仍不清理（只修正与强制写入值完全相同的残留）', JSON.stringify(plan({ 'extension_无名AI_useTrainedModel': true }, evList, { djsc_forced_off_v471: false })) === JSON.stringify([]), JSON.stringify(plan({ 'extension_无名AI_useTrainedModel': true }, evList, { djsc_forced_off_v471: false })));
+    ok('旧前缀键（决策积分引擎）同样受门控', JSON.stringify(plan({ 'extension_决策积分引擎_useTrainedModel': false }, evList, { djsc_forced_off_v471: false })) === JSON.stringify(['extension_决策积分引擎_useTrainedModel']), JSON.stringify(plan({ 'extension_决策积分引擎_useTrainedModel': false }, evList, { djsc_forced_off_v471: false })));
+    ok('生产清单为空：本版本不修正任何玩家已保存配置', plan(cfgWithVal).length === 0, JSON.stringify(plan(cfgWithVal)));
+
+    setWriteTimeout(5000);
+    saveMode = 'ok';
 }
 
 section('P1-c 超大归档不删除');
@@ -420,10 +539,10 @@ section('P1-c 超大归档不删除');
     const ARCH = '无名AI_archive';
     const NOTICE = 'extension_无名AI_archiveNoticeVer';
     const big = 'x'.repeat(1048576 + 10);
+    saveMode = 'ok';
 
     /* ① 超阈值：暂停 + 提示一次，绝不删除 */
     stub.lib.config = { 'extension_无名AI_archiveGames': true, 'extension_无名AI_cfgMigratedVer': '471' };
-    stub.game._saveConfigResult = 'ok';
     writes.length = 0;
     LS.setItem(ARCH, big);
     confirmAnswer = false;

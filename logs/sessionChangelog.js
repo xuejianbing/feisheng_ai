@@ -1620,6 +1620,42 @@ export const SESSION_CHANGELOG = [
                 desc: '六项修复的回归测试（68 项行为断言，含五态扫描、读失败不得冒充 builtin-only、迁移逐键落盘/失败不写标记/重启不重跑、超大归档不删除且需确认、三口径统计不相加、上传锁退避与异常路径、shadow 退出刷盘/幂等/清空不复活/配额退避）。运行：node tools/test-regressions.mjs'
             }
         ]
+    },
+    {
+        phase: 'v4.1.2.8 · 四项遗留问题修复（配置写入确认 / 迁移不覆盖玩家设置 / 扫描严格读记录 / shadow 退出刷盘）',
+        date: '2026-10-16',
+        changes: [
+            {
+                file: 'js/config/config.js',
+                lines: '36-116',
+                desc: 'P0 配置写入确认重写：核对本体源码后确认 game.saveConfig(key,value,local,callback) **不返回 Promise**（结尾 save(...).then(callback) 无 return），且 _status.reloading 时直接 return（不落盘/不回调/不改内存）；game.promises.saveConfig 在 reloading 时 return Promise.resolve()（完成≠落盘），底层失败时回调不触发→该 Promise 既不一 resolve 也不 reject。旧实现要求返回 Promise，导致正常写入也被误判"未受理"、迁移标记永远写不进去（每次启动重跑迁移）。现改为：reloading 前置检查 → 优先 promises.saveConfig、缺省走回调形态 → 5s 超时兜底（不无期限等待），完成判据只认宿主回调，绝不用内存 lib.config 推断成功。'
+            },
+            {
+                file: 'js/config/config.js',
+                lines: '53-84, 118-127',
+                desc: 'P1 迁移改为证据门控：核对版本历史（git log -S championBoost/useTrainedModel）确认止血期措施全部在代码层，不存在"由扩展写入这两个键"的痕迹，单凭数值无法证明取值来源。故本版本不修正任何玩家已保存的配置（CFG_MIGRATION_EVIDENCE 为空表，__cfgMigrationPlan 无证据恒返回空），只记录一次性迁移标记；未配置用户继续吃当前默认值（useTrainedModel=true、championBoost=0）。将来出现可证明来源的强制写入标记时，加一条 {name, forcedValues, evidenceKey} 即可放行，且只清理"与强制写入值完全相同（玩家没再改过）"的键。本条覆盖上一版"只清止血期取值"的清理策略。'
+            },
+            {
+                file: 'js/update/modelUpdate.js',
+                lines: '1015-1044',
+                desc: 'P2 扫描官方记录改严格读取：scanWeightsOnDisk 不再用宽松 readOfficialRecord()（safeGet 把访问/解析异常吞成 null → 读失败被谎报成"没有官方记录"而给出 builtin-only），改用已有 readOfficialRecordStrict()（仅键不存在才返回 null，访问/解析异常向上抛）+ asOfficialRecord 结构校验；安装/恢复/门禁等既有严格读取路径未改动。'
+            },
+            {
+                file: 'js/update/updateCore.js',
+                lines: '717-746',
+                desc: 'P2 classifyArchiveScan 新增 officialReadError 入参：官方记录"读取失败 / JSON 损坏 / 结构不合法"一律 ok=false + verdict=null + 明确错误，不得退化成 builtin-only / params-ok-no-record；键确实不存在时仍正常进入无记录态。五态结论、参数长度与字节数区分、数据纪元、SHA-256 校验保持不变。'
+            },
+            {
+                file: 'shadow/shadowCore.js',
+                lines: '55-62, 121-125',
+                desc: 'P2 退出刷盘去重：flushLog 只在存在未落盘的脏数据时才写盘（force 仅绕过退避时间，不再绕过脏判断），beforeunload 与 pagehide 连续触发时第二次不再对已保存日志重复整包同步写；saveLog 覆盖内存后先标脏再刷盘。5s 防抖、配额失败退避、退出兜底、off 清理与监听幂等均保留。'
+            },
+            {
+                file: 'tools/test-regressions.mjs',
+                lines: 'all',
+                desc: '宿主桩按本体真实语义重写（saveConfig 返回 undefined + 回调完成信号 + promises 形态 + reloading 静默丢弃 + 存储失败/悬挂不回调），并新增 P0/P1/P2-a/P2-b 用例：写入确认不误判、存储失败/悬挂/重载中都不谎报、中断可重试、玩家已保存设置不被覆盖、真实启动路径自动迁移、官方记录读失败与真缺失分开、连续退出事件只写一次、监听幂等、clear 不复活、off 不重写。回归总数 84 项。运行：node tools/test-regressions.mjs'
+            }
+        ]
     }
 ];
 

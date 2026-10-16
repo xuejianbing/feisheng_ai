@@ -33,52 +33,97 @@ import { VERSION } from './version.js?v=41a';  /* ★ P2-35：版本号唯一权
  import { nei } from './identities/nei.js?v=41a';
 import { installFarmerHandVisibility, refreshFarmerHandVisibility } from '../content/farmerHandVisibility.js?v=41a';
 
-/* ================= 一次性配置迁移（★P1 修复） =================
- * 原实现：只改内存里的 lib.config，然后调用无参 game.saveConfig()。
- * 无名杀 saveConfig(key, value) 是「逐键落盘」，单参 = 删键；无参等于
- * delete lib.config[undefined] + save(undefined, …)，迁移标记与删除都没有真正写盘。
- * 后果：每次启动都重跑迁移（等于每次启动重置玩家的 useTrainedModel/championBoost），
- * 且残留一个无意义的 undefined 键。
+/* ================= 一次性配置迁移（★P0/P1 修复） =================
+ * 事实核查（以本体源码为准，测试桩同样按本体语义复刻）：
+ *  ① 本体 `game.saveConfig(key, value, local, callback)` **不返回 Promise**——
+ *     结尾是 `save(storeKey, "config", value).then(callback)`（无 return）；
+ *     `_status.reloading` 时更是直接 return：不落盘、不回调、内存也不改。
+ *     上一版实现要求它返回 Promise，于是**正常写入也会被误判成"未受理"**，
+ *     迁移标记永远写不进去 → 每次启动重跑迁移（这正是本轮的 P0）。
+ *  ② `game.promises.saveConfig()` 在 reloading 时 `return Promise.resolve()`——
+ *     完成 ≠ 落盘；且底层 `save()` 失败时回调永不触发，那个 Promise 既不 resolve
+ *     也不 reject（无期限悬挂）。所以「完成」必须配合 reloading 前置检查 + 超时兜底。
+ *  ③ 存储层的 `save()`：indexedDB 路径返回 putDB/deleteDB 的 Promise，
+ *     localStorage 路径同步 setItem 后 Promise.resolve()；两者都以回调作为完成信号。
  *
- * 现在：① 逐键调用本体的 saveConfig 落盘；② 全部成功后才写迁移标记；
- *      ③ 存储不可用（saveConfig 未返回 Promise，如 _status.reloading）或写入被拒时
- *         不写标记并回滚内存标记，下次启动重试；④ 只清理"止血期取值"，玩家自己设过的
- *         其它取值一律保留不删。
- * 注：无名杀 saveConfig(key, undefined) 即删键语义（本体 delete base[key] + save 落盘）。 */
+ * 迁移内容（★P1 修复：只做有证据的修正）
+ *  止血期（4.1.2.4–4.1.2.6）的关闭措施全部在代码层（modelState 的
+ *  LOCAL_WEIGHT_MUTATION_DISABLED、weightPersist 直接 return false），
+ *  版本历史中不存在任何一处"由扩展写入 useTrainedModel / championBoost"的痕迹，
+ *  这两个键上的取值既可能是玩家自己选的、也可能是风险提示期手动关的，**单凭数值无法证明来源**。
+ *  因此本版本不自动修正任何玩家已保存的配置；未配置过的玩家继续吃当前默认值
+ *  （useTrainedModel=true、championBoost='0'）。
+ *  将来若出现可证明来源的强制写入标记，只需往 CFG_MIGRATION_EVIDENCE 加一条
+ *  { name, forcedValues, evidenceKey }——判定与清理逻辑已就绪并有测试覆盖。 */
 const CFG_MIGRATED_KEY = 'extension_无名AI_cfgMigratedVer';
 const CFG_MIGRATED_VER = '471';
-/* 止血期被强制写入的取值：训练模型开关=false、冠军强度=3（当时默认强度）。
- * 只删这些"非玩家主动选择"的残留，恢复内置默认（useTrainedModel=true、championBoost=0）。 */
-const CFG_MIGRATION_STALE = [
-	{ name: 'useTrainedModel', stale: [false] },
-	{ name: 'championBoost', stale: [3, '3'] },
-];
+const CFG_WRITE_TIMEOUT_MS = 5000;   /* 写入完成确认上限：存储层拒不回调时不再无期限等待 */
+/* 证据门控的清理表（本版本为空 = 不修正任何玩家配置）。
+ * 条目形如 { name, forcedValues, evidenceKey }：evidenceKey 的值必须是"旧版**实际强制写入过**的取值"，
+ * 且当前配置值与之**完全相同**（说明玩家此后没再改过）才纳入清理；玩家改过的值一律保留。 */
+const CFG_MIGRATION_EVIDENCE = [];
+/* 纯判定：给定当前配置与证据，算出需要清理的键（无证据 / 值不匹配 → 恒为空） */
+export const __cfgMigrationPlan = (cfg, evidenceList, evidence) => {
+	const out = [];
+	const src = cfg || {};
+	const ev = evidence || {};
+	const list = evidenceList || [];
+	for (let i = 0; i < list.length; i++) {
+		const t = list[i];
+		if (!t || !t.evidenceKey || !Array.isArray(t.forcedValues)) continue;
+		if (!(t.evidenceKey in ev)) continue;                          /* 无来源证据 → 保留玩家配置 */
+		const forcedVal = ev[t.evidenceKey];
+		if (t.forcedValues.indexOf(forcedVal) < 0) continue;           /* 证据值必须是旧版强制写入过的取值 */
+		const names = ['extension_无名AI_' + t.name, 'extension_决策积分引擎_' + t.name];
+		for (let j = 0; j < names.length; j++) {
+			const cur = src[names[j]];
+			if (cur !== undefined && cur === forcedVal) out.push(names[j]);   /* 仅当值与强制写入值完全相同（玩家没再改过） */
+		}
+	}
+	return out;
+};
 const _cfgSwallow = e => { try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } catch (e2) {} };
-/* 逐键落盘：resolve 才会被本体真正写入（putDB/deleteDB）；reloading 时本体提前 return undefined → reject */
+const _cfgReloading = () => { try { return !!(_status && _status.reloading === true); } catch (e) { return false; } };
+let _cfgWriteTimeoutMs = CFG_WRITE_TIMEOUT_MS;
+/* 测试钩子（与仓库 __ 约定一致）：缩短"写入超时未确认"的等待、直接驱动迁移，仅测试使用。
+ * 生产路径不变：模块加载时自动执行一次 _migrateConfig471()。 */
+export const __cfgMigrationTest = {
+	setWriteTimeout: ms => { _cfgWriteTimeoutMs = Number(ms) > 0 ? Number(ms) : CFG_WRITE_TIMEOUT_MS; },
+	runMigration: () => _migrateConfig471(),
+};
+/* 单键写入（逐键落盘）：resolve = 已确认完成；reject = 未受理 / 失败 / 超时未确认。
+ * 判据一律来自宿主自身的完成信号（回调 / promises），**绝不靠内存 lib.config 推断落盘成功**。 */
 const _persistConfigKey = (key, value) => new Promise((resolve, reject) => {
-	let r = null;
-	try { r = game.saveConfig(key, value); } catch (e) { reject(e); return; }
-	if (!r || typeof r.then !== 'function') { reject(new Error('配置写入未受理（可能在重载中）')); return; }
-	r.then(resolve, reject);
+	try {
+		if (typeof game === 'undefined' || !game || typeof game.saveConfig !== 'function') { reject(new Error('宿主不可用，写入未受理')); return; }
+		/* 本体在 _status.reloading 时静默丢弃写入（promises 形态还会 resolve 一个已完成的 Promise），
+		   必须自己先判一次，否则"完成"与"没写"无从区分。 */
+		if (_cfgReloading()) { reject(new Error('配置重载中，写入未受理')); return; }
+		let settled = false;
+		const timer = setTimeout(() => fail(new Error('写入超时未确认（存储层未回调）')), _cfgWriteTimeoutMs);
+		function done() { if (settled) return; settled = true; clearTimeout(timer); resolve(); }
+		function fail(e) { if (settled) return; settled = true; clearTimeout(timer); reject(e instanceof Error ? e : new Error(String(e))); }
+		const P = game.promises;
+		if (P && typeof P.saveConfig === 'function') {
+			/* promises 形态：底层失败时既不 resolve 也不 reject → 由上面的超时兜底 */
+			try { Promise.resolve(P.saveConfig(key, value)).then(done, fail); } catch (e) { fail(e); }
+			return;
+		}
+		/* 回调形态（本体原生接口：第四个参数才是完成回调；本方法返回 undefined，不能用返回值判断） */
+		game.saveConfig(key, value, false, done);
+	} catch (e) { reject(e); }
 });
 const _migrateConfig471 = async () => {
 	try {
 		if (typeof game === 'undefined' || !game || typeof game.saveConfig !== 'function') return;
-		if (lib.config[CFG_MIGRATED_KEY] === CFG_MIGRATED_VER) return;   /* 已完成，绝不重跑（保留玩家后续手动选择） */
-		const deletes = [];
-		for (let i = 0; i < CFG_MIGRATION_STALE.length; i++) {
-			const t = CFG_MIGRATION_STALE[i];
-			const keys = ['extension_无名AI_' + t.name, 'extension_决策积分引擎_' + t.name];
-			for (let j = 0; j < keys.length; j++) {
-				const cur = lib.config[keys[j]];
-				if (cur !== undefined && t.stale.indexOf(cur) >= 0) deletes.push(keys[j]);
-			}
-		}
+		if (lib.config[CFG_MIGRATED_KEY] === CFG_MIGRATED_VER) return;   /* 已完成，绝不重跑（玩家后续修改不被重置） */
+		const deletes = __cfgMigrationPlan(lib.config, CFG_MIGRATION_EVIDENCE, lib.config);
+		/* 只有"必要变更"全部确认完成，才写迁移标记；任一失败就整体不标记，下次启动安全重试 */
 		for (let i = 0; i < deletes.length; i++) await _persistConfigKey(deletes[i], undefined);
 		await _persistConfigKey(CFG_MIGRATED_KEY, CFG_MIGRATED_VER);
 		lib.config[CFG_MIGRATED_KEY] = CFG_MIGRATED_VER;
 	} catch (e) {
-		/* 保守：存储失败就当作没迁移过，标记不留在内存，下次启动重试 */
+		/* 保守：存储失败/被拒/超时就当作没迁移过，标记不留在内存，下次启动重试 */
 		try { delete lib.config[CFG_MIGRATED_KEY]; } catch (e2) {}
 		_cfgSwallow(e);
 	}
