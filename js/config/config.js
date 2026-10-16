@@ -33,30 +33,101 @@ import { VERSION } from './version.js?v=41a';  /* ★ P2-35：版本号唯一权
  import { nei } from './identities/nei.js?v=41a';
 import { installFarmerHandVisibility, refreshFarmerHandVisibility } from '../content/farmerHandVisibility.js?v=41a';
 
-/* ★ 4.1.2.7 一次性配置迁移：止血期关闭的训练模型开关随升级恢复默认开启；冠军强度回退旧默认。
-   只执行一次（cfgMigratedVer 标记），之后玩家手动改的值不会被覆盖。 */
-try {
-	if (!lib.config['extension_无名AI_cfgMigratedVer']) {
-		lib.config['extension_无名AI_cfgMigratedVer'] = '471';
-		delete lib.config['extension_无名AI_useTrainedModel'];
-		delete lib.config['extension_决策积分引擎_useTrainedModel'];
-		delete lib.config['extension_无名AI_championBoost'];
-		delete lib.config['extension_决策积分引擎_championBoost'];
-		if (typeof game !== 'undefined' && game && game.saveConfig) game.saveConfig();
+/* ================= 一次性配置迁移（★P1 修复） =================
+ * 原实现：只改内存里的 lib.config，然后调用无参 game.saveConfig()。
+ * 无名杀 saveConfig(key, value) 是「逐键落盘」，单参 = 删键；无参等于
+ * delete lib.config[undefined] + save(undefined, …)，迁移标记与删除都没有真正写盘。
+ * 后果：每次启动都重跑迁移（等于每次启动重置玩家的 useTrainedModel/championBoost），
+ * 且残留一个无意义的 undefined 键。
+ *
+ * 现在：① 逐键调用本体的 saveConfig 落盘；② 全部成功后才写迁移标记；
+ *      ③ 存储不可用（saveConfig 未返回 Promise，如 _status.reloading）或写入被拒时
+ *         不写标记并回滚内存标记，下次启动重试；④ 只清理"止血期取值"，玩家自己设过的
+ *         其它取值一律保留不删。
+ * 注：无名杀 saveConfig(key, undefined) 即删键语义（本体 delete base[key] + save 落盘）。 */
+const CFG_MIGRATED_KEY = 'extension_无名AI_cfgMigratedVer';
+const CFG_MIGRATED_VER = '471';
+/* 止血期被强制写入的取值：训练模型开关=false、冠军强度=3（当时默认强度）。
+ * 只删这些"非玩家主动选择"的残留，恢复内置默认（useTrainedModel=true、championBoost=0）。 */
+const CFG_MIGRATION_STALE = [
+	{ name: 'useTrainedModel', stale: [false] },
+	{ name: 'championBoost', stale: [3, '3'] },
+];
+const _cfgSwallow = e => { try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } catch (e2) {} };
+/* 逐键落盘：resolve 才会被本体真正写入（putDB/deleteDB）；reloading 时本体提前 return undefined → reject */
+const _persistConfigKey = (key, value) => new Promise((resolve, reject) => {
+	let r = null;
+	try { r = game.saveConfig(key, value); } catch (e) { reject(e); return; }
+	if (!r || typeof r.then !== 'function') { reject(new Error('配置写入未受理（可能在重载中）')); return; }
+	r.then(resolve, reject);
+});
+const _migrateConfig471 = async () => {
+	try {
+		if (typeof game === 'undefined' || !game || typeof game.saveConfig !== 'function') return;
+		if (lib.config[CFG_MIGRATED_KEY] === CFG_MIGRATED_VER) return;   /* 已完成，绝不重跑（保留玩家后续手动选择） */
+		const deletes = [];
+		for (let i = 0; i < CFG_MIGRATION_STALE.length; i++) {
+			const t = CFG_MIGRATION_STALE[i];
+			const keys = ['extension_无名AI_' + t.name, 'extension_决策积分引擎_' + t.name];
+			for (let j = 0; j < keys.length; j++) {
+				const cur = lib.config[keys[j]];
+				if (cur !== undefined && t.stale.indexOf(cur) >= 0) deletes.push(keys[j]);
+			}
+		}
+		for (let i = 0; i < deletes.length; i++) await _persistConfigKey(deletes[i], undefined);
+		await _persistConfigKey(CFG_MIGRATED_KEY, CFG_MIGRATED_VER);
+		lib.config[CFG_MIGRATED_KEY] = CFG_MIGRATED_VER;
+	} catch (e) {
+		/* 保守：存储失败就当作没迁移过，标记不留在内存，下次启动重试 */
+		try { delete lib.config[CFG_MIGRATED_KEY]; } catch (e2) {}
+		_cfgSwallow(e);
 	}
-} catch (eMig471) {}
+};
 
-/* ★ 4.1.2.7 启动归档自检：无名AI_archive 积累超过 1MB 时自动清理并关闭归档
-   （等价玩家控制台命令：清无名AI_archive + archiveGames=false；小于阈值不影响归档功能） */
-try {
-	var _archLen = ((typeof localStorage !== 'undefined' && localStorage.getItem('无名AI_archive')) || '').length;
-	if (_archLen > 1048576) {
-		localStorage.removeItem('无名AI_archive');
-		lib.config['extension_无名AI_archiveGames'] = false;
-		if (typeof game !== 'undefined' && game && game.saveConfig) game.saveConfig();
-		if (typeof game !== 'undefined' && game && game.log) game.log('归档数据 ' + (_archLen / 1024).toFixed(1) + 'KB 已自动清理，归档功能已关闭');
-	}
-} catch (eArchCheck) {}
+/* ================= 启动归档自检（★P1 修复：非破坏性） =================
+ * 原实现：无名AI_archive 超过 1MB 直接 removeItem 删除玩家历史归档——未经确认、不可恢复。
+ * 现在：① 超阈值只「暂停新增归档」并明确提示，不删除任何已有归档；
+ *      ② 提示只弹一次（标记落盘；且归档开关已持久化为关闭，重启不会再触发）；
+ *      ③ 删除必须由玩家在提示中或 设置→「清空战报归档」中明确确认；
+ *      ④ 已有归档始终可查看（设置→「战报归档」）与导出（设置→「导出反馈数据」）。 */
+const ARCHIVE_SIZE_LIMIT = 1048576;   /* 1MB */
+const ARCHIVE_NOTICE_KEY = 'extension_无名AI_archiveNoticeVer';
+const ARCHIVE_NOTICE_VER = '1';
+const _archiveSize = () => { try { return ((typeof localStorage !== 'undefined' && localStorage.getItem('无名AI_archive')) || '').length; } catch (e) { return 0; } };
+/* 供启动提示与设置菜单共用的清理入口：删除前必须得到玩家明确确认 */
+const clearArchiveWithConsent = () => {
+	const kb = (_archiveSize() / 1024).toFixed(1);
+	let yes = false;
+	try { yes = confirm('无名AI：确定清空战报归档（约 ' + kb + 'KB）？此操作不可恢复。\n\n如需保留，请先用 设置 →「导出反馈数据」备份。'); } catch (e) { yes = false; }
+	if (!yes) return false;
+	try { localStorage.removeItem('无名AI_archive'); } catch (e2) { return false; }
+	try { if (typeof game !== 'undefined' && game && game.log) game.log('无名AI：战报归档已清空（' + kb + 'KB）'); } catch (e3) {}
+	return true;
+};
+const _archiveStartupCheck = () => {
+	try {
+		const len = _archiveSize();
+		if (len <= ARCHIVE_SIZE_LIMIT) return;
+		if (lib.config['extension_无名AI_archiveGames'] !== false) {
+			lib.config['extension_无名AI_archiveGames'] = false;           /* 只暂停新增 */
+			_persistConfigKey('extension_无名AI_archiveGames', false).catch(_cfgSwallow);   /* 开关变更必须真正落盘 */
+		}
+		if (lib.config[ARCHIVE_NOTICE_KEY] === ARCHIVE_NOTICE_VER) return;   /* 已提示过，不重复打扰 */
+		lib.config[ARCHIVE_NOTICE_KEY] = ARCHIVE_NOTICE_VER;
+		_persistConfigKey(ARCHIVE_NOTICE_KEY, ARCHIVE_NOTICE_VER).catch(_cfgSwallow);
+		setTimeout(function () {
+			try {
+				const kb = (len / 1024).toFixed(1);
+				const yes = confirm('无名AI：战报归档已积累 ' + kb + 'KB（超过 1MB），为免拖慢启动，已暂停新增归档。\n\n已有归档不会被自动删除。\n\n“确定”= 现在清空归档（不可恢复，建议先备份）\n“取消”= 保留归档，可随时在 设置→战报归档 查看');
+				if (yes) clearArchiveWithConsent();
+			} catch (e) {}
+		}, 0);
+	} catch (e) { _cfgSwallow(e); }
+};
+
+_migrateConfig471();
+_archiveStartupCheck();
+
 export let config = {
 	hideFarmerTeammateHand: { name: '隐藏农民队友手牌', onclick(value) {
 	 game.saveConfig('extension_无名AI_hideFarmerTeammateHand', !!value);
@@ -737,6 +808,17 @@ export let config = {
 					if (!confirm('确定清空 ' + st.games + ' 局对局日志（约 ' + st.kb + ' KB）？此操作不可恢复。')) return false;
 					store.clearGames();
 					alert('✅ 已清空对局日志库');
+				} catch (e) { alert('清空失败：' + e.message); }
+				return false;
+			},
+		},
+
+		clearArchive: {
+			name: '<button class="djsc-menu-config-btn" style="background: linear-gradient(135deg, #ff8a8a, #c23b3b); width: 100%; padding: 15px; font-size: 16px; margin: 8px 0;">🗑️ 清空战报归档</button>',
+			intro: '清空扩展保存的历史战报归档（不影响对局日志库与训练样本）。删除前会二次确认；如需保留，请先用「导出反馈数据」备份。',
+			onclick: function () {
+				try {
+					if (clearArchiveWithConsent()) alert('✅ 已清空战报归档');
 				} catch (e) { alert('清空失败：' + e.message); }
 				return false;
 			},

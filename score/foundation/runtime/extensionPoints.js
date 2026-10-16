@@ -131,12 +131,13 @@ export function readiness() {
 /* ---------- 内置实现（证明机制可用，同时也是真实可用的指标） ---------- */
 
 register(POINTS.METRIC, 'sampleCount', function () {
+            /* ★P2 修复：不再返回"本地待传 + 累计已上传"的和——
+             * 上传成功后本地样本仍然保留（本地数已含已上传数），相加是重复计数。
+             * 本指标只看「本地保存样本数」；三个口径各自独立，见 cloudFeedback.status().sampleCounts。 */
             let n = 0;
-            try { n += (window.__DJSC.trainBufferSize && window.__DJSC.trainBufferSize()) || 0; } catch (e) {}
-            /* ★1015：训练数据 = 本地待传 + 累计已上传（上传成功会清出缓冲，只看缓冲会误以为丢数据） */
-            try { const st = window.__DJSC.cloudFeedback && window.__DJSC.cloudFeedback.status ? window.__DJSC.cloudFeedback.status() : null; if (st) n += st.uploadedTotal || 0; } catch (e2) {}
+            try { n = (window.__DJSC.trainBufferSize && window.__DJSC.trainBufferSize()) || 0; } catch (e) { n = 0; }
             return n;
-        }, { label: '训练数据（待传+已传）', builtin: true });
+        }, { label: '本地训练样本（本地保存）', builtin: true });
 
 register(POINTS.METRIC, 'championCount', function () {
 	try {

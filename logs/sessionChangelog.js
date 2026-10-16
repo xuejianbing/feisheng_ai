@@ -1554,6 +1554,72 @@ export const SESSION_CHANGELOG = [
                 desc: '引擎全面接入统一关系系统：①导入 relActionValue/relExposureOf 统一入口；②卡牌目标评分"对象匹配"段由 isSameCamp/getCamp 阵营判敌改为 isAllyOf/isEnemyOf 敌我三态；③新增"统一收益方向守卫"：对每个作用于玩家的 act 用 actionValue 强制方向判定(攻击只对真敌/辅助救援只对真友，中性强负、真友攻击/真敌增益强罚)，收口散落各处依赖阵营的目标口径。'
             }
         ]
+    },
+    {
+        phase: 'v4.1.2.8 · 六项针对性修复（扫描/迁移/归档/统计/上传锁/shadow 落盘）',
+        date: '2026-10-16',
+        changes: [
+            {
+                file: 'js/update/updateCore.js',
+                lines: '716-855',
+                desc: 'P1 落盘扫描改为纯函数 classifyArchiveScan（宿主层与自动化测试共用同一实现）：按 paramSpec 的 {key,len,kind} 逐参数核对（元素数与实际字节数分开记，int16 字节=元素×2），数据纪元/网络结构版本/官方记录 sha256 一并校验，五态结论 builtin-only / official-intact / archive-mismatch / params-ok-no-record / damaged；读取失败或契约不可用一律 ok=false + verdict=null，绝不退化成 builtin-only。'
+            },
+            {
+                file: 'js/update/modelUpdate.js',
+                lines: '294-330, 617-630, 1015-1034',
+                desc: 'P1 宿主层修复：①删除未定义的 readArchive() 调用，改用 weights.js 只读接口的 storageOps.readArchiveStrict()（不吞异常，读不到能被识别）；②paramsDigest/官方记录改读 sha256 字段（原读 rec.digest 恒空）；③训练证据与内置默认摘要抽成 _scanContext，供完整性核验与扫描共用；④scanWeightsOnDisk 移到模块作用域并 export，判定逻辑委托 updateCore，扫描本身不再误报 ok。'
+            },
+            {
+                file: 'js/config/config.js',
+                lines: '34-140, 816-828',
+                desc: 'P1 配置迁移：原实现只改 lib.config 后调用无参 game.saveConfig()（本体语义为逐键落盘/单参删键，无参等于 delete lib.config[undefined]），标记与删除都没写盘 → 每次启动重跑迁移、玩家设置被反复重置。改为逐键 _persistConfigKey 落盘、全部成功后才写标记、只清理"止血期取值"（useTrainedModel=false / championBoost=3）、写入被拒或重载中不写标记也不留内存。'
+            },
+            {
+                file: 'js/config/config.js',
+                lines: '98-140, 816-828',
+                desc: 'P1 超大归档改为非破坏性：超过 1MB 只暂停新增归档（开关落盘）+ 一次性提示（提示标记落盘，重启不再打扰），绝不删除历史归档；删除必须由玩家明确确认；新增设置菜单入口「清空战报归档」（clearArchiveWithConsent 二次确认），查看/导出入口保持。'
+            },
+            {
+                file: 'js/config/configSchema.js',
+                lines: '24, 193, 325',
+                desc: 'P1 归档面板接入：02·对局记录新增 clearArchive 动作项（dangerous，二次确认）及标签/说明映射。'
+            },
+            {
+                file: 'score/foundation/runtime/extensionPoints.js',
+                lines: '131-143',
+                desc: 'P2 训练样本指标不再把"本地样本数 + 累计已上传数"相加（上传成功后本地样本仍保留，本地数已含已上传数，相加必然重复计数）；指标只报本地保存样本数，标签改为「本地训练样本（本地保存）」。'
+            },
+            {
+                file: 'score/foundation/cloud/cloudIngest.js',
+                lines: '551-585',
+                desc: 'P2 status() 明确区分三个口径：本地保存样本数（bufferTotal）/ 当前待上传（pendingSamples）/ 历史累计成功上传（uploadedTotal），并新增 sampleCounts 显式暴露，禁止相加冒充去重总数；游标与样本结构保持不变。'
+            },
+            {
+                file: 'score/foundation/cloud/cloudIngest.js',
+                lines: '372-382, 392-414, 415-470',
+                desc: 'P2 上传任务锁：原实现先置 _uploading=true 再判退避，命中退避直接 return → 锁永不释放，此后自动与手动上传恒返回 busy 直到刷新。改为退避判断前移，主体抽为 _uploadRun，成功/失败/异常/提前返回全部经 _release 统一复位（异常路径另记 lastErr 并可重试）。同处修复限流退避失效：429 错误补 rateLimited 标记（消费端原用 /rate_limit|429/ 匹配中文文案，恒不命中 → 30 分钟退避从未生效）。'
+            },
+            {
+                file: 'shadow/shadowCore.js',
+                lines: '34-118, 337-372',
+                desc: 'P2 防抖写盘补齐可靠性（保留 5s 脏写性能优化）：①新增 pagehide/beforeunload 同步兜底刷盘（注册/清理幂等，off 时移除）；②写盘失败退避 60s，不再每 5s 无限重试；③空日志不落盘，清空后强制刷盘不会把键建回来；④off 收缩直接落盘，不再经 saveLog 把刚释放的内存缓存用旧日志填回（旧缓存复活）；⑤导出 flushShadowLog/ensureExitFlush/dropExitFlush 与 __shadowLogTest 测试钩子。'
+            },
+            {
+                file: 'extension.js',
+                lines: '158-165',
+                desc: 'P2 扩展卸载时先 flushShadowLog(true) 并 dropExitFlush()，把 shadow 防抖窗口内未落盘的记录同步写掉（动态 import，模块已加载时同微任务内完成）。'
+            },
+            {
+                file: 'tools/noname-stub-loader.mjs（新增）',
+                lines: 'all',
+                desc: '测试用宿主桩加载器：把任何指向 noname.js 的 import 换成统一桩模块，使 Node 侧能真实 import 生产模块（含宿主适配层），避免用理想化假对象掩盖宿主接口差异。'
+            },
+            {
+                file: 'tools/test-regressions.mjs（新增）',
+                lines: 'all',
+                desc: '六项修复的回归测试（68 项行为断言，含五态扫描、读失败不得冒充 builtin-only、迁移逐键落盘/失败不写标记/重启不重跑、超大归档不删除且需确认、三口径统计不相加、上传锁退避与异常路径、shadow 退出刷盘/幂等/清空不复活/配额退避）。运行：node tools/test-regressions.mjs'
+            }
+        ]
     }
 ];
 

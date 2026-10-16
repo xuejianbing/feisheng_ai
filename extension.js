@@ -155,6 +155,13 @@ const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
 	try { uninstallModelUpdate(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
 	try { uninstallScoreEngine(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	/* ★P2 修复：卸载前把 shadow 防抖窗口内未落盘的日志同步写掉（模块已加载时同一微任务内完成），并停掉退出兜底监听 */
+	try {
+		import('./shadow/shadowCore.js?v=41a').then(function (mShadow) {
+			try { mShadow.flushShadowLog(true); } catch (eF) {}
+			try { mShadow.dropExitFlush(); } catch (eD) {}
+		}).catch(function () {});
+	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★ P1-25：还原 Player.prototype.useCard，取消未执行的 3s 补丁定时器 */
 	try { if (_useCardPatchTimer) { clearTimeout(_useCardPatchTimer); _useCardPatchTimer = null; } } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try {

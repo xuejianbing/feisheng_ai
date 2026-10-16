@@ -376,7 +376,14 @@ function postJSON(bodyObj) {
         body: _stableStringify(bodyObj)
     }).then(r => {
         if (r && r.ok) return true;
-        if (r && r.status === 429) throw new Error('触发服务端限流，请稍后自动重试，数据已保留待传，稍后自动重试');
+        if (r && r.status === 429) {
+            /* ★P2 修复：给限流错误打标记——原实现只把中文提示作为 message 抛出，
+             * 而消费端用 /rate_limit|429/ 匹配 message，恒不命中 → 30 分钟退避从未生效，
+             * 反而退回"每小时重试一次"。标记比文案匹配可靠，文案仍保留给玩家看。 */
+            const err = new Error('HTTP 429 触发服务端限流，请稍后自动重试，数据已保留待传，稍后自动重试');
+            err.rateLimited = true;
+            throw err;
+        }
         throw new Error('HTTP ' + (r ? r.status : '?'));
     });
 }
@@ -385,9 +392,27 @@ function postJSON(bodyObj) {
 function uploadNow(force) {
     if (!force && !cfg('cloudAutoUpload', false)) return Promise.resolve({ skipped: 'disabled' });
     if (_uploading) return Promise.resolve({ skipped: 'busy' });
-    _uploading = true;
     const cur = loadCursor();
+    /* ★P2 修复：退避（以及下面所有提前返回）必须在拿锁之前或经统一释放路径，
+     *   原实现先置 _uploading = true 再判退避，命中退避直接 return → 锁永不释放，
+     *   此后自动与手动上传都只能返回 busy，直到刷新页面。 */
     if (!force && cur.backoffUntil && Date.now() < cur.backoffUntil) return Promise.resolve({ skipped: 'backoff', minLeft: Math.ceil((cur.backoffUntil - Date.now()) / 60000) });   /* ★fixPR2: 限流退避期内不再空耗配额 */
+    _uploading = true;
+    const _release = r => { _uploading = false; return r; };
+    const _releaseOnError = e => {
+        _uploading = false;
+        const msg = String((e && e.message) || e);
+        try { cur.lastErr = msg; saveCursor(cur); } catch (e2) {}
+        _lastResult = { at: Date.now(), ok: false, detail: '异常：' + msg };
+        try { log.warn('cloud', '上报异常（已释放任务锁，可重试）：' + msg); } catch (e3) {}
+        return { ok: false, error: msg, sentSamples: 0 };
+    };
+    /* 成功 / 失败 / 异常 / 提前返回，全部经 _release 复位任务锁 */
+    return Promise.resolve().then(() => _uploadRun(cur, force)).then(_release, _releaseOnError);
+}
+
+/* 上传主体：不含任务锁，由 uploadNow 统一拿锁与释放 */
+function _uploadRun(cur, force) {
     const samples = getSamples ? getSamples() : [];
     const pick = pickNewSamples(samples, cur.watermark, cur.keyFp && cur.keyFp.samples);
     const snap = diffSnapshot(cur);
@@ -396,14 +421,13 @@ function uploadNow(force) {
     const skbdPend = collectSkillBreakdownPending();   /* ★PR7 */
     const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0 || (skbdPend && skbdPend.players.length > 0);   /* ★PR7 */
     if (!hasWork && !force) {
-        _uploading = false;
         return Promise.resolve({ skipped: 'no-new-data', pendingSamples: bufferSize() });
     }
     /* 样本分批：每批独立 POST，全部 2xx 才推进水印 */
     const batches = [];
     for (let i = 0; i < pick.list.length; i += BATCH_LIMIT) batches.push(pick.list.slice(i, i + BATCH_LIMIT));
     if (!batches.length || (snap.changed || force)) batches.push(null);   /* 终批：携带快照/统计/配置 */
-    let idx = 0, sentSamples = 0, failed = false, failMsg = '';
+    let idx = 0, sentSamples = 0, failed = false, failMsg = '', rateLimited = false;
     function step() {
         if (idx >= batches.length) return Promise.resolve();
         const list = batches[idx];
@@ -414,15 +438,18 @@ function uploadNow(force) {
         return postJSON(env).then(() => {
             if (list) sentSamples += list.length;
             idx++;
-        }).catch(e => { failed = true; failMsg = String(e && e.message || e); });
+        }).catch(e => {
+            failed = true;
+            failMsg = String(e && e.message || e);
+            if (e && e.rateLimited) rateLimited = true;   /* ★P2 修复：限流标记透传（文案匹配不可靠） */
+        });
     }
     function run() { return step().then(() => ((failed || idx >= batches.length) ? Promise.resolve() : run())); }
     return run().then(() => {
-        _uploading = false;
         if (failed) {
             cur.lastErr = failMsg;
             /* ★fixPR2: 服务端限流（429/rate_limit）→ 30 分钟退避；lastErr 落盘避免重启后无痕迹 */
-            if (/rate_limit|429/i.test(failMsg)) cur.backoffUntil = Date.now() + 30 * 60 * 1000;
+            if (rateLimited || /rate_limit|429/i.test(failMsg)) cur.backoffUntil = Date.now() + 30 * 60 * 1000;
             saveCursor(cur);
             _lastResult = { at: Date.now(), ok: false, detail: failMsg };
             try { log.warn('cloud', '上报失败（保留待传，本地数据未动）：' + failMsg); } catch (e) {}
@@ -536,15 +563,21 @@ function status() {
     const cur = loadCursor();
     const pick = pickNewSamples(getSamples ? getSamples() : [], cur.watermark, cur.keyFp && cur.keyFp.samples);
     const snap = diffSnapshot(cur);
+    /* ★P2 修复：三个口径必须各自独立，禁止相加冒充"去重后的样本总数"——
+     * 上传成功后本地样本仍然保留，本地数已包含已上传数，相加必然重复计数。 */
+    const localSaved = bufferSize();          /* 本地保存样本数（含已上传，本地永不删除） */
+    const pendingCount = pick.list.length;    /* 当前待上传样本数（水印之后的新样本） */
+    const uploadedCount = cur.uploadedTotal || 0;   /* 历史累计成功上传样本数 */
     return {
         endpoint: ENDPOINT,
         watermark: cur.watermark,
         watermarkText: cur.watermark ? new Date(cur.watermark).toLocaleString() : '（首次，将全量上传）',
-        pendingSamples: pick.list.length,
-        bufferTotal: bufferSize(),
+        pendingSamples: pendingCount,
+        bufferTotal: localSaved,
         snapshotChanged: snap.changed,
         lastOk: cur.lastOk ? new Date(cur.lastOk).toLocaleString() : '从未',
-        uploadedTotal: cur.uploadedTotal || 0,   /* ★1015：累计已上传 */
+        uploadedTotal: uploadedCount,   /* ★1015：累计已上传 */
+        sampleCounts: { localSaved: localSaved, pending: pendingCount, uploaded: uploadedCount },
         backoffMin: (cur.backoffUntil && Date.now() < cur.backoffUntil) ? Math.ceil((cur.backoffUntil - Date.now()) / 60000) : 0,
         lastErr: cur.lastErr || '',
         lastResult: _lastResult

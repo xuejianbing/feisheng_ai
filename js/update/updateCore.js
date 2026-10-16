@@ -700,6 +700,130 @@ export const classifyIntegrityArchive = opt => {
     return { state: 'ok', digest };
 };
 
+/* ---------------- 落盘扫描（宿主 `__DJSC.modelUpdate.scan()` 与自动化测试共用） ----------------
+ * 纯函数：入参是"宿主读到的原始材料"，出参是可信结论 + 逐参数明细。
+ * 与套件里其它模块一样不碰 window / localStorage，读取动作留给宿主层。
+ *
+ * verdict 契约（五态）：
+ *   builtin-only        无官方记录、也无权重存档 → 运行时使用内置默认权重（正常态）
+ *   official-intact     有官方记录，存档结构、数据纪元与摘要均与记录一致
+ *   archive-mismatch    有官方记录，但存档内容不是该官方权重（本地训练成果 / 外部改写，见 reason）
+ *   params-ok-no-record 无官方记录，但存档结构有效、参数完整可用
+ *   damaged             存档缺失 / 解析失败 / 结构或数据纪元不符（附 reason，可重新获取修复）
+ *
+ * ok=false 表示本次扫描本身不可信（读取失败、契约不可用、无法判定），此时 verdict 为 null。
+ * 绝不允许把"读不到"退化成 builtin-only —— 那会把读取故障谎报成"没有存档"。 */
+export const classifyArchiveScan = opt => {
+    const { raw, readError, contract, officialRec, hasTrainingEvidence, defaultDigest } = opt || {};
+    const out = {
+        ok: false, verdict: null, reason: '', errors: [],
+        hasArchive: typeof raw === 'string' && raw.length > 0,
+        archive: null, official: null, checks: [], paramsOk: null,
+        digestMatch: null, computedDigest: null, integrity: null,
+        dims: contract && Array.isArray(contract.dims) ? contract.dims.slice() : null,
+    };
+    if (readError) {
+        out.errors.push('读取权重存档失败：' + String((readError && readError.message) || readError));
+        out.reason = '权重存档读取失败，当前权重状态无法判定（不等于"没有存档"）';
+        return out;
+    }
+    if (!contract) {
+        out.errors.push('模型契约不可用（weights.js 的 MODEL_SCHEMA / DATA_EPOCH 未就绪）');
+        out.reason = '运行时契约不可用，无法核对存档结构与数据纪元';
+        return out;
+    }
+    if (officialRec) {
+        out.official = {
+            releaseSeq: officialRec.releaseSeq != null ? officialRec.releaseSeq : null,
+            modelVersion: officialRec.modelVersion || null,
+            sha256: officialRec.sha256 ? String(officialRec.sha256).toLowerCase() : null,
+            size: officialRec.size || null,
+        };
+    }
+    /* ① 无存档：有官方记录 = 记录在而存档丢了（损坏）；无官方记录 = 在用内置默认权重 */
+    if (!out.hasArchive) {
+        out.paramsOk = false;
+        out.ok = true;
+        if (officialRec) { out.verdict = 'damaged'; out.reason = '官方权重记录存在，但权重存档缺失（运行时已回退内置默认权重）'; }
+        else { out.verdict = 'builtin-only'; out.reason = '未曾安装官方权重，运行时使用内置默认权重'; }
+        return out;
+    }
+    /* ② 解析 */
+    let obj = null;
+    try { obj = JSON.parse(raw); } catch (e) {
+        out.errors.push('权重存档 JSON 解析失败：' + String((e && e.message) || e));
+        out.ok = true; out.verdict = 'damaged'; out.reason = '权重存档无法解析（可能已损坏）';
+        return out;
+    }
+    if (!obj || typeof obj !== 'object') {
+        out.ok = true; out.verdict = 'damaged'; out.reason = '权重存档结构无效（不是对象）';
+        return out;
+    }
+    out.archive = {
+        v: obj.v != null ? obj.v : null, dv: obj.dv != null ? obj.dv : null,
+        trained: obj.trained != null ? obj.trained : null,
+        accuracy: obj.accuracy != null ? obj.accuracy : null,
+        ready: obj.ready,
+    };
+    /* ③ 逐参数核对：元素数 vs 实际字节数分开记（int8 1 字节、int16 2 字节），
+     *    并确认可解码 + 数值可用；只有长度对而内容不可解码同样算不合格。 */
+    const spec = paramSpec(contract.dims);
+    let allOk = true;
+    for (let i = 0; i < spec.length; i++) {
+        const s = spec[i];
+        const row = {
+            key: s.key, kind: s.kind, elements: s.len,
+            expectBytes: s.kind === 'int16' ? s.len * 2 : s.len,
+            present: false, decodedBytes: null, bytesOk: false, valuesOk: false,
+            min: null, max: null, error: null,
+        };
+        try {
+            const b64 = obj[s.key];
+            row.present = typeof b64 === 'string' && b64.length > 0;
+            if (row.present) {
+                const bytes = decodeBase64(b64);
+                row.decodedBytes = bytes ? bytes.byteLength : null;
+                const typed = bytesToTyped(bytes, s);
+                row.bytesOk = !!typed;
+                if (typed) {
+                    let finite = true, min = Infinity, max = -Infinity;
+                    for (let k = 0; k < typed.length; k++) {
+                        const v = typed[k];
+                        if (!Number.isFinite(v)) { finite = false; break; }
+                        if (v < min) min = v;
+                        if (v > max) max = v;
+                    }
+                    row.valuesOk = finite;
+                    if (finite && typed.length) { row.min = min; row.max = max; }
+                }
+            }
+        } catch (e) { row.error = String((e && e.message) || e); }
+        if (!row.present || !row.bytesOk || !row.valuesOk) allOk = false;
+        out.checks.push(row);
+    }
+    out.paramsOk = allOk;
+    out.computedDigest = allOk ? paramsDigest(obj, contract.dims) : null;
+    if (out.official && out.official.sha256) {
+        out.digestMatch = out.computedDigest ? (out.computedDigest === out.official.sha256) : null;
+    }
+    const structureOk = (obj.v === contract.schemaVersion) && (Number(obj.dv || 0) >= Number(contract.dataEpoch));
+    out.ok = true;
+    if (!officialRec) {
+        if (allOk && structureOk) { out.verdict = 'params-ok-no-record'; out.reason = '无官方权重记录；存档结构有效、参数完整可用'; }
+        else { out.verdict = 'damaged'; out.reason = allOk ? '存档结构或数据纪元与当前运行时不符（会被拒载）' : '存档参数不完整或无法解码'; }
+        return out;
+    }
+    /* ④ 有官方记录：复用已验收的完整性分类（结构 + 纪元 + 参数 + 摘要 + 训练证据） */
+    const cls = classifyIntegrityArchive({ raw, contract, officialRec, hasTrainingEvidence, defaultDigest });
+    out.integrity = cls.state;
+    if (cls.state === 'unknown') { out.ok = false; out.verdict = null; out.reason = cls.reason || '无法判定存档完整性'; return out; }
+    if (cls.state === 'ok') { out.verdict = 'official-intact'; out.reason = '存档与官方记录一致（官方权重已完整落地）'; return out; }
+    if (cls.state === 'broken') { out.verdict = 'damaged'; out.reason = cls.reason || '存档损坏'; return out; }
+    out.verdict = 'archive-mismatch';
+    out.reason = cls.reason || '存档内容与官方记录不一致';
+    return out;
+};
+
 /* ---------------- 下载体积上限（P2-3） ----------------
  * 由网络维度派生：参数原始字节 × base64 膨胀(4/3) × 余量 + 元数据开销，
  * 并对未来更大模型留出充裕空间（不会把合法模型误拒）。 */

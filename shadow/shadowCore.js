@@ -34,6 +34,9 @@ const MAX_RECORDS = 300;   /* PR5：localStorage 是主扩展共享池（约5MB 
 let _logMem = null;          /* ★ 4.1.2.5：内存日志缓存——读一次常驻，记录/回填只改内存，防抖刷盘 */
 let _logDirty = false;
 let _flushTimer = null;
+let _flushBackoffUntil = 0;  /* ★P2 修复：写盘失败（配额不足）后的退避截止时间，防 5s 一次无限重试 */
+let _FLUSH_BACKOFF_MS = 60 * 1000;
+let _exitHooked = false;     /* ★P2 修复：退出兜底监听是否已注册（幂等标记，绝不重复挂） */
 
 function loadLog() {
     if (_logMem) return _logMem;
@@ -44,23 +47,71 @@ function loadLog() {
     return _logMem;
 }
 
-/* ★ 4.1.2.5 防抖写盘：原来每条决策 2 次整包 JSON.parse + 2 次整包 JSON.stringify 同步写 localStorage（约 600KB×4），是对局卡顿与能耗大户之一。现在 5 秒定时、脏了才写。 */
+/* ★ 4.1.2.5 防抖写盘：原来每条决策 2 次整包 JSON.parse + 2 次整包 JSON.stringify 同步写 localStorage（约 600KB×4），是对局卡顿与能耗大户之一。现在 5 秒定时、脏了才写。
+ * ★P2 修复：写失败不再每 5 秒重试——退避 _FLUSH_BACKOFF_MS（默认 60s）；数据仍在内存，
+ *   退避结束或退出兜底时再试，绝不因配额不足陷入高频写盘。 */
 function markLogDirty() { _logDirty = true; }
 
 function flushLog(force) {
     if ((!_logDirty && !force) || !_logMem) return;
+    if (_logMem.length === 0 && !_logDirty) return;   /* ★P2：空日志不落盘（清空后强制刷盘不得把键重新建回来） */
+    if (!force && Date.now() < _flushBackoffUntil) return;   /* 退避期内普通刷盘直接跳过（退出兜底仍尽力写一次） */
     while (_logMem.length > MAX_RECORDS) _logMem.shift();
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem));
         _logDirty = false;
+        _flushBackoffUntil = 0;
     } catch (e) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem.slice(-MAX_RECORDS))); _logDirty = false; } catch (e2) {}
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_logMem.slice(-MAX_RECORDS))); _logDirty = false; _flushBackoffUntil = 0; }
+        catch (e2) { _flushBackoffUntil = Date.now() + _FLUSH_BACKOFF_MS; }
     }
 }
 
 function ensureFlushTimer() {
     if (_flushTimer) return;
+    ensureExitFlush();
     _flushTimer = setInterval(() => { try { flushLog(false); } catch (eF) {} }, 5000);
+}
+
+/* ---------- 退出兜底（★P2 修复） ----------
+ * 防抖窗口内的记录在"关页面 / 刷新 / 后台回收"时会随内存一起丢，
+ * 因此挂一次性同步刷盘监听；注册与清理都幂等（_exitHooked 标记）。 */
+function _flushOnExit() { try { flushLog(true); } catch (e) {} }
+
+export function ensureExitFlush() {
+    if (_exitHooked || typeof window === 'undefined' || typeof window.addEventListener !== 'function') return false;
+    _exitHooked = true;
+    try { window.addEventListener('pagehide', _flushOnExit); } catch (e1) {}
+    try { window.addEventListener('beforeunload', _flushOnExit); } catch (e2) {}
+    return true;
+}
+
+export function dropExitFlush() {
+    if (!_exitHooked) return false;
+    _exitHooked = false;
+    try { window.removeEventListener('pagehide', _flushOnExit); } catch (e1) {}
+    try { window.removeEventListener('beforeunload', _flushOnExit); } catch (e2) {}
+    return true;
+}
+
+/* 供扩展卸载 / 外部收口调用：尽力同步写掉未落盘的记录 */
+export function flushShadowLog(force) { try { flushLog(force !== false); } catch (e) {} }
+
+/* 测试钩子（与 weights.js 的 __ 约定一致）：只读写状态，不改变生产路径 */
+export function __shadowLogTest() {
+    return {
+        markDirty: () => markLogDirty(),
+        push: rec => { loadLog().push(rec); markLogDirty(); },   /* 等价于一条决策写入（追加 + 脏标记） */
+        setBackoffMs: ms => { _FLUSH_BACKOFF_MS = Number(ms) || 0; },
+        clearBackoff: () => { _flushBackoffUntil = 0; },
+        flush: force => flushLog(force !== false),
+        state: () => ({
+            dirty: _logDirty, hasMem: !!_logMem, timer: !!_flushTimer,
+            hooked: _exitHooked, backoffUntil: _flushBackoffUntil,
+            memLen: _logMem ? _logMem.length : -1,
+        }),
+        peek: () => (_logMem ? _logMem.slice() : null),
+    };
 }
 
 /* 兼容旧调用（off 收缩/全量替换场景）：覆盖内存并立即刷盘 */
@@ -286,6 +337,7 @@ export function shadowCmd(action = 'stats') {
     if (action === 'clear') {
         localStorage.removeItem(STORAGE_KEY);
         _logMem = []; _logDirty = false;   /* ★ 4.1.2.5：同步清内存缓存 */
+        _flushBackoffUntil = 0;            /* ★P2：清空即视为存储可用，解除写盘退避 */
         return { ok: true, msg: '已清空v5 shadow日志' };
     }
 
@@ -307,15 +359,19 @@ export function shadowCmd(action = 'stats') {
         _started = false; _lastKey = '';
         if (_flushTimer) { clearInterval(_flushTimer); _flushTimer = null; }   /* ★ 4.1.2.5：off 时停刷盘定时器并释放内存缓存 */
         try { flushLog(true); } catch (eF0) {}
-        _logMem = null; _logDirty = false;
         /* PR5b：off 时同步收缩本地日志到 MAX_RECORDS，立即释放共享配额
-           （从旧版 2000 条上限升级来的场景：不清缩的话配额挤占在 off 后依旧存在） */
+           （从旧版 2000 条上限升级来的场景：不清缩的话配额挤占在 off 后依旧存在）
+           ★P2 修复：直接落盘收缩结果，不再走 saveLog —— saveLog 会把刚释放的内存缓存
+           用同一份旧日志重新填回（旧缓存复活），后续任何强制刷盘都可能把已清空的日志写回去。 */
+        let shrunk = false;
         try {
             if (log.length > MAX_RECORDS) {
-                saveLog(log.slice(-MAX_RECORDS));
-                return { ok: true, msg: 'v5 shadow 已关闭，本地日志已收缩到 ' + MAX_RECORDS + ' 条（配额已释放）。恢复：shadow(\'on\') 后下一局生效' };
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(log.slice(-MAX_RECORDS))); shrunk = true; } catch (eTrim0) {}
             }
         } catch (eTrim) {}
+        _logMem = null; _logDirty = false; _flushBackoffUntil = 0;
+        dropExitFlush();   /* 停止退出兜底：off 之后不得再有任何写盘路径 */
+        if (shrunk) return { ok: true, msg: 'v5 shadow 已关闭，本地日志已收缩到 ' + MAX_RECORDS + ' 条（配额已释放）。恢复：shadow(\'on\') 后下一局生效' };
         return { ok: true, msg: 'v5 shadow 已关闭（模型不再加载、不再记录）。恢复：shadow(\'on\') 后下一局生效' };
     }
 

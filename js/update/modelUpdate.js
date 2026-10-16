@@ -42,6 +42,7 @@ import {
     classifyIntegrityArchive, computeMaxBundleBytes, fetchTextWithLimits, MAX_MANIFEST_BYTES,
     computeTrainingEvidence, restoreOfficialRecord, decodeBackupParams,
     generateTxId, classifyInterruptedTx, reauthorizeRecord, rollbackStatusText,
+    classifyArchiveScan,
 } from './updateCore.js?v=41a';
 
 /* ---------- 存储键 ---------- */
@@ -281,9 +282,16 @@ export const verifyOfficialIntegrity = async () => {
     const contract = await getContract();
     const wm = weightsModuleSync();
     const raw = (wm && typeof wm.__readArchive === 'function') ? wm.__readArchive() : null;
-    /* ★ P1-4：训练证据必须来自可信来源，不能仅凭 `trained > 0`
-     *   （官方权重自身也可能带非零训练步数，安装后 META.trained 即官方包 trained）。
-     *   依据：① 官方记录里保存的官方训练步数；② 状态机的候选晋升计数。 */
+    const ctx = await _scanContext(contract, raw, rec);
+    return classifyIntegrityArchive({ raw, contract, officialRec: rec, ...ctx });
+};
+
+/* ---------- 扫描上下文（完整性核验与落盘扫描共用，避免两处口径漂移） ----------
+ * ★ P1-4：训练证据必须来自可信来源，不能仅凭 `trained > 0`
+ *   （官方权重自身也可能带非零训练步数，安装后 META.trained 即官方包 trained）。
+ *   依据：① 官方记录里保存的官方训练步数；② 状态机的候选晋升计数。
+ * defaultDigest = 内置默认权重摘要，用于识别"官方权重丢失/未生效"。 */
+const _scanContext = async (contract, raw, rec) => {
     let hasTrainingEvidence = false, defaultDigest = null;
     if (contract) {
         defaultDigest = paramsDigest(defaultParams(), contract.dims);
@@ -310,10 +318,10 @@ export const verifyOfficialIntegrity = async () => {
             }
         } catch (e) { _swallow(e); }
         hasTrainingEvidence = computeTrainingEvidence({
-            archiveTrained, officialTrained: rec.trained, promotedCount,
+            archiveTrained, officialTrained: rec && rec.trained, promotedCount,
         });
     }
-    return classifyIntegrityArchive({ raw, contract, officialRec: rec, hasTrainingEvidence, defaultDigest });
+    return { hasTrainingEvidence, defaultDigest };
 };
 
 /* ---------- 网络（P2-2 / P2-3） ----------
@@ -608,6 +616,14 @@ const buildBridge = async () => {
 
 const storageOps = {
     readArchive: () => { const wm = weightsModuleSync(); if (wm && typeof wm.__readArchive === 'function') { try { return wm.__readArchive(); } catch (e) {} } return null; },
+    /* 扫描用严格读取：与事务用 readArchive 走同一个 weights.js 只读接口，
+     * 但不吞异常——权重模块未就绪 / 读取抛错必须能被上层识别为"读不到"，
+     * 不得冒充"没有存档"（否则扫描会把读取故障报成 builtin-only）。 */
+    readArchiveStrict: () => {
+        const wm = weightsModuleSync();
+        if (!wm || typeof wm.__readArchive !== 'function') throw new Error('权重模块未就绪（__readArchive 不可用）');
+        return wm.__readArchive();
+    },
     /* 长期恢复点：只有安装整体成功后才轮换（P2-1），恢复流程绝不写入 */
     writeBackup: rec => writeJSON(BACKUP_KEY, rec),
     readBackup: () => readJSON(BACKUP_KEY),
@@ -990,108 +1006,38 @@ export const modelUpdateStatus = () => {
     };
 };
 
+/* ---------- 落盘扫描（P1 修复） ----------
+ * 逐参数核对权重存档是否真实落地，并区分五种状态。判定逻辑在 updateCore.classifyArchiveScan
+ * （与自动化测试共用同一份实现）；这里只负责"取材料"：
+ *   运行时契约（weights.js 的 MODEL_SCHEMA / DATA_EPOCH）、
+ *   权重存档（weights.js 公开只读接口，绝不写入）、官方权重记录、训练证据。
+ * 读取失败/契约不可用一律如实上报为"不可判定"，绝不冒充 builtin-only。 */
+export const scanWeightsOnDisk = async () => {
+    let contract = null, raw = null, readError = null;
+    try { contract = await getContract(); } catch (e) { _swallow(e); }
+    if (contract) {
+        try { raw = storageOps.readArchiveStrict(); } catch (e) { readError = e; }
+    }
+    const rec = readOfficialRecord();
+    let ctx = { hasTrainingEvidence: false, defaultDigest: null };
+    try { ctx = await _scanContext(contract, raw, rec); } catch (e) { _swallow(e); }
+    try {
+        return classifyArchiveScan({
+            raw, readError, contract, officialRec: rec,
+            hasTrainingEvidence: ctx.hasTrainingEvidence, defaultDigest: ctx.defaultDigest,
+        });
+    } catch (e) {
+        const msg = String((e && e.message) || e);
+        return { ok: false, verdict: null, reason: '扫描异常：' + msg, errors: ['扫描异常：' + msg], hasArchive: false, checks: [] };
+    }
+};
+
 /* ---------- 装配 ---------- */
 export const installModelUpdate = () => {
     try {
         window.__DJSC = window.__DJSC || {};
         window.__DJSC.updateCheck = function () { return checkModelUpdate({ manual: true }); };
-        /* ---------- ★1015 落盘扫描：遍历权重存档逐参数核对是否真实落地 ---------- */
-const scanWeightsOnDisk = async () => {
-	const out = { ok: false, hasArchive: false, archive: null, official: null, digestMatch: null, checks: [], errors: [] };
-	try {
-		const contract = await getContract();
-		if (!contract) { out.errors.push('模型契约不可用（weights.js 未就绪）'); return out; }
-		out.dims = contract.dims;
-		/* ① 活跃权重存档（weights.js 公开只读接口，绝不写入） */
-		let rawArc = null;
-		try { rawArc = readArchive(); } catch (e) { out.errors.push('读取权重存档失败：' + (e && e.message || e)); }
-		out.hasArchive = !!rawArc;
-		let arc = null;
-		if (rawArc) {
-			try { arc = JSON.parse(rawArc); } catch (e) { out.errors.push('权重存档 JSON 解析失败：' + (e && e.message || e)); arc = null; }
-		}
-		if (arc) {
-			out.archive = {
-				v: arc.v != null ? arc.v : null, dv: arc.dv != null ? arc.dv : null,
-				trained: arc.trained != null ? arc.trained : null,
-				accuracy: arc.accuracy != null ? arc.accuracy : null,
-				ready: arc.ready,
-			};
-		}
-		/* ② 官方权重记录 */
-		const rec = readOfficialRecord();
-		if (rec) out.official = { releaseSeq: rec.releaseSeq, modelVersion: rec.modelVersion, digest: rec.digest || null, size: rec.size || null };
-		/* ③ 逐参数核对：存在性/长度/取值范围（int8 ±127、int16 ±32767，小端） */
-		if (arc) {
-			const spec = paramSpec(contract.dims);
-			let allOk = true;
-			for (let si = 0; si < spec.length; si++) {
-				const name = spec[si][0], expectLen = spec[si][1], dtype = spec[si][2];
-				const b64 = arc[name];
-				const row = { name: name, dtype: dtype, expectLen: expectLen, present: typeof b64 === 'string' && b64.length > 0, lenOk: false, rangeOk: false, decodedLen: 0, min: null, max: null };
-				try {
-					if (row.present) {
-						const bytes = decodeBase64(b64);
-						row.decodedLen = bytes.length;
-						row.lenOk = bytes.length === expectLen;
-						const lo = dtype === 'int8' ? -128 : -32768;
-						const hi = dtype === 'int8' ? 127 : 32767;
-						let min = Infinity, max = -Infinity, bad = 0;
-						if (dtype === 'int8') {
-							const arr = Int8Array.from(bytes);
-							for (let k = 0; k < arr.length; k++) { const v = arr[k]; if (v < lo || v > hi) { bad++; continue; } if (v < min) min = v; if (v > max) max = v; }
-						} else {
-							const dview = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-							const n16 = Math.floor(bytes.length / 2);
-							for (let k = 0; k < n16; k++) { const v = dview.getInt16(k * 2, true); if (v < lo || v > hi) { bad++; continue; } if (v < min) min = v; if (v > max) max = v; }
-						}
-						row.rangeOk = bad === 0;
-						if (min !== Infinity) { row.min = min; row.max = max; }
-						if (bad) row.outOfRange = bad;
-					}
-				} catch (e) { row.error = String(e && e.message || e); }
-				if (!row.present || !row.lenOk || !row.rangeOk) allOk = false;
-				out.checks.push(row);
-			}
-			out.paramsOk = allOk;
-		} else {
-			out.paramsOk = false;
-		}
-		/* ④ 摘要核对：官方记录 digest vs 存档参数重算 */
-		if (arc && rec && out.paramsOk) {
-			try {
-				const params = {};
-				for (let ci = 0; ci < out.checks.length; ci++) {
-					const it = out.checks[ci];
-					const bytes = decodeBase64(arc[it.name]);
-					if (it.dtype === 'int8') { params[it.name] = Int8Array.from(bytes); }
-					else {
-						const arr = new Int16Array(Math.floor(bytes.length / 2));
-						const dview = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-						for (let k = 0; k < arr.length; k++) arr[k] = dview.getInt16(k * 2, true);
-						params[it.name] = arr;
-					}
-				}
-				const live = paramsDigest(params, contract.dims);
-				const recDigest = String(rec.digest || '').toLowerCase();
-				out.digestMatch = recDigest ? live === recDigest : null;
-				out.computedDigest = live;
-			} catch (e) { out.errors.push('摘要重算失败：' + (e && e.message || e)); }
-		}
-		/* ⑤ 结论：builtin-only=无存档用内置 / official-intact=官方权重完整落地 / archive-mismatch=存档被本地训练覆盖 / params-ok-no-record=参数完整但无官方记录 / damaged=存档损坏 */
-		out.verdict = (!out.hasArchive) ? 'builtin-only'
-			: (out.paramsOk && out.digestMatch === true) ? 'official-intact'
-			: (out.paramsOk && out.digestMatch === false) ? 'archive-mismatch'
-			: (out.paramsOk) ? 'params-ok-no-record'
-			: 'damaged';
-		out.ok = true;
-		return out;
-	} catch (e) {
-		out.errors.push('扫描异常：' + (e && e.message || e));
-		return out;
-	}
-};
-
+        /* 扫描实现已移至模块作用域并导出（scanWeightsOnDisk），此处仅注册，见下方 modelUpdate 表。 */
 window.__DJSC.modelUpdate = {
             scan: scanWeightsOnDisk,
             check: function () { return checkModelUpdate({ manual: true }); },
