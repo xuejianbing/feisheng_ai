@@ -277,6 +277,54 @@ section('P1-a 宿主层 scanWeightsOnDisk（真实 import 生产模块）');
     LS._failGet(OFFICIAL_KEY, false);
     r = await mod.scanWeightsOnDisk();
     ok('记录确实不存在 → 正常进入无记录态（params-ok-no-record）', r.ok === true && r.verdict === 'params-ok-no-record', JSON.stringify(r.verdict));
+
+    /* ⑨ ★P2 边界修复回归："键存在但内容无效" ≠ "键不存在"，都不得冒充"没有官方记录" */
+    LS.setItem(OFFICIAL_KEY, 'null');
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录内容为 JSON null → ok=false，不得冒充无记录', r.ok === false && r.verdict === null && /JSON null/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, '');
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录键存在但内容为空字符串 → ok=false，不得冒充无记录', r.ok === false && r.verdict === null && /空字符串/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(['array-not-object']));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录内容为数组 → ok=false', r.ok === false && r.verdict === null && /不是对象/.test(r.errors[0] || ''), JSON.stringify(r.errors));
+
+    /* ⑩ ★P2 结构校验增强：摘要缺失 / 类型错误 / 格式错误一律不可判定 */
+    const recBase = {
+        version: OFFICIAL_RECORD_VERSION, modelId: 'main-actor-critic', modelVersion: 'mv-x',
+        releaseSeq: normalizeReleaseSeq(7), schemaVersion: SCHEMA, dataEpoch: EPOCH, size: 51534,
+    };
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(recBase));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录缺失 sha256 → ok=false（不得判 official-intact）', r.ok === false && r.verdict === null && /缺失/.test(r.errors[0] || ''), JSON.stringify(r.verdict) + '|' + JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { digest: BASE_DIGEST })));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录只有旧 digest 字段 → 视为摘要缺失，ok=false', r.ok === false && r.verdict === null && /缺失/.test(r.errors[0] || ''), JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { sha256: 12345 })));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录 sha256 类型错误（数字）→ ok=false', r.ok === false && r.verdict === null && /类型错误/.test(r.errors[0] || ''), JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { sha256: 'abc123' })));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录 sha256 格式错误（长度不足）→ ok=false', r.ok === false && r.verdict === null && /格式错误/.test(r.errors[0] || ''), JSON.stringify(r.errors));
+
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { sha256: 'z'.repeat(64) })));
+    r = await mod.scanWeightsOnDisk();
+    ok('官方记录 sha256 含非十六进制字符 → ok=false', r.ok === false && r.verdict === null && /格式错误/.test(r.errors[0] || ''), JSON.stringify(r.errors));
+
+    /* ⑪ 正向对照：合法摘要（大写十六进制同样合法，比较时统一小写）仍判官方权重完整落地 */
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { sha256: BASE_DIGEST.toUpperCase() })));
+    r = await mod.scanWeightsOnDisk();
+    ok('合法摘要（大写十六进制）→ official-intact', r.ok === true && r.verdict === 'official-intact' && r.digestMatch === true, JSON.stringify(r.verdict) + '|' + r.digestMatch);
+
+    /* ⑫ 摘要非法不得影响"存档本身仍然完整"这一事实的后续重试：修好记录后恢复 official-intact */
+    LS.setItem(OFFICIAL_KEY, JSON.stringify(Object.assign({}, recBase, { sha256: BASE_DIGEST })));
+    r = await mod.scanWeightsOnDisk();
+    ok('记录修复后恢复正常五态判定', r.ok === true && r.verdict === 'official-intact' && r.checks.length === 10, JSON.stringify(r.verdict));
 }
 
 /* ============================================================

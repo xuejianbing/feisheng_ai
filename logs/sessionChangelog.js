@@ -1656,6 +1656,27 @@ export const SESSION_CHANGELOG = [
                 desc: '宿主桩按本体真实语义重写（saveConfig 返回 undefined + 回调完成信号 + promises 形态 + reloading 静默丢弃 + 存储失败/悬挂不回调），并新增 P0/P1/P2-a/P2-b 用例：写入确认不误判、存储失败/悬挂/重载中都不谎报、中断可重试、玩家已保存设置不被覆盖、真实启动路径自动迁移、官方记录读失败与真缺失分开、连续退出事件只写一次、监听幂等、clear 不复活、off 不重写。回归总数 84 项。运行：node tools/test-regressions.mjs'
             }
         ]
+    },
+    {
+        phase: 'v4.1.2.8 · 扫描官方记录两个边界修复（JSON null 区分 / 摘要完整性）',
+        date: '2026-10-16',
+        changes: [
+            {
+                file: 'js/update/modelUpdate.js',
+                lines: '268-294',
+                desc: 'P2 扫描官方记录读取新增 readOfficialForScan（仅扫描诊断用；安装/恢复/事务继续走 readOfficialRecordStrict，一行未动）：本体 localStorage 的 getItem 对"键不存在"返回 null、对"键存在但内容为空串"返回 \'\'，旧严格读取把空串一并当成不存在，且 JSON.parse(\'null\') === null 也与不存在混淆，导致"键存在但内容 null/空串"被谎报成"没有官方记录"。现在键不存在 → { exists:false }（唯一允许进入无记录态），空串 / JSON null / 非对象（含数组）/ 结构不符 / 摘要非法一律抛错（上层 → ok:false + verdict:null + 明确错误）。'
+            },
+            {
+                file: 'js/update/modelUpdate.js',
+                lines: '276-277, 1050-1056',
+                desc: 'P2 官方记录摘要完整性校验：asOfficialRecord 原先不校验 sha256，缺少摘要也能通过。扫描侧新增 hasValidSha256（64 位十六进制，比较时统一小写；判据口径与 weightBundle.validateBundle 中 /^[0-9a-f]{64}$/ 一致），摘要缺失 / 类型错误 / 格式错误（长度不足、含非十六进制字符）全部判为不可判定；大写十六进制视为合法。安装事务自身的记录校验逻辑未改动。'
+            },
+            {
+                file: 'tools/test-regressions.mjs',
+                lines: 'all',
+                desc: '新增两个边界问题的真实生产代码回归（全部经 scanWeightsOnDisk()）：键不存在进入无记录态、JSON null、空字符串、数组、缺失 sha256、旧 digest 字段冒充（视为缺失）、sha256 类型错误、长度不足、非十六进制字符、大写十六进制合法 → official-intact、记录修复后恢复正常五态。回归总数 94 项。运行：node tools/test-regressions.mjs'
+            }
+        ]
     }
 ];
 

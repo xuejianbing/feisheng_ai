@@ -266,6 +266,33 @@ export const readOfficialRecord = () => asOfficialRecord(readJSON(OFFICIAL_KEY))
 export const readPending = () => readJSON(PENDING_KEY);
 export const hasBackup = () => !!readJSON(BACKUP_KEY);
 
+/* ★P2 修复：扫描专用的官方记录读取（安装 / 恢复 / 事务继续用 readOfficialRecordStrict，保持不动）。
+ * 本体的 localStorage 语义：键不存在 → getItem 返回 null；键存在但内容为空串 → ''。
+ * 旧严格读取把空串一并当成"不存在"，且 JSON.parse('null') === null 也与"不存在"混淆，
+ * 于是"键存在但内容 null/空串"会被谎报成"没有官方记录"。这里把三种情况彻底分开，
+ * 并补摘要完整性校验（sha256 必须是 64 位十六进制，判据口径与 weightBundle.validateBundle 一致）：
+ *   键不存在                                   → { exists:false }（唯一允许进入无记录态的情况）
+ *   空串 / JSON null / 非对象 / 结构不符 / 摘要非法 → 抛错（上层 → ok:false + verdict:null） */
+const SHA256_HEX_RE = /^[0-9a-f]{64}$/;
+const hasValidSha256 = rec => !!rec && typeof rec.sha256 === 'string' && SHA256_HEX_RE.test(rec.sha256.toLowerCase());
+const readOfficialForScan = () => {
+    const ls = _strictStore();                        /* 无存储环境 / 访问异常向上抛 */
+    if (!ls) throw new Error('无存储环境，无法读取官方权重记录');
+    const raw = ls.getItem(OFFICIAL_KEY);             /* 读取异常向上抛 */
+    if (raw === null || raw === undefined) return { exists: false, value: null };
+    if (raw === '') throw new Error('官方权重记录键存在但内容为空字符串');
+    let value = null;
+    try { value = JSON.parse(raw); } catch (e) { throw new Error('官方权重记录 JSON 解析失败（内容可能已损坏）'); }
+    if (value === null) throw new Error('官方权重记录键存在但内容为 JSON null');
+    if (typeof value !== 'object' || Array.isArray(value)) throw new Error('官方权重记录内容不是对象（实际为 ' + (Array.isArray(value) ? 'array' : typeof value) + '）');
+    if (!asOfficialRecord(value)) throw new Error('官方权重记录结构无效（键存在但字段不符合记录格式）');
+    if (!hasValidSha256(value)) {
+        const got = value.sha256 === undefined ? '缺失' : (typeof value.sha256 === 'string' ? '格式错误：' + value.sha256 : '类型错误：' + typeof value.sha256);
+        throw new Error('官方权重记录摘要非法（要求 64 位十六进制 SHA-256，实际' + got + '）');
+    }
+    return { exists: true, value };
+};
+
 export const localModelRelease = () => {
     const rec = readOfficialRecord();
     if (rec) return { releaseSeq: normalizeReleaseSeq(rec.releaseSeq), modelVersion: rec.modelVersion, source: 'official' };
@@ -1018,16 +1045,13 @@ export const scanWeightsOnDisk = async () => {
     if (contract) {
         try { raw = storageOps.readArchiveStrict(); } catch (e) { readError = e; }
     }
-    /* ★P2 修复：官方记录改用已有的严格读取（safeGet 会把访问/解析异常吞成 null，
-     * 从而把"读失败/内容损坏"谎报成"没有官方记录"而给出 builtin-only）。
-     * 严格读取仅在键确实不存在时返回 null；访问异常、JSON 损坏向上抛；
-     * 合法 JSON 但结构不符由 asOfficialRecord 判定为损坏。 */
+    /* ★P2 修复：官方记录读取改用扫描专用严格读取——区分"键确实不存在"（唯一允许进入无记录态）
+     * 与"键存在但内容为空串 / JSON null / 非对象 / 结构不符 / 摘要非法或缺失"（一律 ok:false）。
+     * 摘要判据（64 位十六进制）沿用 weightBundle.validateBundle 已确立的口径。 */
     let rec = null, officialReadError = null;
     try {
-        const rawRec = readOfficialRecordStrict();
-        if (rawRec === null || rawRec === undefined) rec = null;
-        else if (asOfficialRecord(rawRec)) rec = rawRec;
-        else officialReadError = new Error('官方权重记录结构无效（键存在但字段不符合记录格式）');
+        const got = readOfficialForScan();
+        rec = got.exists ? got.value : null;
     } catch (e) { officialReadError = e; }
     let ctx = { hasTrainingEvidence: false, defaultDigest: null };
     try { ctx = await _scanContext(contract, raw, rec); } catch (e) { _swallow(e); }
