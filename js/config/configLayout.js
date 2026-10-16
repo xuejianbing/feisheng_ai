@@ -125,7 +125,7 @@ export function arrangeConfig(source, lib, game) {
                 '<div class="djsc-team-title">无名AI开发团队</div>' +
                 '<div class="djsc-team-grid">' +
                     '<span>原作者 / 核心开发</span><strong>飞升</strong>' +
-                    '<span>当前维护 / 后续开发</span><strong>微雀qiao（WeiqiaoCode）</strong>' +
+                    '<span>当前维护 / 后续开发</span><strong>微雀qiao（WeiqiaoCode），子右</strong>' +
                     '<span>内测与宣传</span><strong>小小王同志</strong>' +
                 '</div>' +
                 '<div class="djsc-team-qq"><span>反馈与交流QQ群</span><strong>' + QQ_GROUP + '</strong></div>' +
