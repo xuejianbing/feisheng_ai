@@ -227,6 +227,7 @@ node tools/export-weights.mjs --verify dist/main-actor-critic-w7d5-20261015-01-x
 | 不误判"用户训练成果" | 训练证据取自官方记录的训练步数基线与候选晋升计数，`trained > 0` 不单独作为依据；无法判定时归为 `mismatch`（不自动覆盖） |
 | 下载安全 | 超时覆盖正文读取；优先**流式读取**并按实际接收字节数即时限额（不依赖 Content-Length），另设绝对硬上限 |
 | 弹窗降级安全 | DOM 不可用时，破坏性操作默认取消（返回安全值），只读提示才安全降级 |
+| 弹窗布局隔离 | 更新弹窗（styledDialog / progressDialog）为纵向 Flex：标题/按钮 `flex:0 0 auto` 恒定可见，正文区 `flex:1 1 auto; min-height:0` 滚动；所有结构节点以 `!important` 覆盖本体全局规则（`div{position:absolute;transition:all .5s}` → `position:static;transition:none`）；尺寸/位置按"实际可视区域 ÷ 实测缩放比"换算（补偿 `ui.updatez()` 的 `body transform:scale`）；同屏至多一个确认弹窗 + 一个进度浮层（新弹窗以安全取消值关闭旧弹窗） |
 
 > 事务原子性说明：localStorage 的多个键**不具备**数据库级原子性。本模块不宣称跨键原子事务，
 > 而是通过"单键阶段日志（含基线与目标摘要、安装前官方记录快照）+ 事务暂存备份 + 每步读回校验"

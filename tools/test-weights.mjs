@@ -35,7 +35,7 @@ import {
     createStrictKeyReader, isTxJournalShape,
 } from '../js/update/updateCore.js';
 import { safeGet } from '../score/foundation/storage/storage.js';
-import { styledDialog } from '../js/update/updateUi.js';
+import { styledDialog, progressDialog, UI } from '../js/update/updateUi.js';
 import { DEFAULT_WEIGHTS } from '../score/model/weights/defaultWeights.js';
 
 const DIMS = [134, 128, 64, 6];
@@ -2428,6 +2428,102 @@ section('宿主存储适配层：严格读取（P1）');
         const plan = await recoverInterruptedTransaction({ storageOps, getBridge: async () => bridge, contract: contract37 });
         ok('37h 结构无效 → manual（分类层兜底，不误放行）', plan.action === 'manual', JSON.stringify(plan));
         ok('37h 数据保留（未改写、未回滚）', storageOps.st.tx !== null && paramsDigest(snapshotToParams(bridge.snapshotModel()), DIMS) === userDigest);
+    }
+}
+
+/* ---------- 38. 弹窗 DOM 声明层与单弹窗策略（更新 UI 布局修复） ---------- */
+section('弹窗 DOM 声明层（更新 UI 布局修复）');
+{
+    /* 极简假 DOM：只实现 updateUi.js 用到的接口；布局样式经 setProperty(k, v, 'important') 记录。
+     * 几何层验证由 tools/ui-lab.html（真实浏览器 + 本体 CSS 干扰复现）承担。 */
+    const mkFakeNode = tag => {
+        const node = {
+            tag, children: [], parentNode: null, _style: {}, _listeners: [],
+            className: '', textContent: '', dataset: {},
+            style: { setProperty: (k, v, prio) => { node._style[k] = { v: String(v), prio: prio || '' }; } },
+            appendChild(c) { if (c.parentNode) c.parentNode.removeChild(c); c.parentNode = node; node.children.push(c); return c; },
+            removeChild(c) { node.children = node.children.filter(x => x !== c); c.parentNode = null; return c; },
+            addEventListener(t, fn) { node._listeners.push({ t, fn }); },
+            querySelectorAll() { return []; },
+            get isConnected() { let n = node; while (n) { if (n === bodyEl) return true; n = n.parentNode; } return false; },
+        };
+        return node;
+    };
+    const bodyEl = mkFakeNode('body');
+    const headEl = mkFakeNode('head');
+    const fakeDoc = { body: bodyEl, head: headEl, createElement: tag => mkFakeNode(tag) };
+    const fire = (node, type) => node._listeners.filter(l => l.t === type).forEach(l => l.fn({ target: node, preventDefault() {} }));
+    const masksOf = () => bodyEl.children.filter(c => c.className === 'djsc-dialog-mask');
+    const styleOf = (node, key) => node._style[key] || null;
+    const imp = (node, key, want) => { const s = styleOf(node, key); return !!s && s.v === want && s.prio === 'important'; };
+
+    const prevDoc = globalThis.document;
+    globalThis.document = fakeDoc;
+    try {
+        /* 38a) 面板 = 纵向 Flex；结构节点 static!important；外观常量保留 */
+        const p1 = styledDialog({ title: '布局断言', message: '正文内容', buttons: [{ label: '确定', value: 'ok', primary: true }] });
+        const mask = masksOf()[0];
+        const panel = mask && mask.children[0];
+        const [title, scroll, actions] = panel ? panel.children : [];
+        ok('38a 弹窗已建立（mask→panel→title/scroll/actions）', !!mask && !!panel && panel.children.length === 3);
+        ok('38a 面板为纵向 Flex（display/flex-direction/overflow 均 important）',
+            imp(panel, 'display', 'flex') && imp(panel, 'flex-direction', 'column') && imp(panel, 'overflow', 'hidden'));
+        ok('38a 面板定位与盒模型明确（fixed / box-sizing / translate 居中）',
+            imp(panel, 'position', 'fixed') && imp(panel, 'box-sizing', 'border-box') && imp(panel, 'transform', 'translate(-50%, -50%)'));
+        ok('38a 标题参与布局（static!important + display:block + flex 0 0 auto）',
+            imp(title, 'position', 'static') && imp(title, 'display', 'block') && imp(title, 'flex', '0 0 auto'));
+        ok('38a 正文区参与布局且可滚动（static!important + flex 1 1 auto + min-height 0 + overflow auto）',
+            imp(scroll, 'position', 'static') && imp(scroll, 'flex', '1 1 auto') && imp(scroll, 'min-height', '0') && imp(scroll, 'overflow', 'auto'));
+        ok('38a 按钮行参与布局（static!important + display:flex + flex 0 0 auto）',
+            imp(actions, 'position', 'static') && imp(actions, 'display', 'flex') && imp(actions, 'flex', '0 0 auto'));
+        const btn = actions.children[0];
+        ok('38a 按钮参与布局且外观保留（static + 描边/底色/文字色为 UI 常量）',
+            imp(btn, 'position', 'static') && styleOf(btn, 'background').v === UI.btnBg
+            && styleOf(btn, 'border').v === '1px solid ' + UI.btnBorder && styleOf(btn, 'color').v === UI.titleColor);
+        ok('38a 本体 div 全局规则被 !important 隔离（position/transition 全覆盖）',
+            styleOf(title, 'position').prio === 'important' && styleOf(scroll, 'position').prio === 'important'
+            && styleOf(actions, 'position').prio === 'important'
+            && imp(mask, 'transition', 'none') && imp(panel, 'transition', 'none') && imp(scroll, 'transition', 'none'));
+
+        /* 38b) 单弹窗策略：第二个弹窗打开 → 第一个以安全值结束（无 defaultValue 时为 null），仅剩一个 */
+        const p2 = styledDialog({
+            title: '第二个弹窗', message: '内容', dangerous: true,
+            buttons: [{ label: '保留', value: 'keep', primary: true }, { label: '仍然安装', value: 'apply' }], defaultValue: 'keep',
+        });
+        ok('38b 旧弹窗被安全关闭（无默认值 → null，不会触发任何动作）', (await p1) === null);
+        ok('38b 同屏只剩一个弹窗', masksOf().length === 1 && masksOf()[0].children[0].children[0].textContent === '第二个弹窗');
+        fire(masksOf()[0].children[0].children[2].children[1], 'click');   /* 点「仍然安装」 */
+        ok('38b 新弹窗正常交互（点击 resolve=apply）', (await p2) === 'apply');
+        ok('38b 关闭后无残留', masksOf().length === 0);
+
+        /* 38c) 进度浮层：互斥替换 + update/close 幂等 + 结构正确 */
+        const g1 = progressDialog('第一段');
+        const g2 = progressDialog('第二段');
+        ok('38c 新进度浮层替换旧浮层（同屏至多一个）', masksOf().length === 1);
+        g1.close();
+        ok('38c 旧句柄 close 幂等（不影响新浮层）', masksOf().length === 1);
+        g2.update('第三段');
+        ok('38c update 更新正文', masksOf()[0].children[0].children[1].textContent === '第三段');
+        ok('38c 进度浮层无按钮行（title+scroll 两段结构）', masksOf()[0].children[0].children.length === 2);
+        g2.close();
+        ok('38c 进度浮层可正常关闭', masksOf().length === 0);
+
+        /* 38d) 进度开始时安全关闭遗留弹窗（defaultValue 语义） */
+        const pd = styledDialog({ title: '确认', message: 'x', buttons: [{ label: '确定', value: 'go', primary: true }, { label: '取消', value: 'no' }], defaultValue: 'no' });
+        ok('38d 弹窗正常打开', masksOf().length === 1);
+        const g3 = progressDialog('开始安装');
+        ok('38d 遗留弹窗被安全取消（resolve=defaultValue）', (await pd) === 'no');
+        ok('38d 仅剩进度浮层', masksOf().length === 1 && masksOf()[0].children[0].children.length === 2);
+
+        /* 38e) 弹窗打开时关闭遗留进度浮层 */
+        const pd2 = styledDialog({ title: '完成', message: 'done' });
+        ok('38e 进度浮层被弹窗替换', masksOf().length === 1 && masksOf()[0].children[0].children.length === 3);
+        g3.close();
+        fire(masksOf()[0].children[0].children[2].children[0], 'click');
+        ok('38e 弹窗正常关闭且无残留', (await pd2) === 'ok' && masksOf().length === 0);
+    } finally {
+        globalThis.document = prevDoc;
+        if (prevDoc === undefined) delete globalThis.document;
     }
 }
 

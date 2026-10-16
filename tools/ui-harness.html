@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>无名AI 更新弹窗 · 本体 CSS 干扰复现与几何断言</title>
+<style>
+/* ============================================================
+ * 复现无名杀本体 layout/default/layout.css 的全局规则：
+ *   body { position:absolute; transform-origin:top left; }
+ *   div  { display:inline-block; position:absolute; transition:all .5s; }
+ * 这正是"弹窗塌缩成横向窄框"的干扰来源；本页同时供 ui-lab.html 以
+ * 设备尺寸 iframe 加载，配合 __applyGameZoom 复现 ui.updatez() 的 body 缩放。
+ * ============================================================ */
+html { width: 100%; height: 100%; }
+body {
+    width: 100%; height: 100%; padding: 0; margin: 0; left: 0; top: 0;
+    position: absolute; overflow: hidden; transform-origin: top left;
+    background: rgb(60, 60, 60);
+    font-family: "STHeiti", "SimHei", "Microsoft YaHei", sans-serif;
+}
+div { display: inline-block; position: absolute; transition: all 0.5s; }
+table { table-layout: fixed; }
+#window { width: 100%; height: 100%; top: 0px; left: 0px; background: #2b2b2b; }
+#fake-arena { width: 80%; height: 55%; top: 20%; left: 10%; background: #333; color: #888; padding: 12px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="window"><div id="fake-arena">（模拟对局区域 #window / #arena，本体内容与遮挡参照）</div></div>
+<script>
+/* 复现本体 ui.updatez()：body 宽高按 viewport/zoom 反算 + transform:scale(zoom) */
+window.__gameZoom = 1;
+window.__applyGameZoom = function (zoom) {
+    zoom = Number(zoom) || 1;
+    window.__gameZoom = zoom;
+    const width = document.documentElement.offsetWidth;
+    const height = document.documentElement.offsetHeight;
+    if (zoom !== 1) {
+        document.body.style.width = Math.round(width / zoom) + 'px';
+        document.body.style.height = Math.round(height / zoom) + 'px';
+        document.body.style.transform = 'scale(' + (Math.floor(zoom * 100) / 100) + ')';
+    } else {
+        document.body.style.width = width + 'px';
+        document.body.style.height = height + 'px';
+        document.body.style.transform = '';
+    }
+};
+window.addEventListener('resize', function () { window.__applyGameZoom(window.__gameZoom || 1); });
+</script>
+<script type="module">
+/* ?src=legacy → 加载 tools/ui-legacy-snapshot.js（修复前版本快照，仅用于"断言能抓出旧缺陷"的证伪对照） */
+const _srcParam = new URLSearchParams(location.search).get('src');
+const _mod = _srcParam === 'legacy' ? await import('./ui-legacy-snapshot.js') : await import('../js/update/updateUi.js');
+const { styledDialog, progressDialog } = _mod;
+
+const raf2 = () => new Promise(r => {
+    let fired = false;
+    const fin = () => { if (!fired) { fired = true; r(); } };
+    try { requestAnimationFrame(() => requestAnimationFrame(fin)); } catch (e) { fin(); }
+    setTimeout(fin, 400);   /* 后台节流兜底：rAF 不触发时以定时器继续（不影响真机行为） */
+});
+const rectOf = el => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; };
+const overlapArea = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+const inside = (inner, outer, tol) => inner.l >= outer.l - tol && inner.t >= outer.t - tol && inner.r <= outer.r + tol && inner.b <= outer.b + tol;
+const panels = () => Array.from(document.querySelectorAll('.djsc-dialog-panel'));
+const topPanel = () => panels()[panels().length - 1] || null;
+const clickTopButton = i => {
+    const p = topPanel();
+    const btns = p ? Array.from(p.querySelectorAll('.djsc-dialog-actions button')) : [];
+    const target = btns[i || 0];
+    if (target) target.click();
+    return !!target;
+};
+
+/* 单个已打开弹窗的几何测量 + 断言（标题/正文/按钮：不重叠、都在毛玻璃容器内） */
+const inspect = label => {
+    const results = [];
+    const panel = topPanel();
+    const push = (name, ok, detail) => results.push({ name: label + ' · ' + name, ok: !!ok, detail });
+    if (!panel) { push('面板存在', false, 'no panel'); return results; }
+    const vv = window.visualViewport;
+    const vw = vv ? vv.width : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+    const p = rectOf(panel);
+    const title = rectOf(panel.querySelector('.djsc-dialog-title'));
+    const scrollEl = panel.querySelector('.djsc-dialog-scroll');
+    const scroll = rectOf(scrollEl);
+    const actionsEl = panel.querySelector('.djsc-dialog-actions');
+    const inner = [title, scroll].concat(actionsEl ? [rectOf(actionsEl)] : []);
+    const tol = 1.5;
+
+    push('面板在可视区域内', inside(p, { l: 0, t: 0, r: vw, b: vh }, tol), { panel: p, vw, vh });
+    push('面板宽度按可视区域适配（' + Math.round(Math.min(560, vw * 0.88)) + 'px）', Math.abs(p.w - Math.min(560, vw * 0.88)) <= 2, { w: p.w });
+    push('面板高度不超上限（' + Math.round(Math.min(720, vh * 0.82)) + 'px）', p.h <= Math.min(720, vh * 0.82) + tol, { h: p.h });
+    push('标题在容器内', inside(title, p, tol), { title, panel: p });
+    push('正文在容器内', inside(scroll, p, tol), { scroll, panel: p });
+    if (actionsEl) {
+        const actions = rectOf(actionsEl);
+        push('按钮行在容器内', inside(actions, p, tol), { actions, panel: p });
+        push('正文与按钮行不重叠', overlapArea(scroll, actions) <= 0.5, { overlap: overlapArea(scroll, actions) });
+        push('标题与按钮行不重叠', overlapArea(title, actions) <= 0.5, { overlap: overlapArea(title, actions) });
+        const btns = Array.from(actionsEl.querySelectorAll('button')).map(rectOf);
+        push('全部按钮在容器内（' + btns.length + ' 个）', btns.length > 0 && btns.every(b => inside(b, p, tol)), { btns });
+    }
+    push('标题与正文不重叠', overlapArea(title, scroll) <= 0.5, { overlap: overlapArea(title, scroll) });
+    push('三个区块都在面板内', inner.every(r => inside(r, p, tol)), {});
+    return results;
+};
+
+const suite = [];
+const add = (name, ok, detail) => suite.push({ name, ok: !!ok, detail: detail || {} });
+
+async function scenarioStyled(label, opts, openChecks) {
+    const p = styledDialog(opts);
+    await raf2();
+    inspect(label).forEach(r => add(r.name, r.ok, r.detail));
+    if (openChecks) openChecks();
+    clickTopButton(0);
+    await p;
+    await raf2();
+}
+async function scenarioProgress(label, text) {
+    const g = progressDialog(text);
+    await raf2();
+    inspect(label).forEach(r => add(r.name, r.ok, r.detail));
+    const sc = topPanel() && topPanel().querySelector('.djsc-dialog-scroll');
+    if (sc) add(label + ' · 进度弹窗无按钮行（结构正确）', !topPanel().querySelector('.djsc-dialog-actions'), {});
+    g.close();
+    await raf2();
+}
+
+window.__suiteLive = suite;   /* 运行中实时可观测（证伪对照用：旧版可能在互斥场景挂起） */
+window.__runSuite = async function (zoom) {
+    window.__applyGameZoom(zoom || 1);
+    await raf2();
+    const before = suite.length;
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+
+    /* S1 短文本信息弹窗 */
+    await scenarioStyled('S1 短文本', { title: '模型权重已是最新', message: '当前模型权重：w7d5-t01\n服务器最新：w7d5-t01' });
+    /* S2 多行长文本（正文必须滚动，不被裁切） */
+    const longText = Array.from({ length: 60 }, (_, i) => '第 ' + (i + 1) + ' 行：这是一段较长的检查说明文字，用于验证正文区域可以滚动而非被裁切。').join('\n');
+    {
+        const p = styledDialog({ title: '多行长文本', message: longText });
+        await raf2();
+        inspect('S2 长文本').forEach(r => add(r.name, r.ok, r.detail));
+        const sc = topPanel().querySelector('.djsc-dialog-scroll');
+        add('S2 长文本 · 正文区已产生滚动（scrollHeight > clientHeight）', sc.scrollHeight > sc.clientHeight + 1, { sh: sc.scrollHeight, ch: sc.clientHeight });
+        const pb = rectOf(topPanel());
+        const btn = rectOf(topPanel().querySelector('.djsc-dialog-actions button'));
+        add('S2 长文本 · 按钮仍可见且与正文不重叠', inside(btn, pb, 1.5) && overlapArea(rectOf(sc), rectOf(topPanel().querySelector('.djsc-dialog-actions'))) <= 0.5, {});
+        clickTopButton(0);
+        await p;
+        await raf2();
+    }
+    /* S3 安装失败提示（多行 + 单按钮） */
+    await scenarioStyled('S3 安装失败', {
+        title: '安装未完成',
+        message: '新权重未通过校验或提交步骤失败。已完整回滚到更新前的模型与版本记录。\n\n原因：\n版本记录提交失败：记录写入失败\n回滚未完全确认：存档校验未通过\n\n请重启游戏后检查模型状态。',
+        buttons: [{ label: '确定', value: 'ok', primary: true }],
+    });
+    /* S4 确认弹窗（dangerous，保留/覆盖） */
+    await scenarioStyled('S4 确认弹窗', {
+        title: '当前模型已变化，需要重新确认',
+        message: '在你确认安装期间，当前生效模型发生了变化：等待期间当前模型已发生变化。\n\n· 「保留当前模型」：放弃本次安装\n· 「仍然安装」：用官方权重替换当前模型',
+        buttons: [{ label: '保留当前模型', value: 'keep', primary: true }, { label: '仍然安装', value: 'apply' }],
+        dangerous: true, defaultValue: 'keep',
+    });
+    /* S5 进度弹窗 */
+    await scenarioProgress('S5 进度弹窗', '下载并校验权重包…（体积上限 8MB，SHA-256 校验中）');
+    /* S6 单弹窗策略：第二个弹窗打开时，第一个以安全值结束且仅剩一个面板 */
+    {
+        const p1 = styledDialog({ title: '弹窗 A', message: '第一个弹窗' });
+        await raf2();
+        const p2 = styledDialog({ title: '弹窗 B', message: '第二个弹窗' });
+        const v1 = await p1;
+        await raf2();
+        add('S6 单弹窗 · 旧弹窗被安全关闭（resolve=null）', v1 === null, { v1 });
+        add('S6 单弹窗 · 同屏仅剩 1 个面板', panels().length === 1, { count: panels().length });
+        clickTopButton(0);
+        await p2;
+        await raf2();
+    }
+    /* S7 进度浮层与弹窗互斥：开进度时关闭遗留弹窗（安全取消值） */
+    {
+        const pd = styledDialog({ title: '确认', message: '确认操作？', buttons: [{ label: '确定', value: 'go', primary: true }, { label: '取消', value: 'no' }], defaultValue: 'no' });
+        await raf2();
+        const g = progressDialog('开始安装…');
+        const v = await pd;
+        await raf2();
+        add('S7 互斥 · 遗留弹窗以安全值关闭（resolve=defaultValue）', v === 'no', { v });
+        add('S7 互斥 · 同屏仅有进度浮层', panels().length === 1 && !!topPanel().querySelector('.djsc-dialog-scroll'), { count: panels().length });
+        g.close();
+        await raf2();
+    }
+    add('收尾 · 全部关闭后无残留面板', panels().length === 0, { count: panels().length });
+    add('环境 · 缩放已应用（zoom=' + (zoom || 1) + '）', Math.abs((window.__gameZoom || 1) - (zoom || 1)) < 0.001, { zoom: window.__gameZoom, vw });
+
+    return { zoom: zoom || 1, vw, allOk: suite.slice(before).every(r => r.ok), results: suite.slice(before) };
+};
+
+/* ?auto=open|long：headless 截图场景（打开一个真实场景弹窗并保持，不参与断言） */
+(() => {
+    const auto = new URLSearchParams(location.search).get('auto');
+    if (auto === 'open') {
+        styledDialog({
+            title: '模型权重更新完成',
+            message: '新模型权重已生效：w7d5-t01\n\n· 已通过结构 / 体积 / SHA-256 / 数值有限性 / 前向自检\n· 版本记录已写入并读回核对通过\n· 长期备份已轮换为更新前的模型\n· 优化器状态已重置，后续本地训练从新权重继续',
+            buttons: [{ label: '确定', value: 'ok', primary: true }],
+        });
+    } else if (auto === 'long') {
+        styledDialog({
+            title: '多行长文本（正文滚动）',
+            message: Array.from({ length: 60 }, (_, i) => '第 ' + (i + 1) + ' 行：这是一段较长的检查说明文字，用于验证正文区域可以滚动而非被裁切。').join('\n'),
+            buttons: [{ label: '确定', value: 'ok', primary: true }],
+        });
+    } else if (auto === 'progress') {
+        progressDialog('下载并校验权重包…（体积上限 8MB，SHA-256 校验中）');
+    }
+})();
+
+window.__uiReady = true;
+</script>
+</body>
+</html>
