@@ -1,0 +1,427 @@
+{
+  "completedAt": "2026-10-18T14:02:43.334Z",
+  "status": "passed",
+  "scope": "真实宿主固定场景集成验证；非完整自动对局、胜率或校准验收",
+  "setup": "隔离浏览器上下文、只读文件接口；正常标准八人身份局初始化后停住自动回合并清理技能/手牌；手动安装生产 engine.installHooks；不手动调用证据钩子",
+  "browserVersion": "155.0.8059.84",
+  "hostVersion": "1.11.6",
+  "triggerNames": [
+    "useCardAfter",
+    "damageEnd",
+    "recoverEnd",
+    "dieAfter"
+  ],
+  "scenes": [
+    {
+      "scene": "sha",
+      "beforeHp": 5,
+      "afterHp": 4,
+      "sessionId": "identity-session-1",
+      "version": "identity-evidence-v1",
+      "shadow": true,
+      "events": [
+        {
+          "sessionId": "identity-session-1",
+          "eventId": "public-event-2",
+          "rootActionId": "public-event-1",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 0,
+          "publicStateRef": "identity-session-1:1:2",
+          "actionKind": "damage",
+          "cardId": "sha",
+          "actualPublicDeltas": {
+            "damage": 1
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "harm",
+          "reasonCodes": [],
+          "eligible": true
+        },
+        {
+          "sessionId": "identity-session-1",
+          "eventId": "public-event-1",
+          "rootActionId": "public-event-1",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 1,
+          "publicStateRef": "identity-session-1:1:2",
+          "actionKind": "useCard",
+          "cardId": "sha",
+          "actualPublicDeltas": {},
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "unknown",
+          "reasonCodes": [
+            "semantics-unknown"
+          ],
+          "eligible": false
+        }
+      ],
+      "evidence": [
+        {
+          "rootActionId": "public-event-1",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "semantics": "harm",
+          "eventIds": [
+            "public-event-2"
+          ],
+          "evidenceVersion": "identity-evidence-v1"
+        }
+      ],
+      "stats": {
+        "duplicates": 0,
+        "rejected": 0,
+        "truncated": false,
+        "reasons": {
+          "semantics-unknown": 1
+        },
+        "eventCount": 2,
+        "evidenceGroups": 1
+      }
+    },
+    {
+      "scene": "tao-rescue",
+      "afterHp": 1,
+      "alive": true,
+      "sessionId": "identity-session-2",
+      "version": "identity-evidence-v1",
+      "shadow": true,
+      "events": [
+        {
+          "sessionId": "identity-session-2",
+          "eventId": "public-event-5",
+          "rootActionId": "public-event-4",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 0,
+          "publicStateRef": "identity-session-2:1:5",
+          "actionKind": "recover",
+          "cardId": "tao",
+          "actualPublicDeltas": {
+            "healing": 1
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "benefit",
+          "reasonCodes": [],
+          "eligible": true
+        },
+        {
+          "sessionId": "identity-session-2",
+          "eventId": "public-event-4",
+          "rootActionId": "public-event-4",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 1,
+          "publicStateRef": "identity-session-2:1:5",
+          "actionKind": "useCard",
+          "cardId": "tao",
+          "actualPublicDeltas": {},
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "unknown",
+          "reasonCodes": [
+            "semantics-unknown"
+          ],
+          "eligible": false
+        },
+        {
+          "sessionId": "identity-session-2",
+          "eventId": "public-event-6",
+          "rootActionId": "public-event-3",
+          "actorId": "603104212",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 2,
+          "publicStateRef": "identity-session-2:1:6",
+          "actionKind": "damage",
+          "cardId": "sha",
+          "actualPublicDeltas": {
+            "damage": 1
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "harm",
+          "reasonCodes": [],
+          "eligible": true
+        },
+        {
+          "sessionId": "identity-session-2",
+          "eventId": "public-event-3",
+          "rootActionId": "public-event-3",
+          "actorId": "603104212",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 3,
+          "publicStateRef": "identity-session-2:1:6",
+          "actionKind": "useCard",
+          "cardId": "sha",
+          "actualPublicDeltas": {},
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "unknown",
+          "reasonCodes": [
+            "semantics-unknown"
+          ],
+          "eligible": false
+        }
+      ],
+      "evidence": [
+        {
+          "rootActionId": "public-event-4",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "semantics": "benefit",
+          "eventIds": [
+            "public-event-5"
+          ],
+          "evidenceVersion": "identity-evidence-v1"
+        },
+        {
+          "rootActionId": "public-event-3",
+          "actorId": "603104212",
+          "targetIds": [
+            "698613714"
+          ],
+          "semantics": "harm",
+          "eventIds": [
+            "public-event-6"
+          ],
+          "evidenceVersion": "identity-evidence-v1"
+        }
+      ],
+      "stats": {
+        "duplicates": 0,
+        "rejected": 0,
+        "truncated": false,
+        "reasons": {
+          "semantics-unknown": 2
+        },
+        "eventCount": 4,
+        "evidenceGroups": 2
+      }
+    },
+    {
+      "scene": "remove-lebu",
+      "remainingJudges": [],
+      "sessionId": "identity-session-3",
+      "version": "identity-evidence-v1",
+      "shadow": true,
+      "events": [
+        {
+          "sessionId": "identity-session-3",
+          "eventId": "public-event-7",
+          "rootActionId": "public-event-7",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "decisionIndex": 0,
+          "publicStateRef": "identity-session-3:1:7",
+          "actionKind": "remove",
+          "cardId": "guohe",
+          "actualPublicDeltas": {
+            "removedNegativeJudges": 1,
+            "removedEquipment": 0
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "698613714": "zhu"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "benefit",
+          "reasonCodes": [],
+          "eligible": true
+        }
+      ],
+      "evidence": [
+        {
+          "rootActionId": "public-event-7",
+          "actorId": "876659810",
+          "targetIds": [
+            "698613714"
+          ],
+          "semantics": "benefit",
+          "eventIds": [
+            "public-event-7"
+          ],
+          "evidenceVersion": "identity-evidence-v1"
+        }
+      ],
+      "stats": {
+        "duplicates": 0,
+        "rejected": 0,
+        "truncated": false,
+        "reasons": {},
+        "eventCount": 1,
+        "evidenceGroups": 1
+      }
+    },
+    {
+      "scene": "death",
+      "beforeExposure": {
+        "shown": false,
+        "known": 0.98,
+        "source": "infer",
+        "inferConfidence": 0.98
+      },
+      "afterExposure": {
+        "shown": true,
+        "known": 1,
+        "source": "dead_id",
+        "inferConfidence": 1
+      },
+      "inDead": true,
+      "hostShown": true,
+      "revealedRole": "fan",
+      "sessionId": "identity-session-4",
+      "version": "identity-evidence-v1",
+      "shadow": true,
+      "events": [
+        {
+          "sessionId": "identity-session-4",
+          "eventId": "public-event-9",
+          "rootActionId": "public-event-8",
+          "actorId": "876659810",
+          "targetIds": [
+            "603104212"
+          ],
+          "decisionIndex": 0,
+          "publicStateRef": "identity-session-4:2:9",
+          "actionKind": "die",
+          "cardId": "sha",
+          "actualPublicDeltas": {
+            "died": true
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "603104212": "fan"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "unknown",
+          "reasonCodes": [
+            "semantics-unknown"
+          ],
+          "eligible": false
+        },
+        {
+          "sessionId": "identity-session-4",
+          "eventId": "public-event-10",
+          "rootActionId": "public-event-8",
+          "actorId": "876659810",
+          "targetIds": [
+            "603104212"
+          ],
+          "decisionIndex": 1,
+          "publicStateRef": "identity-session-4:2:10",
+          "actionKind": "damage",
+          "cardId": "sha",
+          "actualPublicDeltas": {
+            "damage": 1
+          },
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "603104212": "fan"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "harm",
+          "reasonCodes": [],
+          "eligible": true
+        },
+        {
+          "sessionId": "identity-session-4",
+          "eventId": "public-event-8",
+          "rootActionId": "public-event-8",
+          "actorId": "876659810",
+          "targetIds": [
+            "603104212"
+          ],
+          "decisionIndex": 2,
+          "publicStateRef": "identity-session-4:2:10",
+          "actionKind": "useCard",
+          "cardId": "sha",
+          "actualPublicDeltas": {},
+          "agency": "chosen",
+          "opportunity": "unknown",
+          "publicTargetRoles": {
+            "603104212": "fan"
+          },
+          "evidenceVersion": "identity-evidence-v1",
+          "semantics": "unknown",
+          "reasonCodes": [
+            "semantics-unknown"
+          ],
+          "eligible": false
+        }
+      ],
+      "evidence": [
+        {
+          "rootActionId": "public-event-8",
+          "actorId": "876659810",
+          "targetIds": [
+            "603104212"
+          ],
+          "semantics": "harm",
+          "eventIds": [
+            "public-event-10"
+          ],
+          "evidenceVersion": "identity-evidence-v1"
+        }
+      ],
+      "stats": {
+        "duplicates": 0,
+        "rejected": 0,
+        "truncated": false,
+        "reasons": {
+          "semantics-unknown": 2
+        },
+        "eventCount": 3,
+        "evidenceGroups": 1
+      }
+    }
+  ]
+}

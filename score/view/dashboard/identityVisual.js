@@ -13,102 +13,14 @@
  */
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 
-// Autor: Feisheng Original | Lizenz: GPL-3.0
-/* ================= 身份推理缓存 ================= */
-const _idCache = new Map();
-let _cacheRound = -1;
+import {identityView,identityOfFor} from '../../perception/observer/identity.js?v=41a';
 
-function _roundKey() {
-	try {
-		if (_status && typeof _status.roundNumber === "number") return _status.roundNumber;
-		if (typeof game === "object" && typeof game.roundNumber === "number") return game.roundNumber;
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	return 0;
-}
-
-function _syncCache() {
-	const r = _roundKey();
-	if (r !== _cacheRound) {
-		_idCache.clear();
-	}
-}
-
-/* ================= 1. 身份推理 =================
- * 根据玩家行为，推理他的身份
- */
-export function inferIdentity(player) {
-	try {
-		_syncCache();
-		const key = 'id_' + (player.name1 || player.name || '?');
-		if (_idCache.has(key)) return _idCache.get(key);
-
-		/* 基础：从 get.attitude 拿 */
-		let attitude = 0;
-		try {
-			attitude = get.attitude(game.me, player);
-		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-
-		let identity = 'unknown';
-		let confidence = 0.5;
-
-		/* === 身份局 === */
-		if (attitude > 0.5) {
-			identity = 'ally';
-			confidence = 0.8;
-		} else if (attitude < -0.5) {
-			identity = 'enemy';
-			confidence = 0.8;
-		} else {
-			identity = 'unknown';
-			confidence = 0.3;
-		}
-
-		/* === 从行为进一步推理 === */
-		const actions = player._djsc_actions || [];
-		if (actions.length > 0) {
-			let attackCount = 0;
-			let supportCount = 0;
-
-			actions.forEach(function (a) {
-				if (['sha', 'juedou', 'huogong', 'nanman', 'wanjian'].indexOf(a.id) >= 0) attackCount++;
-				if (['tao', 'wuxie', 'wuzhong'].indexOf(a.id) >= 0) supportCount++;
-			});
-
-			const total = actions.length;
-			const attackRatio = attackCount / total;
-			const supportRatio = supportCount / total;
-
-			/* 攻击多 → 可能是反贼/忠臣 */
-			if (attackRatio > 0.5) {
-				if (identity === 'enemy') {
-					identity = 'fan';  /* 反贼 */
-					confidence = 0.7;
-				} else if (identity === 'ally') {
-					identity = 'zhong';  /* 忠臣 */
-					confidence = 0.7;
-				}
-			}
-
-			/* 辅助多 → 可能是内奸/忠臣 */
-			if (supportRatio > 0.4) {
-				if (identity === 'unknown') {
-					identity = 'nei';  /* 内奸 */
-					confidence = 0.6;
-				}
-			}
-		}
-
-		const result = {
-			identity: identity,
-			confidence: Math.round(confidence * 100) / 100,
-			attitude: attitude,
-		};
-
-		_idCache.set(key, result);
-		return result;
-	} catch (e) {
-		return { identity: 'unknown', confidence: 0.5, attitude: 0 };
-	}
+/* 不单独猜身份、不按武将名缓存；每次读取统一视图的精确修订号。 */
+export function inferIdentity(player, observer = game.me) {
+    const view = identityView(observer,player);
+    if (!view) return {identity:'unknown',confidence:0,attitude:0,calibrated:false,weightLabel:'推断权重'};
+    return {identity:identityOfFor(observer,player),confidence:view.diagnostics.maxProbability,
+        attitude:0,calibrated:view.calibrated,weightLabel:'推断权重',view};
 }
 
 /* ================= 2. 身份描述 ================= */
@@ -138,7 +50,7 @@ export function getAllIdentities(me) {
 		players.forEach(function (p) {
 			if (!p || p.alive === false) return;
 
-			const id = inferIdentity(p);
+			const id = inferIdentity(p,me);
 			const desc = describeIdentity(id.identity);
 
 			result.push({
@@ -147,6 +59,7 @@ export function getAllIdentities(me) {
 				identityLabel: desc.label,
 				color: desc.color,
 				confidence: id.confidence,
+                calibrated:id.calibrated,weightLabel:id.weightLabel,view:id.view,
 				attitude: id.attitude,
 			});
 		});

@@ -11,6 +11,8 @@
 import { BUCKET, bucketIds } from '../../foundation/adapt/terms.js?v=41a';
 import '../../foundation/adapt/gameProfile.js';
 import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
+import {identityMode} from '../../perception/observer/identityFacts.js?v=41a';
+import {identityView} from '../../perception/observer/identity.js?v=41a';
 
 /* ================= 特征提取 · Int8 · 134维 =================
  * 0-31  状态特征（原 32 维，保留）
@@ -21,8 +23,8 @@ import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
  * 96-119 面板扩展特征（新增：技能/记忆/连招/预测/心理/位置/团队/规划/经济/认知）
  * 120-124 全卡牌分组概率（新增：控制/AOE/延时/爆发/过牌）
  * 125-129 完整技能标签（新增：摸牌/回复/辅助/生存/目标防御）
- * 130-133 目标身份 one-hot（★ fix7：目标主公/忠臣/反贼/内奸——此前网络只有自己身份
- *   f[12..15]，对「打谁」类决策看不到目标身份，身份边界无法显式学习）
+ * 130-133 合法已知目标身份 one-hot；隐藏未知全零。
+ * 身份场的旧权重和采样由 identityCompatibility 暂停，不能以同维度偷换语义。
  */
 
 export const FEATURE_DIM = 134;
@@ -199,7 +201,9 @@ export function extractFeatures(me, act, ctx, out, allPlayers) {
         /* ★ fix7: 目标身份 one-hot（f[130..133]）——身份边界显式进网络。
          *   此前 130 维只有自己身份 f[12..15]，忠臣/内奸对同一目标的最优行为不同
          *   却在网络输入上完全同形。目标为 null/非身份场时保持全 0（清零已在入口完成）。 */
-        const _tid = tgt.identity || '';
+        // 首批只迁移身份场；其他模式保持旧语义，避免未升级权重接收变更输入。
+        const _tid = identityMode() === 'identity'
+            ? identityView(me,tgt)?.hardRole : (tgt.identity || '');
         f[130] = _tid === 'zhu' ? 127 : 0;
         f[131] = (_tid === 'zhong' || _tid === 'mingzhong') ? 127 : 0;
         f[132] = _tid === 'fan' ? 127 : 0;

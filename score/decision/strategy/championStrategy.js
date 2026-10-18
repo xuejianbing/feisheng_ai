@@ -1,3 +1,4 @@
+import {identityModelCompatibility} from '../../model/features/identityCompatibility.js?v=41a';
 import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=41a';
 import { decisionActionSnapshot } from '../analysis/decisionStages.js?v=41a';
 /*
@@ -203,6 +204,7 @@ export function championOf(action, heroId) {
 
 /* ★ 按 (heroId, action, id) 精确查某决策点的嵌入条，无则 null */
 export function getEmbedding(action, id, heroId, context=null) {
+    if (!identityModelCompatibility().allowed || context?.mode === 'identity') return null;
     try {
         const rows = _rowsOf(heroId || '', action,context);
         for (let i = 0; i < rows.length; i++) {
@@ -297,6 +299,9 @@ export function findSimilar(action, id, heroId, refEmb,context=null) {
 
 /* 默认旁路比较，不使用旧最高值；active 仅用于显式验收/后续切换。 */
 export function applyChampionRule(acts,best,boost,ctx={}) {
+    const compatibility = identityModelCompatibility();
+    if (!compatibility.allowed || ctx.modeContext?.mode === 'identity') return {best,replaced:false,hit:0,
+        evidence:{domain:'learned-preference',status:'paused',reason:'identity-feature-schema-migration'}};
     const mode=ctx.championMode==='active'?'active':'shadow';
     const evidence={domain:'learned-preference',schema:'champion-comparison-v5',mode,status:'kept',rows:[],sampleAudit:STORE.audit};
     try {

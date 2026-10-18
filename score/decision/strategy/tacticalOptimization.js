@@ -1,3 +1,4 @@
+import {identityHostEffect,identityHostDamageEffect,identityHostAttitude} from '../../perception/observer/identityDiagnostics.js?v=41a';
 /* Experimental AI-only policies. Configuration is captured once per game. */
 import {lib, game, get, ui, _status} from '../../foundation/adapt/host.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
@@ -24,7 +25,7 @@ export function fireUtility(source,target,viewer,card,suit){
  try{
   if(source===viewer&&!canPay(source,target,card,suit))return 0;
   // Native damageEffect already includes elemental chain propagation and skill effects.
-  const value=get.damageEffect(target,source,viewer,'fire');
+  const value=identityHostDamageEffect(target,source,viewer,'fire');
   return Number.isFinite(value)?value:null;
  }catch(_){return null;}
 }
@@ -44,7 +45,7 @@ export function weaponOrder(p,card,original){
   // Conservative: do not replace another weapon. Do not speculate about future range.
   if(name==='guding'&&blade)return original;
   if(name==='jiu'&&(!blade||get.name(blade,p)!=='guding'))return original;
-  const target=game.players.find(t=>t!==p&&get.attitude(p,t)<0&&t.countCards('h')===0&&attacks.some(c=>p.canUse(c,t)&&get.effect(t,c,p,p)>0));
+  const target=game.players.find(t=>t!==p&&identityHostAttitude(p,t)<0&&t.countCards('h')===0&&attacks.some(c=>p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0));
   if(!target)return original;
   // Wine is only promoted if it can help secure a low-HP target; avoid wasting it on overkill.
   if(name==='jiu'&&(target.hp<=2||target.hp>3||p.hasSkillTag('jiuSustain')))return original;
@@ -102,10 +103,10 @@ function reachesAfterMount(p,t,slash,mount){
 }
 function nativeStripPositive(p,t,card){
  evaluatingStrip=true;
- try{return get.effect(t,card,p,p)>0;}finally{evaluatingStrip=false;}
+ try{return identityHostEffect(t,card,p,p)>0;}finally{evaluatingStrip=false;}
 }
 function immediateLethal(p,slashes){
- return game.players.some(t=>t!==p&&dispositionOf(p,t)<0&&t.hp<=1&&t.countCards('h')===0&&slashes.some(c=>p.canUse(c,t)&&get.effect(t,c,p,p)>0));
+ return game.players.some(t=>t!==p&&dispositionOf(p,t)<0&&t.hp<=1&&t.countCards('h')===0&&slashes.some(c=>p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0));
 }
 export function stripPlan(p,card,t,resolution=false){
  if(!active.enabled||evaluatingStrip||!p||!t||p===t)return null;
@@ -137,7 +138,7 @@ export function stripPlan(p,card,t,resolution=false){
   if(!resolution&&!nativeStripPositive(p,t,card))return null;
   if(delayedStrip)return delayedStrip;
   if(!slashes.length)return null;
-  const useful=slashes.filter(c=>p.canUse(c,t,false)&&get.effect(t,c,p,p)>0);
+  const useful=slashes.filter(c=>p.canUse(c,t,false)&&identityHostEffect(t,c,p,p)>0);
   if(!useful.length)return null;
   const reachable=useful.some(c=>p.canUse(c,t));
   const mount=t.getEquip(3);
@@ -184,8 +185,8 @@ export function extraCardOrder(p,card,original){
   if(!lib.filter.cardEnabled(card,p)||!lib.filter.cardUsable(card,p))return original;
   const name=get.name(card,p),hand=handOf(p),weapon=p.getEquip(1);
   const slashes=hand.filter(c=>get.name(c,p)==='sha'&&lib.filter.cardEnabled(c,p));
-  const enemies=game.players.filter(t=>t!==p&&get.attitude(p,t)<0);
-  const attackable=t=>slashes.some(c=>lib.filter.cardUsable(c,p)&&p.canUse(c,t)&&get.effect(t,c,p,p)>0);
+  const enemies=game.players.filter(t=>t!==p&&identityHostAttitude(p,t)<0);
+  const attackable=t=>slashes.some(c=>lib.filter.cardUsable(c,p)&&p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0);
   if(active.wine&&name==='jiu'&&!p.hasSkillTag('jiuSustain')){
    // Only promote an immediately useful strike against a publicly empty hand.
    const base=weapon&&get.name(weapon,p)==='guding'?2:1;
@@ -197,7 +198,7 @@ export function extraCardOrder(p,card,original){
   }
   if(active.crossbow&&name==='zhuge'&&!weapon&&slashes.length>=2){
    // canUse's third argument false would ignore range, not the Sha count.
-   if(enemies.some(t=>slashes.filter(c=>p.canUse(c,t)&&get.effect(t,c,p,p)>0).length>=2)){
+   if(enemies.some(t=>slashes.filter(c=>p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0).length>=2)){
     trace('连弩先于多杀',{order:15});return Math.max(original,15);
    }
   }
