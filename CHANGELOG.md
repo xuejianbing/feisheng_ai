@@ -1,3 +1,44 @@
+﻿## CHANGELOG 新增条目（追加到 CHANGELOG.md 顶部）
+
+v4.1.2.8（2026-10-19）
+
+训练与模型专项修复版：
+
+**P0 修复**
+
+1. **130/134 维样本兼容**（TM-01）：`modeDataset.js` 的 `featureVersion!==130` 硬编码拒收改为 `SUPPORTED_DIMS=[130,134]` 白名单。v4.0.24 之后采集的 134 维样本不再被错误拒收。新增 `dimensionAdapter.js`，130→134 适配时目标身份位 [130..133] 显式标记 `_dimAdapted`，不静默补零。142 维实验样本被白名单拒收，不进入正式契约。
+
+2. **训练样本资格四态分离**（TM-02）：新增 `sampleEligibility.js`，样本从采集到训练经历 RAW（原始记录）→ DEDUPED（去重后）→ OBSERVED（已观察收益）→ TRAINABLE（可训练）四态，每次迁移记录原因和时间戳。`samplePersistence.js` 写入路径追加 `_eligibilityState` 字段。去重、收益回填和资格校验不再混用。
+
+3. **TD 转移五字段校验**（TM-03）：新增 `tdValidator.js`，reward 分配前校验 state/action/reward/nextState/done 五字段完整性。无效转移（缺字段、reward 越界、done 与 nextState 不一致）不计入训练，计入 `tdInvalid` 统计。不再只统计相邻记录对。
+
+4. **P0 数据集切分可追溯**（TM-04）：`splitClassicByGame` 从 `i%5===0` 改为确定性种子哈希（默认 seed=20261019，holdoutRatio=0.2），导出 `metadata`（seed、holdoutRatio、holdoutSessions 列表、totalSessions、trainingSamples、validationSamples）。同一种子两次切分结果一致，可复现训练子集来源。
+
+5. **模型输入输出契约校验**（TM-05/TM-06）：新增 `modelContract.js`，权重加载前校验 featureDim=134、hiddenDims=[128,64]、actionOutputs=6、criticOutputs=1。不匹配时返回 `{ok:false, reason}`，调用方拒绝加载并回退内置权重。`modelGuard.js` 追加 `verifyModelContract` 调用。142 维实验权重被识别为 experimental-dim 并拒绝。
+
+**P1 修复**
+
+6. **离线评估与发布门禁**（TM-08/TM-09）：新增 `score/model/verification/` 模块，提供数据泄漏检查（训练集/验证集不共享 session）、样本资格审计、TD 转移审计、模型契约审计和 `runReleaseGate` 一键门禁。`trainExport.js` 导出时附带 `_dataset_manifest.json`（过滤条件、切分参数、样本计数）。
+
+**独立审计工具**
+
+新增 `tools/training_audit/`：
+- `jsonl_audit.py`：JSONL 解析、维度分布、资格计数、重复候选审计
+- `td_audit.py`：TD 转移五字段完整性、奖励数值、终止标记检查
+- `model_contract.py`：模型清单与实测元数据对比，不匹配时退出码 1
+
+**测试**
+
+20 项单元测试全部通过（样本资格 4 项、TD 校验 6 项、模型契约 8 项、JSONL 往返 2 项）。
+
+**不修改项**
+
+- 正式权重文件未改动
+- 客户端策略和 UI 未改动
+- 142 维实验代码保留在实验目录，不并入正式路径
+- 不发布新权重
+
+
 ## v4.1.2.2（2026-10-15）
 
 上传可靠性与权重版本可观测性维护版：
