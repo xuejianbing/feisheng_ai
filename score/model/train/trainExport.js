@@ -1050,8 +1050,8 @@ export function importFromJson(jsonStr) {
         }
 
         let added = 0, merged = 0, skipped = 0, repaired = 0;
-        /* ★ P1-19：导入强校验——维度必须等于 FEATURE_DIM(130)，且每项都是有限数。
-         * 否则旧 48/96 维样本或含 NaN/字符串的样本会被静默零填充成伪 130 维样本污染训练。
+        /* ★ P1-19：导入强校验——维度必须等于 FEATURE_DIM(134)，且每项都是有限数。
+         * 否则旧 48/96 维样本或含 NaN/字符串的样本会被静默零填充成伪 134 维样本污染训练。
          * ★ 数据隔离：统一过 _sanitizeSample——旧版 reward 损坏样本（reward 与 meta.score 脱节）
          *   以 score 为准修复后再入库，杜绝客户旧导出文件污染当前训练。 */
         let skippedWrongDim = 0, skippedNonFinite = 0, skippedInvalidLabels = 0;

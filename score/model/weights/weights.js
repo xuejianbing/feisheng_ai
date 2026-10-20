@@ -92,11 +92,11 @@ function _getLearningRate() {
 export const LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const SMOOTH = 0.05;  /* ★ 标签平滑：防止 softmax 饱和导致梯度消失，提升泛化 */
 
-let W1 = null, B1 = null;   // 130*128, 128
+let W1 = null, B1 = null;   // 134*128, 128
 let W2 = null, B2 = null;   // 128*64, 64
 let W3 = null, B3 = null;   // 64*6, 6 (Actor头)
 let W4 = null, B4 = null;   // 64*1, 1 (Critic头：价值评估) ★ 新增
-let W_proj1 = null;  /* ★ 残差连接1：130→128 投影矩阵 */
+let W_proj1 = null;  /* ★ 残差连接1：134→128 投影矩阵 */
 let W_proj2 = null;  /* ★ 残差连接2：128→64 投影矩阵 */
 let mW1 = null, mB1 = null;  /* ★ AdamW 一阶矩 m */
 let mW2 = null, mB2 = null;
@@ -123,7 +123,7 @@ function _initRandom() {
     B3 = new Int16Array(OUT_DIM);
     W4 = new Int8Array(HID2_DIM * 1);  /* ★ Critic头：64*1 */
     B4 = new Int16Array(1);              /* ★ Critic头偏置：1维 */
-    W_proj1 = new Int8Array(IN_DIM * HID1_DIM);  /* ★ 残差连接1：130→128 */
+    W_proj1 = new Int8Array(IN_DIM * HID1_DIM);  /* ★ 残差连接1：134→128 */
     W_proj2 = new Int8Array(HID1_DIM * HID2_DIM);  /* ★ 残差连接2：128→64 */
     
     /* ★ AdamW 一阶矩 m 和二阶矩 v 初始化 */
@@ -641,7 +641,7 @@ export function forward(features, outBuf) {
         const I = IN_DIM, H1 = HID1_DIM, H2 = HID2_DIM, O = OUT_DIM;
         const useRes = _isolatedResidual ?? ((typeof cfg === 'function') ? cfg('useResidual', false) : false);  /* ★ 修复：此前 useRes 未声明导致 ReferenceError → 校验准确率恒为0 */
         
-        /* 第一层：130 → 128 */
+        /* 第一层：134 → 128 */
         const hidden1 = new Float32Array(H1);
         for (let j = 0; j < H1; j++) {
             let sum = 0;
@@ -708,7 +708,7 @@ export function forwardWithValue(features) {
         const I = IN_DIM, H1 = HID1_DIM, H2 = HID2_DIM, O = OUT_DIM;
         const useRes = _isolatedResidual ?? ((typeof cfg === 'function') ? cfg('useResidual', false) : false);
         
-        /* 第一层：130 → 128 */
+        /* 第一层：134 → 128 */
         const hidden1 = new Float32Array(H1);
         for (let j = 0; j < H1; j++) {
             let sum = 0;
@@ -797,7 +797,7 @@ export function forwardFastWithValue(features) {
         if (_sA.length !== O) _sA = new Float32Array(O);
         const hidden1 = _sH1, hidden2 = _sH2;
 
-        /* 第一层：130 → 128 */
+        /* 第一层：134 → 128 */
         for (let j = 0; j < H1; j++) {
             let sum = 0;
             const base = j * I;

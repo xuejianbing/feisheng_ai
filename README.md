@@ -185,13 +185,14 @@ modelGuard 最终护栏
 0-47   基础局面特征（血量/手牌/装备/敌人等，沿用初代布局）
 48-95  时序特征 + AI 自我状态 + 相对强度 + 元认知干预 + 概率/牌堆/全局校准
 96-129 技能标签/身份/阶段等扩展特征（含少量预留位）
+130-133 目标身份 one-hot
 
 // 使用
-const f = new Int8Array(130);
+const f = new Int8Array(FEATURE_DIM); // FEATURE_DIM = 134
 window.__DJSC.extractFeatures(me, act, ctx, f);
 ```
 
-#### weights.js — 多层网络（130→128→64→6 + Critic）
+#### weights.js — 多层网络（134→128→64→6 + Critic）
 
 ```javascript
 // 结构：GELU 激活 + 每层 LayerNorm；"残差"为并联可训练线性投影（非 identity shortcut）

@@ -13,7 +13,7 @@
  */
 import { pushSample, bufferSize, getSamples } from './trainExport.js?v=41a';
 import { getArchive } from '../../perception/archive/archive.js?v=41a';
-import { FEATURE_DIM } from '../features/features.js?v=41a';   /* ★ 特征维度单一来源（130） */
+import { FEATURE_DIM } from '../features/features.js?v=41a';   /* ★ 特征维度单一来源（134） */
 import { cfg } from '../../foundation/config/util.js?v=41a';
 import { log } from '../../foundation/diag/logger.js?v=41a';
 import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
