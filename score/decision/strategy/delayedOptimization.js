@@ -24,6 +24,14 @@ export function delayPlan(p,card,t,ignoreRange=false){
   if(!lib.filter.cardEnabled(card,p)||!lib.filter.cardUsable(card,p)||!p.canUse(card,t,ignoreRange?false:undefined))return null;
   if(t.hasSkillTag?.('nojudge')||(t.getCards('j')||[]).some(c=>effectiveJudgeName(c)===name))return null;
   if(name==='bingliang'&&t.hasJudge?.('caomu'))return null;
+  return delayedStateImpact(p,t,name);
+ }catch(_){return null;}
+}
+/* Same public state loss is used for proactive play and cancelling an existing delay. */
+export function delayedStateImpact(p,t,name){
+ try{
+  if(!p||!t||!['lebu','bingliang'].includes(name))return null;
+  if(t.hasSkillTag?.('nojudge')||t.skipList?.includes(name==='lebu'?'phaseUse':'phaseDraw'))return {kind:name,utility:0,priority:0,reason:'阶段已跳过或免判定'};
   const hand=Math.max(0,t.countCards('h'));
   const skills=t.getSkills?.()||[];
   const activePlay=skills.some(id=>{

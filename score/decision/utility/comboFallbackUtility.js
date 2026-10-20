@@ -24,7 +24,7 @@ export function applyComboFallbackUtility(me, candidates, { plan, detect, scoreC
 	let changed = false;
 	for (const candidate of list) {
 		if (!['card', 'equip'].includes(candidate.type) || candidate.utilityVector?.ownedSources?.includes('comboFallback')) continue;
-		const targets = selfSetup(candidate) ? [...new Set(list.filter(a => a.targetObj && a.targetObj !== me).map(a => a.targetObj))] : [candidate.targetObj || null];
+		const targets = candidate.id==='jiedao'&&candidate.jiedaoPair?.use?[candidate.jiedaoPair.victim]:selfSetup(candidate) ? [...new Set(list.filter(a => a.targetObj && a.targetObj !== me).map(a => a.targetObj))] : [candidate.targetObj || null];
 		if (!targets.length) targets.push(null);
 		const hits = [];
 		for (const target of targets) {
@@ -53,7 +53,7 @@ export function applyComboFallbackUtility(me, candidates, { plan, detect, scoreC
 		const delta = Math.min(1.5, Math.max(0, candidate.score) * Math.min(0.3, strongest * multiplier));
 		applyOwnedUtility(candidate, 'comboFallback', [{ dimension: 'synergy', delta,
 			note: owns ? 'Planner拥有连续方案，连招不再重复加分' : '连招备用提示取最大值，封顶30%/1.5',
-			details: { plannerOwnsSequence: owns, chainCount: chains.length, strongest, weight: multiplier, mode: owns ? 'planner' : 'fallback' } }]);
+			details: { scoringBasis:owns?'planner-owned-sequence':'bounded-future-preference',baseDamageRecounted:false,plannerOwnsSequence: owns, chainCount: chains.length, strongest, weight: multiplier, mode: owns ? 'planner' : 'fallback' } }]);
 		if (delta > 0) changed = true;
 	}
 	return changed;

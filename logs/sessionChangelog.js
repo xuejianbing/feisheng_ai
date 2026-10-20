@@ -2,13 +2,13 @@
  * ============================================
  * // Autor: Feisheng Original
  * 交流群: 123456789
- * 本文件记录 2026-09-26 整个会话对无名AI扩展的全部修改
+ * 本文件记录无名AI扩展的历史会话与近期维护修改
  * 位置：无名AI扩展 /logs/ 日志文件夹
  * 版权所有，侵权必究
  * ============================================
  */
 
-/* ================= 无名AI · 今日全部修改日志（2026-09-26） =================
+/* ================= 无名AI · 会话与近期维护修改日志 =================
  * 记录本次完整会话中从「冠军策略(上下文维度泛化)」到「存储/性能/架构优化」、
  * 「铁索连环修复」「阵营判据统一」「打包与回归验证」的全部分类修改。
  * 每条标注：修改文件、行号、修改内容。
@@ -16,6 +16,52 @@
  */
 
 export const SESSION_CHANGELOG = [
+{
+    "phase": "2026-10-20 · 斗地主配合意图与决策衔接（PR #6）",
+    "date": "2026-10-20",
+    "changes": [
+        {
+            "file": "score/decision/state/cooperativeTrickIntent.js / score/decision/response/wuxieEvaluator.js",
+            "lines": "相关决策入口",
+            "desc": "手动配合：正常出牌阶段手动火攻自己、铁索、拆顺、借刀及友方决斗时，队友无懈优先尊重本次操作；托管、强制用牌不取得相同权限。南蛮、万箭只放宽当前响应者有合法防御且非致命的目标，不视为全体安全。"
+        },
+        {
+            "file": "score/decision/response/wuxieEvaluator.js",
+            "lines": "相关决策入口",
+            "desc": "反无懈：仍按恢复后的实际收益判断，不会仅凭玩家配合意图浪费无懈；既能保留玩家取消的友方决斗，也能恢复被敌方无懈的有效进攻。"
+        },
+        {
+            "file": "score/decision/strategy/friendlyStripPlan.js / score/decision/cards/jiedaoEvaluator.js",
+            "lines": "相关决策入口",
+            "desc": "拆顺与借刀：拆队友兵乐、拆受伤白银狮子回血，以及持刀者到被杀者的借刀组合，贯通评分、目标护栏与实际选牌，减少后续规则覆盖专项计划。"
+        },
+        {
+            "file": "score/decision/response/responseMaterials.js / score/decision/response/responseMaterialPacking.js",
+            "lines": "相关决策入口",
+            "desc": "响应纠错：决斗不再比杀的点数，旧铁索提示不再限制其他牌；武圣、龙胆、丈八等静态转化计入材料消耗，多次响应寻找不重复用牌的可行组合，避免有牌却误判材料不足。"
+        },
+        {
+            "file": "score/foundation/storage/cache.js / score/decision/state/decisionCache.js",
+            "lines": "相关决策入口",
+            "desc": "状态与估值：护甲、翻面、自身技能、跳过阶段及实体牌替换后及时重算；福利牌采用实际效果或公开五谷牌池，兵乐主动打法与无懈共用阶段损失估计，通用建议按理由去重。"
+        },
+        {
+            "file": "score/decision/strategy/tacticalOptimization.js",
+            "lines": "相关决策入口",
+            "desc": "选牌权：本机手动及远端连接玩家保留火攻展示选择；离线 AI 和本机托管仍保留原展示优化。远端保护有针对性测试，尚未真实双客户端联机验收。"
+        },
+        {
+            "file": "js/config/configSchema.js / docs/doudizhu/PR修复与验证.md",
+            "lines": "相关决策入口",
+            "desc": "设置说明：继续使用已有火攻、铁索、拆顺、无懈等专项按钮，不新增按钮，不更换模型权重；打法优化设置按原说明下一局生效。已有“输出打法优化诊断”可查看意图、调整原因及执行对账。"
+        },
+        {
+            "file": "docs/doudizhu/verification/pr-isolated-regressions.json / docs/doudizhu/verification/pr-isolated-manual-scenes.json",
+            "lines": "相关决策入口",
+            "desc": "验证范围：独立分支 1014 项工具检查、20 项 Python 测试通过；无名杀 1.11.6 的 6 个固定场景、10 个浏览器输入场景及完整托管对局通过。联机、手机性能、大样本胜率及全部扩展技能仍未验收；复杂动态技能和未知失装收益保留宿主回退。"
+        }
+    ]
+},
  {
  "phase": "铁索独立重铸与提前换牌修复",
  "date": "2026-10-13",

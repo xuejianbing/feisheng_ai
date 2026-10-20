@@ -54,6 +54,7 @@ export function vetoCard(id, ctx, tgt) {
 	const cat = classifyCard(id);
 	const t = ctx.targetLocked === true ? (tgt || null) : (tgt || bestTargetOf(ctx));
 	const isAlly = t ? !!t.isAlly : null;
+	if(id==='jiedao'&&ctx.jiedaoPlan?.resolved)return {veto:!ctx.jiedaoPlan.use,reason:ctx.jiedaoPlan.use?'':'无合法正收益借刀组合'};
 	if (['lebu','bingliang'].includes(id) && typeof ctx.delayedStrategy === 'function' && t && !ctx.delayedStrategy(id,t)) {
 		return {veto:true,reason:'兵乐无合法正收益目标'};
 	}
@@ -64,6 +65,10 @@ export function vetoCard(id, ctx, tgt) {
 	}
 	/* ② 拆/顺队友非判定区 → 不主动（队友自己有更合适的人去处理） */
 	if ((id === 'guohe' || id === 'shunshou') && isAlly) {
+		if (typeof ctx.stripStrategy==='function') {
+			const plan=ctx.stripStrategy(id,t);
+			if(plan!==undefined)return {veto:!plan,reason:plan?'':'对队友拆顺无合法收益计划'};
+		}
 		if (!(t && t.isJudge)) return { veto: true, reason: '对队友拆/顺（除非解判定区）' };
 	}
 	/* ③ 输出牌（单点/点杀）打队友 → 否决（含属性杀/决斗/诛杀） */
@@ -109,6 +114,7 @@ export function basePriority(id, ctx, targetOverride) {
 			if (id === 'guohe')     return goodControlTarget(ctx, t) ? 84 : 40;
 			/* ★ 指令 02：tiesuo 不再有专用优先级——铁索的最终「使用/重铸」由
 			 * tiesuoEvaluator 唯一决定，本模块只保留 control 分类（默认 60）。 */
+			if(id==='jiedao'&&ctx.jiedaoPlan?.resolved)return ctx.jiedaoPlan.use?60:0;
 			if (id === 'jiedao')    return (t && t.hasSha) ? 55 : 20;
 			return 60;
 		}
@@ -191,7 +197,9 @@ export function pickTarget(id, ctx) {
 				s=plan.utility;
 			} else s = (t.nextToAct ? 4 : 0) + (t.handCount >= 4 ? 2 : 0) + threat * 0.8;
 		} else if (id === 'guohe' || id === 'shunshou') {
-			s = equip * 2 + (t.isJudge ? 3 : 0) + lowHp;                             // 拆关键装备/判定优先
+			const plan=typeof ctx.stripStrategy==='function'?ctx.stripStrategy(id,t):undefined;
+			if(t.isAlly&&plan!==undefined){if(!plan)return;s=plan.score;}
+			else s = equip * 2 + (t.isJudge ? 3 : 0) + lowHp;                             // 拆关键装备/判定优先
 		} else if (id === 'nanman' || id === 'wanjian') {
 			const resp = id === 'nanman' ? 'sha' : 'shan';
 			const cnt = id === 'nanman' ? (t.shaCount || 0) : (t.shanProb !== undefined ? Math.round(t.shanProb * 3) : 1);

@@ -16,6 +16,10 @@
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { bestAction } from '../engine/engine.js?v=41a';
 import { isTiesuoRecastSelection } from '../cards/tiesuoRecast.js?v=41a';
+import {hostJiedaoTargetDecision,supportedJiedaoShape} from '../cards/jiedaoEvaluator.js?v=41a';
+import {hostTiesuoAllowsTarget} from '../cards/tiesuoEvaluator.js?v=41a';
+import {isPlayerLinked} from '../state/playerState.js?v=41a';
+import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import {
 	executionEligibility,
@@ -352,6 +356,66 @@ function _installTaoRescueGuard(player, ev) {
 	} catch (e) { return null; }
 }
 
+export function installAIUseTargetGuard(ev){
+			try {
+				const origFTGuard = ev.filterTarget;
+				ev.filterTarget = function (card, player, target) {
+					try {
+						if (typeof origFTGuard === 'function' && !origFTGuard(card, player, target)) return false;
+						if (!target) return true;
+						const gid = get.name(card, player);
+						if(gid==='tiesuo'){
+							const allowed=hostTiesuoAllowsTarget(player,target,card,game.players);
+							if(allowed!==null)return allowed;
+						}
+						if(gid==='jiedao'&&tacticalEnabled('enabled')){
+                            const pair=hostJiedaoTargetDecision(player,target,card);
+                            if(pair)return pair.allowed;
+                        }
+						if(target===player)return true;
+						if (['sha', 'juedou', 'huogong', 'jiedao', 'lebu', 'bingliang', 'huosha', 'leisha', 'zhujin'].indexOf(gid) >= 0) {
+							let isFriend = false;
+							try { isFriend = isAllyOf(player, target); } catch (eAg) { isFriend = false; }
+							if (isFriend) { _stat('allyGuard'); return false; }
+							return true;
+						}
+						if (gid === 'guohe' || gid === 'shunshou') {
+							let isFriend = false;
+							try { isFriend = isAllyOf(player, target); } catch (eAg2) { isFriend = false; }
+							if (!isFriend) return true;
+							const plan=friendlyStripPlan(player,card,target);
+							if(plan!==undefined){if(!plan)_stat('allyGuard');return !!plan;}
+							/* 救援豁免：队友判定区有乐/兵/闪电 → 放行（拆负面状态） */
+							try {
+								const j = target.getCards ? target.getCards('j') : [];
+								for (const jc of (j || [])) {
+									let n = '';
+									try { n = effectiveJudgeName(jc) || get.name(jc, target) || ''; } catch (eJ) { n = (jc && jc.name) || ''; }
+									if (n === 'lebu' || n === 'bingliang' || n === 'shandian') return true;
+								}
+							} catch (eJ2) { }
+							_stat('allyGuard');
+							return false;
+						}
+						if (gid === 'tiesuo') {
+							let isFriend = false;
+							try { isFriend = isAllyOf(player, target); } catch (eAg3) { isFriend = false; }
+							if (!isFriend) return true;
+							/* 解链豁免：队友已横置 → 铁索对他=解除连环（救友），放行 */
+							const linked = isPlayerLinked(target);
+							if (linked) return true;
+							_stat('allyGuard');
+							return false;
+						}
+						return true;
+					} catch (errG) {
+						try { return typeof origFTGuard === 'function' ? origFTGuard(card, player, target) : true; }
+						catch (e2G) { return true; }
+					}
+				};
+			} catch (eGuard) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eGuard); }
+}
+
 export function installUseOverride() {
 	try {
 		const proto = lib.element && lib.element.Player && lib.element.Player.prototype;
@@ -451,84 +515,12 @@ export function installUseOverride() {
 			}
 
 			/* ============ ★ 硬接管 B：否决低价值牌 ============ */
-			/* ★ 铁索目标纠偏：引擎给出推荐目标（score>1.5 才启用，避免过期 hint 误杀）时，
-			 *   非推荐目标被否决——治「乱连队友/该解链不解链/只会连一个单位」。
-			 *   复用 bestAction 刚算出的 djsc_lastTiesuoHint（250ms/1.5s 缓存窗内，时序安全）。 */
-			try {
-				const _tsHint = _status.djsc_lastTiesuoHint;
-				if (!tacticalEnabled('tiesuo') && _tsHint && _tsHint.targets && _tsHint.targets.length && (typeof _tsHint.score !== 'number' || _tsHint.score > 1.5)) {
-					const _tsNames = _tsHint.targets.map(function (p) {
-						try { return p ? (p.name1 || p.name || '') : ''; } catch (eN) { return ''; }
-					}).filter(function (x) { return x; });
-					if (_tsNames.length) {
-						const origFilterTarget = ev.filterTarget;
-						ev.filterTarget = function (card, player, target) {
-							try {
-								if (typeof origFilterTarget === 'function' && !origFilterTarget(card, player, target)) return false;
-								const nm = target ? (target.name1 || target.name || '') : '';
-								if (_tsNames.indexOf(nm) >= 0) return true;
-								_stat('tTarget');
-								return false;
-							} catch (errFT) {
-								try { return typeof origFilterTarget === 'function' ? origFilterTarget(card, player, target) : true; }
-								catch (e2FT) { return true; }
-							}
-						};
-					}
-				}
-			} catch (eTsHint2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eTsHint2); }
 
 			/* ★ 通用攻击牌阵营护栏：真友目标一律否决（治「无脑火攻火队友/借刀杀队友」等）。
 			 *   评分层 actionValue 已强罚真友，但宿主原生 AI 自选目标不受控——必须在 filterTarget 拦。
 			 *   豁免：self（自残类不新增约束）、拆/顺队友判定区的乐/兵/闪电（救援）、铁索已横置队友（解链救友）。
 			 *   AOE（nanman/wanjian 全员结算）不在名单。异常 fail-open。 */
-			try {
-				const origFTGuard = ev.filterTarget;
-				ev.filterTarget = function (card, player, target) {
-					try {
-						if (typeof origFTGuard === 'function' && !origFTGuard(card, player, target)) return false;
-						if (!target || target === player) return true;
-						const gid = get.name(card, player);
-						if (['sha', 'juedou', 'huogong', 'jiedao', 'lebu', 'bingliang', 'huosha', 'leisha', 'zhujin'].indexOf(gid) >= 0) {
-							let isFriend = false;
-							try { isFriend = isAllyOf(player, target); } catch (eAg) { isFriend = false; }
-							if (isFriend) { _stat('allyGuard'); return false; }
-							return true;
-						}
-						if (gid === 'guohe' || gid === 'shunshou') {
-							let isFriend = false;
-							try { isFriend = isAllyOf(player, target); } catch (eAg2) { isFriend = false; }
-							if (!isFriend) return true;
-							/* 救援豁免：队友判定区有乐/兵/闪电 → 放行（拆负面状态） */
-							try {
-								const j = target.getCards ? target.getCards('j') : [];
-								for (const jc of (j || [])) {
-									let n = '';
-									try { n = effectiveJudgeName(jc) || get.name(jc, target) || ''; } catch (eJ) { n = (jc && jc.name) || ''; }
-									if (n === 'lebu' || n === 'bingliang' || n === 'shandian') return true;
-								}
-							} catch (eJ2) { }
-							_stat('allyGuard');
-							return false;
-						}
-						if (gid === 'tiesuo') {
-							let isFriend = false;
-							try { isFriend = isAllyOf(player, target); } catch (eAg3) { isFriend = false; }
-							if (!isFriend) return true;
-							/* 解链豁免：队友已横置 → 铁索对他=解除连环（救友），放行 */
-							let linked = false;
-							try { linked = typeof target.isLinked === 'function' ? target.isLinked() : !!target.isLinked; } catch (eLk) { linked = false; }
-							if (linked) return true;
-							_stat('allyGuard');
-							return false;
-						}
-						return true;
-					} catch (errG) {
-						try { return typeof origFTGuard === 'function' ? origFTGuard(card, player, target) : true; }
-						catch (e2G) { return true; }
-					}
-				};
-			} catch (eGuard) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eGuard); }
+			installAIUseTargetGuard(ev);
 
 			/* ★ 借刀第二目标（被杀者）护栏：filterTarget2 存在时，被杀者为真友 → 否决 */
 			try {
@@ -537,6 +529,7 @@ export function installUseOverride() {
 					ev.filterTarget2 = function (card, player, target) {
 						try {
 							if (typeof origFT2 === 'function' && !origFT2(card, player, target)) return false;
+                            if(get.name(card,player)==='jiedao'&&tacticalEnabled('enabled')){const pair=hostJiedaoTargetDecision(player,target,card);if(pair)return pair.allowed;}
 							if (target && target !== player) {
 								let isFriend = false;
 								try { isFriend = isAllyOf(player, target); } catch (eF2) { isFriend = false; }
@@ -845,7 +838,7 @@ export function installJiedaoTargetBridge() {
 				if (cfg('hardOverride', false) === false) return orig.apply(this, args);
 				if (isTripped('use')) return orig.apply(this, args);
 				const ev = _status.event;
-				if (!_isJiedaoTarget2Event(ev)) return orig.apply(this, args);
+				if (!_isJiedaoTarget2Event(ev)||supportedJiedaoShape()) return orig.apply(this, args);
 				if (ev[JTGT_ORIG_KEY]) return orig.apply(this, args);   /* 防重入 */
 				try { ev[JTGT_ORIG_KEY] = true; } catch (eS) { }
 				try {

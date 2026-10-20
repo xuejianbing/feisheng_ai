@@ -29,6 +29,7 @@ export function targetKey(target) {
 
 export function candidateTargetValue(candidate) {
 	if (!candidate) return null;
+	if(candidate.id==='jiedao'&&candidate.jiedaoPair?.use&&candidate.targetList?.length===2)return candidate.targetList.map(targetKey);
 	if (candidate.targetObj) return targetKey(candidate.targetObj);
 	if (Array.isArray(candidate.targetList)) return candidate.targetList.map(targetKey).filter(Boolean);
 	const t = candidate.target;
@@ -51,6 +52,7 @@ export function makeActionCandidate(spec) {
 }
 
 export function hasConsistentBoundTarget(candidate) {
+	if(candidate?.id==='jiedao'&&candidate.jiedaoPair?.use)return candidate.targetList?.length===2&&candidate.targetList[0]===candidate.targetObj&&_sameTargetValue(candidate.target,candidate.targetList.map(targetKey));
 	if (!candidate || !candidate.targetObj) return candidate ? candidate.target == null : false;
 	return targetKey(candidate.targetObj) === candidate.target;
 }

@@ -543,6 +543,14 @@ export function hostTiesuoDecision(me, players, context) {
 
 const HOST_LINK_EFFECT_MAG = 0.9;   /* 宿主 result.target 基准幅度（与原生一致） */
 
+/* 目标运输只执行同一 evaluator 的选择，不再维护另一套“友方能否连”的规则。 */
+export function hostTiesuoAllowsTarget(me,target,card,players,context){
+ if(!tacticalEnabled('tiesuo'))return null;
+ if(!legalTarget(me,target,actualCard(me,card)))return false;
+ const decision=hostTiesuoDecision(me,players,context);
+ return decision.use&&decision.targets.includes(target);
+}
+
 /**
  * 宿主 lib.card.tiesuo.ai.result.target 的 evaluator 化实现。
  * 返回与宿主约定一致的带方向 effect：

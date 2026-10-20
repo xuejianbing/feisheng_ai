@@ -11,7 +11,7 @@ export function decisionActionSnapshot(candidate) {
   learnedPreference:preference,policy:candidatePolicySnapshot(candidate)};
 }
 function serializable(value) { return JSON.parse(JSON.stringify(value, (_,v)=>typeof v==='number'&&!Number.isFinite(v)?null:v)); }
-export function createDecisionStages(initial) {
+export function createDecisionStages(initial, evaluationAudit = null) {
  const stages=[];
  function record(stage,before,after,evidence={}) {
   if(stages.length>=8)return;
@@ -19,7 +19,8 @@ export function createDecisionStages(initial) {
   catch(error){stages.push({stage,error:String(error.message||error),changed:null});}
  }
  record('evaluation',null,initial,{domain:'core-utility-and-policy'});
- return {record,snapshot(final,actual=null,transaction=null){return serializable({schema:'decision-stages-v1',stages,final:decisionActionSnapshot(final),executionState:transaction?.state||'suggested',transactionId:transaction?.id||null,actorId:transaction?.trainingActorId||null,sessionId:transaction?.trainingSessionId||null,actual});}};
+ return {record,setEvaluationAudit(value){evaluationAudit=value;},snapshot(final,actual=null,transaction=null){return serializable({schema:'decision-stages-v1',stages,
+  ...(evaluationAudit?{evaluationAudit}:{}),final:decisionActionSnapshot(final),executionState:transaction?.state||'suggested',transactionId:transaction?.id||null,actorId:transaction?.trainingActorId||null,sessionId:transaction?.trainingSessionId||null,actual});}};
 }
 export function planAdoption(plan,final) {
  const first=plan?.best?.action;

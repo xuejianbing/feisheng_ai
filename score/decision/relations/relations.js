@@ -39,6 +39,7 @@
  * 本模块为纯计算，只 import 宿主与 observer 的“读取类”API，不触碰本体的记分。
  */
 import { game, get } from '../../foundation/adapt/host.js?v=41a';
+import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
 import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
@@ -309,7 +310,9 @@ function actionValue(me, act) {
 			}
 			if (d > 0) {
 				/* ★ 反例覆盖：过河拆/顺手 队友的乐、兵、闪电 = 解除队友负面状态 → 正收益 */
-				if (_hasNegativeJudge(tgt)) return Math.round((base + 3.0) * 100) / 100;
+				const plan=friendlyStripPlan(me,{name:act.id},tgt);
+				if(plan)return base; // Benefit is already scored by the shared plan, no second rescue reward.
+				if(plan===undefined&&_hasNegativeJudge(tgt))return Math.round((base+3)*100)/100;
 				return -8.0;                             /* 拆队友好牌(装备/手牌) → 强罚 */
 			}
 			return Math.min(base, -3.0);                 /* 中性/身份未明 → 不盲拆 */
@@ -389,7 +392,7 @@ function directionScore(me, act, t) {
 		}
 		if (purpose === 'dismantle') {
 			if (d < 0) return 1;
-			if (d > 0) return _hasNegativeJudge(t) ? 1 : -3;   /* 拆队友负面判定→正，拆队友好牌→负 */
+			if (d > 0) { const plan=friendlyStripPlan(me,{name:act.id},t); return (plan || (plan===undefined && _hasNegativeJudge(t))) ? 1 : -3; }   /* 拆队友负面判定→正，拆队友好牌→负 */
 			return -1;
 		}
 		if (purpose === 'state') return 0;   /* 横置/解横置交回 tiesuoEvaluator，不做关系方向加减分 */

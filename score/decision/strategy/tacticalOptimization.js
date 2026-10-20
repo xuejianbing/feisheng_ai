@@ -4,13 +4,19 @@ import {lib, game, get, ui, _status} from '../../foundation/adapt/host.js?v=41a'
 import {cfg} from '../../foundation/config/util.js?v=41a';
 import {dispositionOf} from '../relations/relations.js?v=41a';
 import {effectiveJudgeName} from './judgeName.js?v=41a';
-import {captureDelayedSettings, installDelayedBridges, stripForDelayedPlan} from './delayedOptimization.js?v=41a';
+import {captureDelayedSettings, delayedOptimizationEnabled, installDelayedBridges, stripForDelayedPlan} from './delayedOptimization.js?v=41a';
+import {beginChoiceAudit} from '../../perception/journal/choiceAudit.js?v=41a';
+import {resetCooperativeTrickIntents} from '../state/cooperativeTrickIntent.js?v=41a';
+import {configureFriendlyStrip,friendlyStripPlan,selectableStrip} from './friendlyStripPlan.js?v=41a';
 let active = {enabled:false, fire:false, guding:false, diagnostic:false};
 export function captureTacticalSettings(){
+ resetCooperativeTrickIntents();
  captureDelayedSettings();
  active={enabled:!!cfg('tacticalOptimization',true),fire:!!cfg('tacticalFire',true),tiesuo:!!cfg('tacticalTiesuo',true),wuxie:!!cfg('tacticalWuxie',true),guding:!!cfg('tacticalGuding',true),wine:!!cfg('tacticalWine',true),strip:!!cfg('tacticalStrip',true),rescue:!!cfg('tacticalJudgeRescue',true),crossbow:!!cfg('tacticalCrossbow',true),diagnostic:!!cfg('tacticalDiagnostics',false)};
+ configureFriendlyStrip(active);
 }
 export function tacticalEnabled(kind){return active.enabled && active[kind];}
+export function tacticalSettingsSnapshot(){return {...active,delay:delayedOptimizationEnabled()};}
 function trace(kind,value){if(active.diagnostic)console.info('[无名AI·打法优化]',kind,value);}
 function handOf(p){return p.getCards('h')||[];}
 function canPay(p,target,card,suit){
@@ -54,10 +60,6 @@ export function weaponOrder(p,card,original){
 }
 
 let evaluatingStrip=false;
-function selectableStrip(p,t,card,name){
- const filter=name==='shunshou'?lib.filter.canBeGained:lib.filter.canBeDiscarded;
- return !!card&&(!filter||filter(card,p,t));
-}
 function availableSlashes(p,trick){
  // Only the actor's own hand is inspected. A converted trick may consume a Sha.
  return handOf(p).filter(c=>c!==trick&&!(trick?.cards||[]).includes(c)&&get.name(c,p)==='sha'&&lib.filter.cardEnabled(c,p)&&lib.filter.cardUsable(c,p));
@@ -118,20 +120,9 @@ export function stripPlan(p,card,t,resolution=false){
   if(relation===0)return null;
   const slashes=availableSlashes(p,card);
   if(relation>0){
-   if(!active.rescue||t.hasSkillTag?.('nojudge'))return null;
-   // Leave an immediately available low-risk kill to native ordering.
+   // Ordering still leaves an immediately available low-risk kill to native AI.
    if(!resolution&&immediateLethal(p,slashes))return null;
-   const judges=(t.getCards('j')||[]).filter(c=>['lebu','bingliang'].includes(effectiveJudgeName(c))&&selectableStrip(p,t,c,name));
-   if(!judges.length)return null;
-   const upcoming=(game.players.indexOf(t)-game.players.indexOf(p)+game.players.length)%game.players.length||1;
-   const canSelfManage=t.hasSkill?.('qiaobian')||t.hasSkill?.('guanxing');
-   const urgency=c=>{
-    const n=effectiveJudgeName(c);
-    const need=n==='lebu'?Math.min(4,t.countCards('h')):Math.max(1,4-t.countCards('h'));
-    return 5+need+2/(upcoming||1)-(canSelfManage?3:0);
-   };
-   judges.sort((a,b)=>urgency(b)-urgency(a));
-   return {kind:'rescue',card:judges[0],score:urgency(judges[0])};
+   return friendlyStripPlan(p,card,t);
   }
   const delayedStrip=stripForDelayedPlan(p,card,t,resolution);
   if(!active.strip&&!delayedStrip)return null;
@@ -159,20 +150,23 @@ export function installStripButtonBridges(){
   const info=lib.card[name];if(!info?.ai||typeof info.ai.button!=='function'||info.ai.button.__djscStripBridge)continue;
   const original=info.ai.button;
   const wrapped=function(button,...args){
+   let audit=null;
+   const scored=(score,planKind=null)=>{audit?.record('candidate-scored',{cardId:name,planKind,aiScore:Number.isFinite(score)?score:null,executionState:'suggested',selectionConfirmed:false});return score;};
    try{
     const event=get.event(),p=event.player,t=event.target;
+    audit=beginChoiceAudit(tacticalEnabled('diagnostic'),p,event,'strip-selection');
     const plan=stripPlan(p,{name},t,true),c=button.link;
     if(plan&&selectableStrip(p,t,c,name)){
      const position=get.position(c);
      if(plan.kind==='rescue'){
-      if(position==='j'&&['lebu','bingliang'].includes(effectiveJudgeName(c)))return c===plan.card?30:29;
-      return -20;
+      if(position==='j'&&['lebu','bingliang'].includes(effectiveJudgeName(c)))return scored(c===plan.card?30:29,plan.kind);
+      return scored(-20,plan.kind);
      }
-     if(c===plan.card||(plan.position==='h'&&position==='h')){trace('拆顺选牌',{kind:plan.kind});return 30;}
-     return -1;
+     if(c===plan.card||(plan.position==='h'&&position==='h')){trace('拆顺选牌',{kind:plan.kind});return scored(30,plan.kind);}
+     return scored(-1,plan.kind);
     }
    }catch(_){}
-   return original.call(this,button,...args);
+   return scored(original.call(this,button,...args));
   };
   wrapped.__djscStripBridge=true;
   info.ai.button=wrapped;
@@ -211,7 +205,12 @@ export function installTacticalOptimization(){
  lib.skill[id]={charlotte:true,silent:true,forced:true,popup:false,priority:-100,trigger:{global:'gameStart'},filter:(e,p)=>p===game.me,
   // Async event content preserves module helpers; StepCompiler rebuilds normal functions.
   content:async()=>{captureTacticalSettings();installStripButtonBridges();installDelayedBridges();},
-  mod:{aiOrder:(p,c,n)=>extraCardOrder(p,c,weaponOrder(p,c,n))},
+  mod:{aiOrder:(p,c,n)=>{
+   const value=extraCardOrder(p,c,weaponOrder(p,c,n));
+   try{if(tacticalEnabled('diagnostic'))beginChoiceAudit(true,p,_status.event,'card-order')?.record('order-scored',{
+    cardId:get.name(c,p),before:Number.isFinite(n)?n:null,after:Number.isFinite(value)?value:null,executionState:'suggested'});}catch(_){}
+   return value;
+  }},
   ai:{effect:{player(card,p,target){
    if(['guohe','shunshou'].includes(get.name(card,p))){
     const plan=stripPlan(p,card,target);
@@ -230,17 +229,26 @@ export function installTacticalOptimization(){
  const info=lib.card.huogong;if(!info||info.__djsc_tacticalContent)return;
  info.__djsc_tacticalContent=info.content;
  info.content=async function(event,trigger,player){
-  if(tacticalEnabled('fire') && event.target===player && (player!==game.me || _status.auto) && !event.chooseToShow && !event.filterShow && !event.showPosition){
+  if(tacticalEnabled('fire') && event.target===player && !player.isOnline2?.() && (player!==game.me || _status.auto) && !event.chooseToShow && !event.filterShow && !event.showPosition){
    event.chooseToShow=async(e,p,t)=>{
     const cards=handOf(p).filter(c=>get.value(c,p)<6.2+Math.min(4,p.hp)&&(!lib.filter.cardDiscardable||lib.filter.cardDiscardable(c,p,'huogong')));
     const card=cards.sort((a,b)=>get.value(a,p)-get.value(b,p))[0];
-    return card?{bool:true,cards:[card]}:{bool:true,cards:handOf(p).slice(0,1)};
+    const result=card?{bool:true,cards:[card]}:{bool:true,cards:handOf(p).slice(0,1)};
+    beginChoiceAudit(tacticalEnabled('diagnostic'),p,e,'fire-selection')?.record('show-selected',{selection:'show',bool:result.bool,cardCount:result.cards.length,executionState:'selection-returned'});
+    return result;
    };
   }
   if(tacticalEnabled('fire')&&!event.chooseToDiscard){
    event.chooseToDiscard=async(e,p,t)=>{
     const suit=get.suit(e.cards2[0]);
-    return await p.chooseToDiscard(e.discardPosition??'h',e.filterDiscard??{suit}).set('ai',c=>fireDiscardScore(p,t,c,suit)??-1).set('prompt',false).forResult();
+    const audit=beginChoiceAudit(tacticalEnabled('diagnostic'),p,e,'fire-selection');
+    const result=await p.chooseToDiscard(e.discardPosition??'h',e.filterDiscard??{suit}).set('ai',c=>{
+     const score=fireDiscardScore(p,t,c,suit)??-1;
+     audit?.record('discard-scored',{aiScore:score,executionState:'suggested'});
+     return score;
+    }).set('prompt',false).forResult();
+    audit?.record('discard-returned',{bool:result?.bool??null,cardCount:result?.cards?.length??null,executionState:'selection-returned'});
+    return result;
    };
   }
   return await info.__djsc_tacticalContent.call(this,event,trigger,player);

@@ -1,5 +1,6 @@
 import { fireUtility, tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
-import { refinedWuxieEffect } from './wuxieOptimization.js?v=41a';
+import { refinedWuxieEffect,tiesuoWuxieEffect } from './wuxieOptimization.js?v=41a';
+import {cooperativeTrickIntent,observedNonManualTrick} from '../state/cooperativeTrickIntent.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 /*
  * ============================================
@@ -28,7 +29,7 @@ import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
  *   - 反无懈必须回溯原始锦囊，按 parity 判断原锦囊最终 resolve/negate；
  *   - 上下文解析失败 → 不 hard block、不 hard force，交回原生 AI。
  */
-import { lib, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';   /* ★ 统一敌我系统单一权威源 */
 
 function _swallow(e) {
@@ -180,12 +181,14 @@ function _sourceGainValue(srcRel) {
 	return 0;
 }
 
-function _removalOptions(tgt, tgtRel, srcRel, isSteal) {
+function _removalOptions(tgt, tgtRel, srcRel, isSteal, source, viewer) {
 	const out = [];
 	try {
 		const gain = isSteal ? _sourceGainValue(srcRel) : 0;
 		const h = _handOf(tgt);
-		if (h > 0) {
+		let handSelectable;
+		try{handSelectable=isSteal?tgt.countGainableCards?.(source,'h'):tgt.countDiscardableCards?.(source,'h');}catch(_){/* 无法确认时沿用未知牌估计 */}
+		if (h > 0 && handSelectable!==0) {
 			/* 手牌身份不可见，只按“可失去一张未知手牌”的期望价值估计。 */
 			let handValue = 0.9;
 			if (_hpOf(tgt) <= 1) handValue += 2.5;
@@ -193,13 +196,27 @@ function _removalOptions(tgt, tgtRel, srcRel, isSteal) {
 		}
 
 		const eq = _equipCardsOf(tgt);
+		const selectable=card=>{
+			const filter=isSteal?lib.filter?.canBeGained:lib.filter?.canBeDiscarded;
+			try{return !source||typeof filter!=='function'||filter(card,source,tgt);}catch(_){return false;}
+		};
 		for (let i = 0; i < eq.length; i++) {
-			out.push(_targetRemovalValue(tgtRel, _equipValueOf(eq[i])) + gain);
+			if(!selectable(eq[i]))continue;
+			let effect=_targetRemovalValue(tgtRel, _equipValueOf(eq[i]));
+			// 白银狮子的失去回血与装备损失分别计入，只读取公开装备和宿主回复评估。
+			if(_cardId(eq[i],tgt)==='baiyin'&&tgt.hp<tgt.maxHp&&typeof get.recoverEffect==='function'){
+				try{
+					const recover=get.recoverEffect(tgt,source,viewer);
+					if(Number.isFinite(recover))effect+=Math.max(-12,Math.min(12,recover*3));
+				}catch(_){/* 回复语义不明时保留装备损失，不伪造回血 */}
+			}
+			out.push(effect + gain);
 		}
 
 		/* 判定区是公开信息。移除负面延时状态会帮助其持有者。 */
 		const js = _judgeCardsOf(tgt);
 		for (let i = 0; i < js.length; i++) {
+			if(!selectable(js[i]))continue;
 			const id = tacticalEnabled('wuxie') ? effectiveJudgeName(js[i]) : _cardId(js[i], null);
 			let v = 0;
 			if (id && HARMFUL_JUDGE.indexOf(id) >= 0) {
@@ -228,7 +245,7 @@ function _destroyValue(player, ctx, context, isSteal) {
 		if (!tgt) return 0;
 		const tgtRel = _rel(player, tgt, context);
 		const srcRel = ctx.source ? _rel(player, ctx.source, context) : 0;
-		const options = _removalOptions(tgt, tgtRel, srcRel, !!isSteal);
+		const options = _removalOptions(tgt, tgtRel, srcRel, !!isSteal, ctx.source, player);
 		const v = _selectRemovalOutcome(options, srcRel);
 		return Math.round(v * 100) / 100;
 	} catch (e) { _swallow(e); return 0; }
@@ -500,6 +517,7 @@ export function evaluateTrickEffect(player, ctx, context) {
 		if (DELAYED_TRICKS.indexOf(id) >= 0) return _delayedValue(player, id, tgtRel, tgt, context);
 		if (id === 'shunshou') return _destroyValue(player, ctx, context, true);
 		if (id === 'guohe') return _destroyValue(player, ctx, context, false);
+		if (id === 'tiesuo') return tiesuoWuxieEffect(player,ctx,context)?.value??0;
 		if (AOE_TRICKS.indexOf(id) >= 0) return _aoeValue(player, ctx, context);
 		if (id === 'huogong') { const u=fireUtility(ctx.source,tgt,player,ctx.card);if(u!==null)return u; }
 		if (SINGLE_DAMAGE_TRICKS.indexOf(id) >= 0) return _singleDamageValue(player, tgtRel, tgt);
@@ -509,6 +527,19 @@ export function evaluateTrickEffect(player, ctx, context) {
 		_swallow(e);
 		return 0;
 	}
+}
+
+/* 玩家主动自伤优先于队友 AI 的负收益估计；只减弱干预，不凭意图强出反无懈。
+ * 本机托管仍按 AI 处理，联机玩家沿用宿主 isOnline2 判定。只处理当前单目标
+ * 自伤，避免把敌方伤害、AOE 波及或判定区状态误认为玩家主动配合。 */
+function _respectPlayerSelfDamage(player, ctx, context) {
+	if(observedNonManualTrick(ctx))return false;
+	const source = ctx.source;
+	if (!source || source === player || source !== ctx.target || ctx.effectScope !== 'target' ||
+		SINGLE_DAMAGE_TRICKS.indexOf(ctx.originalSpellId) < 0 || _rel(player, source, context) <= 0) return false;
+	try {
+		return source === game.me ? !_status.auto : source.isOnline2?.() === true;
+	} catch (_) { return false; }
 }
 
 /* ================= ③ Wuxie Resource Cost =================
@@ -580,6 +611,9 @@ function _recordDiagnostics(res) {
 			hostState: res.hostState,
 			inWuxieChain: res.inWuxieChain,
 			effectValue: res.effectValue,
+			playerIntentRespected: !!res.playerIntentRespected,
+			cooperativeIntent:res.cooperativeIntent||null,
+			effectBasis:res.effectBasis||'unknown',
 			resourceCost: res.resourceCost,
 			score: res.score,
 			use: res.use,
@@ -629,13 +663,17 @@ export function evaluateWuxie(player, event, context) {
 			return r;
 		}
 
-		const optimized = tacticalEnabled('wuxie') ? refinedWuxieEffect(player, ctx, context) : null;
+		const cooperation=cooperativeTrickIntent(player,ctx,(a,b)=>_rel(a,b,context));
+		const intentOnly=ctx.originalSpellId==='jiedao'&&!!cooperation;
+		const optimized = tacticalEnabled('wuxie') ? (intentOnly?{value:0,scope:ctx.effectScope}:refinedWuxieEffect(player, ctx, context)) : null;
 		if (tacticalEnabled('wuxie') && !optimized) {
 			const result = { ..._emptyResult(), originalSpellId: ctx.originalSpellId, reason: 'unsupported-or-ambiguous-effect' };
 			_recordDiagnostics(result);
 			return result;
 		}
-		const effectValue = optimized && !optimized.legacy ? optimized.value : evaluateTrickEffect(player, ctx, context);
+		const estimatedEffect = optimized && !optimized.legacy ? optimized.value : evaluateTrickEffect(player, ctx, context);
+		const playerIntentRespected = !!cooperation || _respectPlayerSelfDamage(player, ctx, context);
+		const effectValue = playerIntentRespected ? Math.max(0, estimatedEffect) : estimatedEffect;
 		const resourceCost = estimateWuxieResourceCost(player, context, ctx);
 		const currentlyNegated = !!ctx.currentlyNegated;
 
@@ -674,7 +712,10 @@ export function evaluateWuxie(player, event, context) {
 			finalStateIfPass: finalStateIfPass,
 			finalStateIfUse: finalStateIfUse,
 			confidence: ctx.confidence,
-			reason: reason,
+			playerIntentRespected,
+			cooperativeIntent:cooperation,
+			effectBasis:intentOnly?'intent-only':optimized?.basis||'effect-estimate',
+			reason: reason + (cooperation?':respect-'+cooperation.kind:playerIntentRespected ? ':respect-player-self-damage' : ''),
 		};
 		_recordDiagnostics(res);
 		return res;

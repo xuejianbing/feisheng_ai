@@ -1,3 +1,4 @@
+import {bestJiedaoPair} from '../cards/jiedaoEvaluator.js?v=41a';
 /*
  * ============================================
  * // Éditeur: Feisheng Original
@@ -307,9 +308,10 @@ export const CHAINS = [
         condition: function (me, enemy) {
             try {
                 if (!enemy) return false;
-                /* 敌我都有武器区 → 借刀杀敌收益最大 */
-                const meWeap = me.getCards ? me.getCards('e').some(function (c) { return get.position(c) === 'e'; }) : false;
-                return meWeap;
+                const card=(me.getCards?.('h')||[]).find(c=>get.name(c,me)==='jiedao');
+                if(!card)return false;
+                const pair=bestJiedaoPair(me,{card});
+                return !!(pair.use&&(pair.holder===enemy||pair.victim===enemy));
             } catch (e) { return false; }
         },
         bonus: 1.9,

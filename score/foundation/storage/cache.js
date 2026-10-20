@@ -63,6 +63,14 @@ export function cacheStats() {
  * ============================================ */
 
 let _lastStateKey = '';
+// Distinguish equal-looking own physical cards without retaining them after loss.
+const _ownCardKeys = new WeakMap();
+let _nextOwnCardKey = 0;
+function ownCardKey(card) {
+    if (!card || typeof card !== 'object') return '';
+    if (!_ownCardKeys.has(card)) _ownCardKeys.set(card, ++_nextOwnCardKey);
+    return _ownCardKeys.get(card);
+}
 
 /* 读取卡牌名的容错工具（宿主 get.name 优先，普通对象回退 .name） */
 function _cacheCardName(card, player) {
@@ -103,10 +111,18 @@ function makeStateKey() {
                 try { suit = get && typeof get.suit === 'function' ? (get.suit(card, current) || '') : (card.suit || ''); } catch (e) {}
                 try { number = get && typeof get.number === 'function' ? (get.number(card, current) || '') : (card.number || ''); } catch (e) {}
                 try { nature = get && typeof get.nature === 'function' ? (get.nature(card, current) || '') : (card.nature || ''); } catch (e) {}
-                return name + ':' + suit + ':' + number + ':' + nature;
+                return name + ':' + suit + ':' + number + ':' + nature + ':REF=' + ownCardKey(card);
             }).sort().join(',');
             parts.push('H:' + ownSig);
         } catch (eOwn) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eOwn); }
+
+        // Only the actor's usable skills/known skipped phases are inspected.
+        // Opponents' concealed skill lists and arbitrary storage are not read.
+        try {
+            const skills = typeof current.getSkills === 'function' ? current.getSkills('invisible') : current.skills || [];
+            parts.push('OWN:SKILLS=' + JSON.stringify([...new Set(skills)].filter(s => typeof s === 'string').sort()));
+            parts.push('OWN:SKIP=' + JSON.stringify([...new Set(current.skipList || [])].filter(s => typeof s === 'string').sort()));
+        } catch (eOwnSkills) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eOwnSkills); }
 
         /* 本回合使用计数同样属于决策状态。
          * 典型例子：一次性/限次技能使用后可能不改手牌或 HP，但下一次 phaseUse 已不能再次使用。
@@ -129,18 +145,19 @@ function makeStateKey() {
             }
         } catch (eStat) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eStat); }
 
-        /* 所有存活角色仅使用公开/可观察状态：血量、手牌数量、横置、判定区、装备区。
+        /* 所有存活角色仅使用公开/可观察状态：血量、护甲、手牌数量、横置、翻面、判定区、装备区。
          * 不读取其他玩家隐藏手牌牌名，避免缓存层引入信息泄漏。 */
         try {
             const players = (game && Array.isArray(game.players)) ? game.players : [];
             for (const p of players) {
                 if (!p || p.alive === false) continue;
                 const pk = String(p.playerid || p.name1 || p.name || p.name2 || '?');
-                let handCount = 0, linked = 0, jn = '', en = '';
+                let handCount = 0, linked = 0, turned = 0, jn = '', en = '';
                 try { handCount = typeof p.countCards === 'function' ? (p.countCards('h') || 0) : 0; } catch (e) {}
                 try {
                     linked = (typeof p.isLinked === 'function' ? p.isLinked() : (p.isLinked || p.isChained)) ? 1 : 0;
                 } catch (e) {}
+                try { turned = (typeof p.isTurnedOver === 'function' ? p.isTurnedOver() : p.isTurnedOver === true) ? 1 : 0; } catch (e) {}
                 try {
                     if (typeof p.getCards === 'function') {
                         const jc = p.getCards('j') || [];
@@ -149,7 +166,7 @@ function makeStateKey() {
                         en = ec.map(function (card) { return _cacheCardName(card, p); }).sort().join(',');
                     }
                 } catch (eInner) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eInner); }
-                parts.push('P:' + pk + ':' + (p.hp || 0) + ':' + (p.maxHp || 0) + ':' + handCount + ':' + linked + ':J=' + jn + ':E=' + en);
+                parts.push('P:' + pk + ':' + (p.hp || 0) + ':' + (p.maxHp || 0) + ':' + handCount + ':' + linked + ':ARMOR=' + (Number(p.hujia) || 0) + ':TURNED=' + turned + ':J=' + jn + ':E=' + en);
             }
         } catch (ePlayers) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(ePlayers); }
 
