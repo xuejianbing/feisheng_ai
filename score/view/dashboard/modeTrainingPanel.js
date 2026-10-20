@@ -77,7 +77,7 @@ export function openModeTrainingPanel(){
 
  function checkbox(key,label,description){
   const row=node('label',undefined,'djsc-mode-switch'),input=node('input'),text=node('span',label);
-  input.type='checkbox';input.checked=cfg(key,!['classicModelEnabled','classicCandidateShadow','classicAutoUpdate'].includes(key))===true;
+  input.type='checkbox';input.checked=cfg(key,!['classicModelEnabled','classicAutoUpdate'].includes(key))===true;
   input.onchange=()=>{lib.config['extension_无名AI_'+key]=input.checked;game.saveExtensionConfig?.('无名AI',key,input.checked);render();};
   text.append(node('small',description));row.append(input,text);return row;
  }
@@ -108,7 +108,7 @@ export function openModeTrainingPanel(){
   const s=classicTrainingStatus(),c=s.context;
   const config=card('专项设置');
   config.append(node('p','当前对局：'+(c.mode==='doudizhu'?(DOUDIZHU_NAMES[c.submode]||'未知子模式'):c.mode)+' · '+(modeSessionActive()?'本局设置已锁定，修改于下一局生效':'可修改下一局设置'),'djsc-mode-note'));
-  const switches=node('div',undefined,'djsc-mode-switches');switches.append(checkbox('classicDoudizhu','启用常规斗地主专项规则','沿用公共 AI，加入地主／农民专项偏好。'),checkbox('classicDoudizhuCollect','采集常规斗地主专项数据','仅收录实际执行、收益已确认且标签有效的样本。'));switches.append(checkbox('playerDemonstrations','采集玩家手动出牌示范','记录手动用牌、重铸及顺序；合格动作参与专项训练。'));switches.append(checkbox('classicModelEnabled','专项模型参与实际选择','使用已启用的试用版本，影响幅度封顶，修改下一局生效。'),checkbox('classicAutoUpdate','局间自动学习与更新','结算后对比公共基线与当前试用版，地主、农民分组通过才更新。'));switches.append(checkbox('classicCandidateShadow','专项候选影子评估','默认关闭；诊断候选模型时开启，可能增加每次出牌或响应的计算量，关闭立即恢复。'));config.append(switches);content.append(config);
+  const switches=node('div',undefined,'djsc-mode-switches');switches.append(checkbox('classicDoudizhu','启用常规斗地主专项规则','沿用公共 AI，加入地主／农民专项偏好。'),checkbox('classicDoudizhuCollect','采集常规斗地主专项数据','仅收录实际执行、收益已确认且标签有效的样本。'));switches.append(checkbox('playerDemonstrations','采集玩家手动出牌示范','记录手动用牌、重铸及顺序；合格动作参与专项训练。'));switches.append(checkbox('classicModelEnabled','专项模型参与实际选择','使用已启用的试用版本，影响幅度封顶，修改下一局生效。'),checkbox('classicAutoUpdate','局间自动学习与更新','结算后对比公共基线与当前试用版，地主、农民分组通过才更新。'));config.append(switches);content.append(config);
   const grid=node('div',undefined,'djsc-mode-grid');for(const [label,value] of [['有效事务',s.data.accepted],['来源局数',s.data.sessions],['重复事务',s.data.duplicates],['冲突事务',s.data.conflicts]]){const stat=node('div',undefined,'djsc-mode-stat');stat.append(node('span',label),node('strong',String(value)));grid.append(stat);}content.append(grid);
   const stats=card('玩法与角色统计'),wrap=node('div',undefined,'djsc-mode-table-wrap'),table=node('table'),head=node('thead'),header=node('tr'),body=node('tbody');
   for(const label of ['玩法／角色','有效事务','来源局数','战绩'])header.append(node('th',label));head.append(header);table.append(head,body);
@@ -134,7 +134,7 @@ export function openModeTrainingPanel(){
    training.append(node('p','本局专项参与比较 '+s.runtime.participated+' 次 · 改变模型阶段首选 '+s.runtime.changed+' 次；最近状态：'+(statusNames[s.runtime.lastStatus]||s.runtime.lastStatus)+(s.runtime.modelId?' · '+s.runtime.modelId:'')+'。刷新统计可更新；后续规划仍可能调整，最终执行以决策记录为准。','djsc-mode-note'));
   }
   const buttons=node('div',undefined,'djsc-mode-actions');
-  for(const [label,action] of [['训练候选模型',trainClassicCandidate],['验证候选模型',validateClassicCandidate],['启用试用版本',activateClassicCandidate],['回滚上一版本',rollbackClassicModel],['导出专项数据',exportClassicData],['重新恢复模型',restoreClassicModels],['刷新统计',async()=>({ok:true,note:'统计已刷新；已附模型状态、局内统计与下一局设置，可复制完整内容反馈。',statistics:classicTrainingStatus(),nextGameSettings:Object.fromEntries(['classicDoudizhu','classicDoudizhuCollect','playerDemonstrations','classicModelEnabled','classicCandidateShadow','classicAutoUpdate'].map(key=>[key,cfg(key,!['classicModelEnabled','classicCandidateShadow','classicAutoUpdate'].includes(key))===true]))})]]){
+  for(const [label,action] of [['训练候选模型',trainClassicCandidate],['验证候选模型',validateClassicCandidate],['启用试用版本',activateClassicCandidate],['回滚上一版本',rollbackClassicModel],['导出专项数据',exportClassicData],['重新恢复模型',restoreClassicModels],['刷新统计',async()=>({ok:true,note:'统计已刷新；已附模型状态、局内统计与下一局设置，可复制完整内容反馈。',statistics:classicTrainingStatus(),nextGameSettings:Object.fromEntries(['classicDoudizhu','classicDoudizhuCollect','playerDemonstrations','classicModelEnabled','classicAutoUpdate'].map(key=>[key,cfg(key,!['classicModelEnabled','classicAutoUpdate'].includes(key))===true]))})]]){
    const button=node('button',label);button.type='button';button.disabled=s.busy&&label!=='刷新统计';
    button.onclick=async()=>{button.disabled=true;let result;try{const task=action();render();result=await task;}catch(e){result={ok:false,err:String(e.message||e)};}lastResult={label,result};safeSet('djsc_mode_fold_'+label+'结果','true');render();};buttons.append(button);
   }

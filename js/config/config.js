@@ -638,7 +638,6 @@ export let config = {
  classicDoudizhuCollect:{name:'采集常规斗地主专项数据',init:true,intro:'为实际提交与已确认结果记录模式、规则和角色；不把建议当执行。修改于下一局生效。'},
  playerDemonstrations:{name:'采集玩家手动出牌示范'},
  classicModelEnabled:{name:'专项模型参与实际选择'},
- classicCandidateShadow:{name:'专项候选影子评估',init:false,intro:'默认关闭，避免每次出牌或响应时额外运行候选模型；仅诊断时开启，修改后立即生效。'},
  classicEffectReport:{name:'结算显示AI效果'},
  modeTrainingCenter:{name:'📊 斗地主专项训练中心',clear:true,onclick:async function(){try{const m=await import('../../score/view/dashboard/modeTrainingPanel.js?v=41a');m.openModeTrainingPanel();}catch(e){alert('专项面板加载失败：'+e.message);}}},
 
