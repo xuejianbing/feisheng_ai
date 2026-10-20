@@ -4,6 +4,7 @@
 
 | 版本 | 日期 | 主要更新 |
 |------|------|----------|
+| **v4.1.2.8-beta.2（15人内测）** | 2026-10-20 | 训练与模型专项修复候选：正式特征维度为 134，兼容旧 130 维样本；单批上报恢复为 400 条，并修复退避时上传锁不释放。仅供内测，不含新权重。 |
 | **v4.1.2.7** | 2026-10-16 | **配置迁移与归档自动清理**：① 一次性配置迁移——清除止血期被手动关闭的`useTrainedModel`和`championBoost`配置项，恢复默认开启（cfgMigratedVer标记，只执行一次，不覆盖玩家后续手动修改）；② 启动归档自检——localStorage中`无名AI_archive`超过1MB时自动清理并关闭归档功能，避免旧玩家存档膨胀拖慢启动；③ 冠军策略默认值从3回退到0 |
 | **v4.1.2.6** | 2026-10-16 | **技能漏斗终局补点**：`activeSkillEligibility.js` 新增 `trackSkillOutcome()`，bestAction收尾回传「技能候选入池数」与「技能最终胜出数」；技能漏斗从只覆盖候选资格筛选（noEnable/filterEnable/cost）扩展到「入池→胜出」全链路可观测，开发者面板技能拆解数据完整 |
 | **v4.1.2.5** | 2026-10-16 | **两项性能/架构修复**：① 冠军策略解耦——engine.js中冠军提权不再依赖`useTrainedModel`开关，冠军=查表学习不修改权重，独立执行不受模型开关影响；② shadowCore.js防抖写盘——原来每条决策2次整包JSON.parse+2次JSON.stringify同步写localStorage（约600KB×4），改为5秒定时脏写，大幅降低对局卡顿与能耗 |
@@ -28,7 +29,7 @@
 
 - **原作者 / Original Author：飞升**
 - **当前维护者 / Current Maintainer：WeiqiaoCode（微雀qiao）**
-- **当前版本：v4.1.2.7（2026-10-16）**
+- **当前版本：v4.1.2.8-beta.2（15人内测，2026-10-20）**
 - **许可证：GPL-3.0**
 - **上游游戏项目：[无名杀 / libnoname/noname](https://github.com/libnoname/noname)**
 
@@ -46,7 +47,7 @@
 | **关系与状态层** | 统一玩家状态快照、敌我关系、威胁与动作效用 |
 | **特殊牌 Evaluator** | 铁索连环、借刀杀人、桃园结义、五谷丰登等专项策略 |
 | **安全护栏** | 对明显错误动作进行保护，例如敌方濒死时误出桃 |
-| **模型系统** | 130维特征 → 128 → 64 → 6 标签 + Critic 价值头 |
+| **模型系统** | 正式 134 维特征（兼容旧 130 维样本）→ 128 → 64 → 6 标签 + Critic 价值头 |
 | **学习与校准** | localTrainer、自动学习、校准器、A/B 模型状态机、策略进化 |
 | **感知与记忆** | 身份观察、玩家/牌堆记忆、对手预测、团队意图与对局日志 |
 | **可视化工具** | AI 大脑总览、校准趋势、决策回放、决策对比、自检面板 |
@@ -67,7 +68,7 @@
 
 ## 当前模型契约
 
-> **FEATURE_DIM = 130；网络 130 → 128（GELU + LayerNorm）→ 64（GELU + LayerNorm）→ 6 标签 + Critic 价值头；权重 Int8（SCALE=128）／偏置 Int16；权重快照 VERSION=7。**
+> **FEATURE_DIM = 134；网络 134 → 128（GELU + LayerNorm）→ 64（GELU + LayerNorm）→ 6 标签 + Critic 价值头；权重 Int8（SCALE=128）／偏置 Int16；权重快照 VERSION=7。训练集兼容 130 维旧样本，适配会标记 `_dimAdapted`。**
 
 旧 48 / 96 维模型与训练数据与当前契约不兼容，载入时会被版本/维度校验拒收。
 
@@ -176,7 +177,7 @@ modelGuard 最终护栏
 
 ### 3.1 核心模块
 
-#### features.js — 特征提取（130维，FEATURE_DIM）
+#### features.js — 特征提取（134维，FEATURE_DIM）
 
 ```javascript
 // 维度分配（权威清单以 features.js 内的 DIM_NAMES / 段注释为准）
@@ -526,7 +527,7 @@ closeBtn.addEventListener('click', () => {
 
 ```javascript
 // 1. 不新增维度，只填充预留位；扩容必须同步升 FEATURE_DIM 与权重快照 VERSION
-// 130维固定，预留位见 features.js 段注释（DIM_NAMES 中标"预留"的下标）
+// 134维固定，目标身份 one-hot 位于 130..133；不得静默补齐新旧样本
 
 // 2. Int8 范围 [-127, 127]
 // 量化函数：q(v) = Math.round(v * 127)
@@ -597,7 +598,7 @@ closeBtn.addEventListener('click', () => {
 
 | 项 | 说明 |
 |---|---|
-| 130维特征（当前） | 旧 48/96 维模型与训练数据均不兼容，载入会被维度/版本校验拒收；需清空旧数据 |
+| 134维正式特征 | 兼容 130 维旧样本并显式标记适配；48/96 维旧模型不兼容，会被契约校验拒收 |
 | 旧训练数据 | 需执行 `window.__DJSC.trainBufferClear()` |
 | 面板系统 | 全屏遮罩版，兼容所有无名杀版本 |
 | 本地持久化 | 业务层统一走 `foundation/storage`；底层可落到浏览器本地存储，清理本地站点数据会重置相应状态 |
@@ -653,8 +654,8 @@ localStorage.removeItem('djsc_weights_v3');
 
 | 参数 | 值 |
 |---|---|
-| 特征维度 | 130 维（FEATURE_DIM） |
-| 网络结构 | 130 → 128(GELU+LayerNorm) → 64(GELU+LayerNorm) → 6 + Critic |
+| 特征维度 | 134 维（FEATURE_DIM；可适配 130 维旧样本） |
+| 网络结构 | 134 → 128(GELU+LayerNorm) → 64(GELU+LayerNorm) → 6 + Critic |
 | 权重快照版本 | VERSION=7（Int8 权重 / Int16 偏置） |
 | Int8 范围 | [-127, 127] |
 | 权重 SCALE | 128 |
