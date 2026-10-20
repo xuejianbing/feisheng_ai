@@ -62,7 +62,15 @@ export function classicCandidateShadow(best,acts,context){
   const info=classicCandidateInfo();if(!info)return {...base,status:'no-candidate'};
   if(!info.ruleKeys.includes(context.ruleKey))return {...base,status:'rule-not-covered',candidateId:info.id};
   if(shadowId!==info.id){shadowSession=createClassicCandidateSession();shadowId=info.id;}
-  const rows=[best,...(acts||[]).filter(a=>a!==best)].filter(a=>a&&a._feat?.length===130&&Array.from(a._feat).every(Number.isFinite)).slice(0,3);
+  const rows=[];
+  const addCandidate=a=>{
+   if(!a||a._feat?.length!==130)return false;
+   const features=a._feat;
+   for(let i=0;i<features.length;i++)if(!Number.isFinite(features[i]))return false;
+   rows.push(a);return rows.length>=3;
+  };
+  addCandidate(best);
+  for(const a of acts||[]){if(rows.length>=3)break;if(a!==best)addCandidate(a);}
   const predictions=rows.map(a=>{const p=shadowSession.predict(a._feat);return {type:a.type,id:a.id,target:typeof a.target==='string'?a.target:playerKey(a.target)||null,value:p?.value??null,label:p?p.logits.indexOf(Math.max(...p.logits)):null};});
   return {...base,status:'shadow',candidateId:info.id,actualSuggestion:{type:best?.type,id:best?.id},classicPreference:best?.classicPreference||null,predictions,note:'预测记录不改变评分，不是实际收益或训练标签'};
  }catch(e){return {...base,status:'error',reason:String(e.message||e)};}
