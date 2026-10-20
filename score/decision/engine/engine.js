@@ -1,3 +1,8 @@
+import {decisionCacheMatches} from '../state/decisionCache.js?v=41a';
+import {createEvaluationAudit} from '../analysis/decisionAudit.js?v=41a';
+import {observeCooperativeTrickUse,finishCooperativeTrickUse,resetCooperativeTrickIntents,cooperativeTrickEpoch} from '../state/cooperativeTrickIntent.js?v=41a';
+import {commonSuggestionFusionFor} from '../utility/suggestionFusion.js?v=41a';
+import {installChoiceAudit,beginChoiceAudit,choiceAuditStats} from '../../perception/journal/choiceAudit.js?v=41a';
 import {identityModelCompatibility} from '../../model/features/identityCompatibility.js?v=41a';
 import {identityView} from '../../perception/observer/identityView.js?v=41a';
 import {identityAuditStats,resetIdentityAudit} from '../../perception/observer/identityDiagnostics.js?v=41a';
@@ -18,7 +23,7 @@ import {modeContext,modeSampleMeta,closeModeContext,roleOf} from '../../foundati
 import {recordClassicMatch} from '../../model/train/modeStats.js?v=41a';
 import { createDecisionStages, decisionActionSnapshot, planAdoption } from '../analysis/decisionStages.js?v=41a';
 import { applyTiesuoRecastTiming } from '../cards/tiesuoRecast.js?v=41a';
-import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
+import { tacticalEnabled, tacticalSettingsSnapshot, stripPlan } from '../strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
  * // Éditeur: Feisheng Original
@@ -166,6 +171,7 @@ import { aoeValue } from '../timing/aoeTiming.js?v=41a';
 import { judgeBonus } from '../timing/judgeTiming.js?v=41a';
 import { multiTurnBonus } from '../strategy/multiTurnOpt.js?v=41a';
 /* ===== v1.0.2 新增 5 个锦囊时机优化模块 ===== */
+import {bestJiedaoPair} from '../cards/jiedaoEvaluator.js?v=41a';
 import { jiedaoBonus } from '../timing/jiedaoTiming.js?v=41a';
 import { shandianBonus } from '../timing/shandianTiming.js?v=41a';
 import { taoyuanBonus } from '../timing/taoyuanTiming.js?v=41a';
@@ -613,6 +619,7 @@ const matchArchive = createMatchArchive({ onLateOutcome: match => {
  void updateMatchArchiveOutcomes(match,id=>(lib.translate&&lib.translate[id])||id).catch(()=>{});
 } });
 let matchReplay = null;
+let choiceAuditCleanup = null;
 /* ★ 全局守恒台账（总账 ledger）：
  *   保证「Σ玩家货币 + _ledger = 0」恒成立 —— 任何一笔 give 都等价于总账内的
  *   转移：加分 → _ledger 补亏；扣分 → _ledger 存留。系统注入（奖池）与
@@ -1655,6 +1662,8 @@ function installHooks() {
 		settings: Object.fromEntries(['testDecisionLog', 'riskProfile', 'aiStrength', 'personalityAggression', 'personalityRisk', 'personalityTeam'].map(k => [k, cfg(k, null)])),
 		players: (game.players || []).map(p => ({ id: p.playerid, name: p.name1 || p.name })),
 	});
+	choiceAuditCleanup?.();
+ choiceAuditCleanup=installChoiceAudit(data=>matchArchive.record('choiceAudit',data,{playerId:data.actorId,round:_getRoundNumber()}),()=>modeContext().sessionId);
 	matchReplay = null;
 	const orig = {};
 	proto[DJSC_ORIG] = orig;
@@ -1686,13 +1695,16 @@ function installHooks() {
             try { delayedBefore = delayedOutcomes.before(me, _status.event); } catch (_) {}
             const outcomeBefore = actionOutcomes.before(me, _status.event, !!outcomeTx && ['card','equip'].includes(outcomeTx.expected.type));
 			/* Execution Gateway 规则：真实宿主函数只允许调用一次。 */
+			const cooperativeChoiceEvent=_status.event;
 			const host = invokeObservedHost({ orig: oUse, thisArg: this, args: Array.from(args), decisionPoint: 'useCard' });
 			if (!host.ok) return host.result;
 			const next = host.result;
+            observeCooperativeTrickUse(next,me,cooperativeChoiceEvent);
             try { identityEvidenceCollector.beginUse(next,me,args[0],next?.targets || args[1],_status.event); } catch (_) {}
             let completeOutcome = null;
             let outcomeCommitted = null, outcomeResult = null;
             function finishOutcome() {
+                finishCooperativeTrickUse(next);
                 if (completeOutcome) { try { completeOutcome(); } catch (_) {} }
                 try { delayedOutcomes.complete(delayedBefore, next, outcomeCommitted, outcomeResult); } catch (_) {}
                 try { publicSources.completeUse(publicBefore,next,outcomeCommitted,outcomeResult); } catch (_) {}
@@ -1760,6 +1772,9 @@ function installHooks() {
                     }
                 }catch(_){}
             }
+            try { beginChoiceAudit(tacticalEnabled('diagnostic'),me,next,'execution')?.record('host-use-created',{
+             action:{type:'card',id:get.name(args[0],me),target:(next?.targets||[]).map(targetKey)},
+             transactionId:outcomeCommitted?.id||null,executionState:'host-call-returned'}); } catch (_) {}
 			if (next && typeof next.then === "function") {
 				Promise.resolve(next).then(function () {
                     finishOutcome();
@@ -2180,6 +2195,8 @@ function installHooks() {
 }
 
 function uninstallHooks() {
+ resetCooperativeTrickIntents();
+ choiceAuditCleanup?.(); choiceAuditCleanup=null;
 	try {
 		/* ★ P1-26：无论钩子是否存在，先取消延迟挂载并置卸载标志 */
 		_disposed = true;
@@ -2689,6 +2706,7 @@ const BEST_ACTION_CACHE_TTL = 1200;
 let _lastBestAction = null;
 let _lastBestActionTime = 0;
 let _lastBestActionStateKey = '';
+let _lastDecisionCacheContext=null;
 let _lastRelationStateKey = '';
 
 /* ============================================
@@ -2785,6 +2803,7 @@ function applyBasicCardPlayRules(me, acts) {
 			hasRejudge: hasRejudge,
 			enemyHasFire: false,
 			targets: targets,
+			stripStrategy:(id,t)=>t?.isAlly&&tacticalSettingsSnapshot().enabled?stripPlan(me,(me.getCards('h')||[]).find(c=>get.name(c,me)===id)||{name:id},t.pp):undefined,
 			targetLocked: true,
 			hi: { identityBiasOf: identityBiasOf },
 		};
@@ -2793,7 +2812,7 @@ function applyBasicCardPlayRules(me, acts) {
 			if (a.type !== 'card' && a.type !== 'equip') return;
 			if (a.id === 'tiesuo') return;
 			const tidx = a.targetObj ? targets.findIndex(function (t) { return t && t.pp === a.targetObj; }) : -1;
-			const d = decideCard(a.id, ctx, tidx);
+			const d = decideCard(a.id, a.id==='jiedao'&&a.jiedaoPair?{...ctx,jiedaoPlan:a.jiedaoPair}:ctx, tidx);
 			if (d.veto) {
 				vetoCandidate(a, d.vetoReason);
 				a.reason = (a.reason || '') + '（[基本规则否决] ' + d.vetoReason + '）';
@@ -3206,6 +3225,7 @@ function _buildCardDecisionContext(me) {
 		hasRejudge: hasRejudge,
 		enemyHasFire: false,
 		targets: targets,
+		stripStrategy:(id,t)=>t?.isAlly&&tacticalSettingsSnapshot().enabled?stripPlan(me,(me.getCards('h')||[]).find(c=>get.name(c,me)===id)||{name:id},t.pp):undefined,
 		hi: { identityBiasOf: identityBiasOf },
 	};
 }
@@ -3214,6 +3234,11 @@ function _buildCardDecisionContext(me) {
  * 无目标、自身、自动全体、多目标/动态目标保持未绑定，交给各自专用策略或宿主。 */
 function _resolveCardCandidateTarget(me, id, ctx, fallback) {
 	try {
+		if(id==='jiedao'&&tacticalSettingsSnapshot().enabled){
+            const card=(me.getCards('h')||[]).find(c=>get.name(c,me)===id)||{name:id};
+            const pair=bestJiedaoPair(me,{card});
+            if(pair.resolved)return {target:pair.holder||null,index:-1,score:pair.score,resolved:true,pair,reason:pair.reason};
+        }
 		if (id === 'tiesuo') return { target: null, index: -1, score: 0, resolved: false, reason: '铁索由专用 evaluator 决定' };
 		const info = lib.card && lib.card[id];
 		const cat = classifyCard(id);
@@ -3259,7 +3284,7 @@ function applyBasicTargetRules(me, acts) {
 		/* ★ 按用途分散目标：控制/拆除类卡各自选最优目标，不再统一指向 bestT */
 		Object.keys(_CARD_PURPOSE).forEach(function (id) { if (!(id in map)) map[id] = _CARD_PURPOSE[id]; });
 		acts.forEach(function (a) {
-			if (a.type !== 'card') return;
+			if (a.type !== 'card'||a.id==='jiedao'&&a.jiedaoPair) return;
 			const purpose = map[a.id];
 			if (!purpose || !targets.length) return;
 			const tk = pickTargetByPurpose(purpose, targets);
@@ -3392,11 +3417,10 @@ function bestActionCore() {
 	} catch (eStateKey) {
 		_decisionStateKey = '';
 	}
-	if (_lastBestAction && _decisionStateKey &&
-		_lastBestActionStateKey === _decisionStateKey &&
-        (!_lastBestAction.__djscTransaction || _lastBestAction.__djscTransaction.domain !== 'play' ||
-            _lastBestAction.__djscTransaction.choiceWindow === playChoiceWindow(_status.event, _status.currentPhase || game.me)) &&
-		(Date.now() - _lastBestActionTime) < BEST_ACTION_CACHE_TTL) {
+    const decisionCacheContext={actor:_status.currentPhase||game.me,key:_decisionStateKey,
+        window:playChoiceWindow(_status.event,_status.currentPhase||game.me),epoch:cooperativeTrickEpoch()};
+    if(decisionCacheMatches({..._lastDecisionCacheContext,ba:_lastBestAction,t:_lastBestActionTime,key:_lastBestActionStateKey},
+        {...decisionCacheContext,ttl:BEST_ACTION_CACHE_TTL})) {
 		try { perfMark('bestAction.cache', performance.now() - _perfT0); } catch (eP) {}
 
 		return _lastBestAction;
@@ -3404,14 +3428,14 @@ function bestActionCore() {
 	_markPhase('preflight');
 
 	/* ★ per-player 节流（卡死缓解）：7 个 AI 玩家每次决策都全量评估是 CPU 大头。
-	 *   非本机玩家 1.5s 内复用其上次评估结果；本机玩家（game.me）保持实时评估不受限。 */
+	 *   非本机玩家仅在相同局面、选择窗口和局次内复用，1.5s 只是时间上限。 */
 	try {
 		const _ppMe = (_status && _status.currentPhase) || game.me;
 		if (_ppMe && _ppMe !== game.me) {
 			const _ppKey = _ppMe.playerid || _ppMe.name1 || _ppMe.name || 'ai';
 			const _ppStore = (window.__DJSC._baPPCache = window.__DJSC._baPPCache || {});
 			const _ppHit = _ppStore[_ppKey];
-			if (_ppHit && _ppHit.ba && (Date.now() - _ppHit.t) < 1500) return _ppHit.ba;
+			if(decisionCacheMatches(_ppHit,{...decisionCacheContext,ttl:1500}))return _ppHit.ba;
 		}
 	} catch (ePP) { }
 
@@ -3425,6 +3449,12 @@ function bestActionCore() {
 			return null;
 		}
 
+        const auditMode=modeSampleMeta(me);
+        const evaluationAudit=createEvaluationAudit({enabled:auditMode.mode==='doudizhu',detailed:!!tacticalEnabled('diagnostic'),
+         control:(()=>{try{return me===game.me?(_status.auto?'local-auto':'local-manual'):me.isOnline2?.()?'remote-human':'ai';}catch(_){return 'unknown';}})(),
+         settings:{suggestionFusion:commonSuggestionFusionFor(auditMode),mode:{enabled:auditMode.enabled,collect:auditMode.collect,specialistEnabled:auditMode.specialistEnabled,
+          specialistVersion:auditMode.specialistVersion,playerDemonstrations:auditMode.playerDemonstrations,autoUpdate:auditMode.autoUpdate},
+          tactical:tacticalSettingsSnapshot(),live:Object.fromEntries(['decisionScore','hardOverride','responseAI','override_use','override_respond','enablePlanner','useTrainedModel','aiStrength','championBoost','broadcastAI','comboChain','hideFarmerTeammateHand','classicEffectReport','showReport','archiveGames'].map(k=>[k,cfg(k,null)]))}});
 		/* 单次决策关系 memo：只在本次 bestAction 内存活，不跨状态/回合复用。
 		 * 复用既有 isEnemyOf / isAllyOf 结果，不改变三态关系语义。 */
 		const _enemyRelationMemo = new Map();
@@ -3714,7 +3744,7 @@ function bestActionCore() {
 
 				const attackEV = _attackExpectedValue(me, id, cardTarget);
 				const areaEV = (id === 'nanman' || id === 'wanjian') ? aoeValue(me, id) : null;
-				const ev = attackEV ? attackEV.score : areaEV ? 2 * areaEV.netImpact : expectedValue(me, id, cardTarget);
+				const ev = id==='jiedao'&&boundTarget.pair?boundTarget.pair.score:attackEV ? attackEV.score : areaEV ? 2 * areaEV.netImpact : expectedValue(me, id, cardTarget);
 				const mv = marginalValue(id, hand);
 				const weight = ATK_CARDS.includes(id) ? Number(cfg('wAtkCard', 1)) : DEF_CARDS.includes(id) ? Number(cfg('wDefCard', 1)) : 1;
 				const evScale = (0.5 + 0.5 * mv / (cardUse || 1)) * 2 * sit.tempo * (Number.isFinite(weight) ? Math.max(0, weight) : 1);
@@ -3726,7 +3756,7 @@ function bestActionCore() {
 				const judgeSignals = {};
 				const threatSignals = {};
 				const deepEvidence = deepValueEvidence(me, { id, target: cardTarget });
-				const cardOverride = readCardOverride(id, me, cardTarget);
+				const cardOverride = id==='jiedao'&&boundTarget.pair?null:readCardOverride(id, me, cardTarget);
 				let transitionPenalty = 0;
 				const collect = (signals, key, fn) => { try { const value = fn(); if (Number.isFinite(value)) signals[key] = value; } catch (_) {} };
 				if (cardTarget) {
@@ -3746,7 +3776,7 @@ function bestActionCore() {
 					attackSeed.score = s;
 					attackSeed.utilityVector = createBaselineUtilitySeed(s, 'fireExpectedValue', 'offense', { hitProbability: hit }).utilityVector;
 				}
-				const timingFns = { resource: () => resourceTimingBonus(me, { id, target: cardTarget }), jiedao: () => jiedaoBonus(me, { id, target: cardTarget }), shandian: () => shandianBonus(me, { id }), taoyuan: () => taoyuanBonus(me, { id }), wugu: () => wuguBonus(me, { id }), tao: () => taoBonus(me, { id }), wuxie: () => wuxieBonus(me, { id }), shunshou: () => shunshouBonus(me, { id, target: cardTarget }) };
+				const timingFns = { resource: () => resourceTimingBonus(me, { id, target: cardTarget }), jiedao: () => jiedaoBonus(me, { id, target: cardTarget, pair:boundTarget.pair }), shandian: () => shandianBonus(me, { id }), taoyuan: () => taoyuanBonus(me, { id }), wugu: () => wuguBonus(me, { id }), tao: () => taoBonus(me, { id }), wuxie: () => wuxieBonus(me, { id }), shunshou: () => shunshouBonus(me, { id, target: cardTarget }) };
 				for (const [key, fn] of Object.entries(timingFns)) collect(timingSignals, key, fn);
 				/* ㉖ 杀目标选择优化：只适用于杀 */
 				if (id === 'sha' && cardTarget) { const shaB = shaTargetBonus(me, cardTarget); threatSignals.shaTarget = shaB; }
@@ -3802,15 +3832,6 @@ function bestActionCore() {
 					} catch (eJiu) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eJiu); }
 				}
 
-				/* ★ 借刀专项：绑定的持刀者（敌人）没武器 → 借刀无效（宿主 filter 也会挡，引擎不评高分） */
-				if (id === 'jiedao' && cardTarget) {
-					try {
-						const _weps = cardTarget.getCards ? cardTarget.getCards('e', function (ec) {
-							try { return get.subtypes(ec).indexOf('equip1') >= 0; } catch (eE0) { return false; }
-						}) : null;
-						if (!_weps || !_weps.length) s = -999;
-					} catch (eJd) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eJd); }
-				}
 
 				/* ★ 装备节奏：濒死不恋装（保命优先）；藤甲怕火，谨慎降权 */
 				if (!cardTarget) {
@@ -3975,7 +3996,7 @@ function bestActionCore() {
 					} catch (eT) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eT); }
 				} else if (cardTarget) {
 					targetNames = targetKey(cardTarget);
-					targetDesc = '→' + targetNames + (boundTarget.score ? '（目标分' + Math.round(boundTarget.score * 10) / 10 + '）' : '');
+					targetDesc = '→' + targetNames + (id==='jiedao'&&boundTarget.pair?.victim?'→'+targetKey(boundTarget.pair.victim):'') + (boundTarget.score ? '（目标分' + Math.round(boundTarget.score * 10) / 10 + '）' : '');
 				}
 
                 for (const option of cardOptions || [null]) {
@@ -3994,7 +4015,8 @@ function bestActionCore() {
 					id: id,
 					target: targetNames,
 					targetObj: (id === 'tiesuo') ? null : cardTarget,
-					targetList: (id === 'tiesuo' && !recast) ? tieTargets : null,
+					targetList: id==='jiedao'&&boundTarget.pair?.use?[boundTarget.pair.holder,boundTarget.pair.victim]:(id === 'tiesuo' && !recast) ? tieTargets : null,
+                    jiedaoPair:id==='jiedao'?boundTarget.pair:null,
 					targetResolved: id === 'tiesuo' ? true : boundTarget.resolved,
 					recast: recast,
 					targetScore: id === 'tiesuo' ? runtimeScore(bestTs) : runtimeScore(boundTarget.score || 0),
@@ -4002,6 +4024,7 @@ function bestActionCore() {
 					reason: (recast ? "重铸" : "使用") + (v.name || id) + targetDesc + "（EV" + Math.round(ev * 10) / 10 + " 边际" + Math.round(mv * 10) / 10 + ovTag + "）"
 				});
 				adoptAttackUtilitySeed(cardAct, id === 'tiesuo' ? (tiesuoSeed || createBaselineUtilitySeed(0, 'tiesuoEvaluator', 'control', { unavailable: true })) : attackSeed, { roundingOnly: true });
+				if(id==='jiedao'&&boundTarget.pair&&!boundTarget.pair.use)vetoCandidate(cardAct,'无正收益合法借刀组合');
 				establishUtilityReference(cardAct);
 				if (id !== 'tiesuo') applyTransitionUtility(cardAct, transitionPenalty);
 				applyOptimizationEvidence(cardAct, cardOverride);
@@ -4050,7 +4073,7 @@ function bestActionCore() {
 				/* 找到目标玩家对象 */
 				const tgt = a.targetObj || resolvePlayerByKey(a.target, game.players || []);
 				if (!tgt) return;
-				if (_isAllyMemo(tgt)) {
+				if (_isAllyMemo(tgt)&&!(a.id==='jiedao'&&a.jiedaoPair?.use)) {
 					/* ★ 不刻意加规则，让模型自己学：
 					 *   打队友的惩罚不写死，而是把"是否打队友"作为特征写进 130 维特征
 					 *   模型从对局反馈中自己学习这个特征的权重
@@ -4066,6 +4089,7 @@ function bestActionCore() {
 		/* ★ 统一候选 policy 默认值 */
 		acts.forEach(function (a) { try { ensureCandidatePolicy(a); } catch (e) {} });
 
+        evaluationAudit.record('beforeBasicRules',acts);
 		/* 基本规则负责目标与policy，保留逐模块故障隔离。
 		 * 兼容观察器检测意外改分，差额保留legacyResidual供诊断。 */
 		try { trackUtilityStage(acts, 'basicCardRules', 'legacyResidual', function () { applyBasicCardPlayRules(me, acts); }); }
@@ -4079,6 +4103,7 @@ function bestActionCore() {
 		try { trackUtilityStage(acts, 'basicTargetRules', 'legacyResidual', function () { applyBasicTargetRules(me, acts); }); }
 		catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
+        evaluationAudit.record('beforeCommonSuggestions',acts);
 		/* 硬规则先绑定实际目标，方向守卫以实例逐个判断；分数已低于违规上限时不再重复扣。 */
 		applyCommonUtilitySuggestions(acts, [
 			{ source: 'modeStrategy', dimension: 'team', run: rows => { const mode = getModeStrategy(); for (const a of rows) { const delta = mode.decisionBoost(me, a); if (Number.isFinite(delta)) a.score += delta; a.mode = mode.name; } } },
@@ -4087,10 +4112,13 @@ function bestActionCore() {
 			{ source: 'resourceMaximize', dimension: 'resource', run: rows => applyResourceMaximizeBonus(me, rows) },
 			{ source: 'lossMinimize', dimension: 'risk', run: rows => applyLossMinimizeBonus(me, rows) },
 			{ source: 'characterPolicy', dimension: 'synergy', run: rows => applyCharacterPolicyToCandidates(me, rows.filter(a => a.type !== 'skill'), characterPolicy) },
-		]);
+		], {audit:auditMode.mode==='doudizhu'&&!!tacticalEnabled('diagnostic'),
+         fusion:commonSuggestionFusionFor(auditMode)});
+        evaluationAudit.record('afterCommonSuggestions',acts);
 
 		for (const a of acts) { try { applyDirectionUtility(me, a, relActionValue); } catch (_) {} }
 
+        evaluationAudit.record('afterDirectionGuard',acts);
 		/* ★ #39 双轨对账：到此为止所有统一后处理分值变化应已进入 Utility Vector。 */
 		try { finalizeUtilityPipeline(acts); }
 		catch (eU) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eU); }
@@ -4627,6 +4655,7 @@ function bestActionCore() {
 
         decisionStages.record('guard',guardBefore,best,guardEvidence);
         decisionStages.record('classicCandidate',best,best,classicCandidateShadow(best,eligibleActs,modeContext()));
+        decisionStages.setEvaluationAudit(evaluationAudit.snapshot(acts,best));
 		_markPhase('guard');
 
 		/* ★ M07：Guard 可能已把 best 换成"结束回合"，动作代号要以最终 best 重新算，避免 action≠rule */
@@ -4849,6 +4878,7 @@ function bestActionCore() {
 		_lastBestAction = _finalResult;
 		_lastBestActionTime = Date.now();
 		_lastBestActionStateKey = _decisionStateKey || '';
+        _lastDecisionCacheContext=decisionCacheContext;
 
 		/* ★ per-player 缓存写入（非本机玩家） */
 		try {
@@ -4856,7 +4886,7 @@ function bestActionCore() {
 			if (_ppMe2 && _ppMe2 !== game.me) {
 				const _ppKey2 = _ppMe2.playerid || _ppMe2.name1 || _ppMe2.name || 'ai';
 				const _ppStore2 = (window.__DJSC._baPPCache = window.__DJSC._baPPCache || {});
-				_ppStore2[_ppKey2] = { ba: _finalResult, t: Date.now() };
+				_ppStore2[_ppKey2] = { ba: _finalResult, t: Date.now(),...decisionCacheContext };
 			}
 		} catch (ePP2) { }
 
@@ -5277,6 +5307,7 @@ function settle() {
                 const context=match.meta?.modeContext;
                 if(context?.mode==='doudizhu'){
                     const samples=selectClassicDataset(_trainExportModule.getSamples()).samples.filter(s=>s.m.sessionId===context.sessionId).length;
+                    match.choiceAuditStats=choiceAuditStats();
                     match.classicEffects={runtime:classicRuntimeSummary(context.sessionId),samples,update:{status:context.autoUpdate?'running':'disabled'}};
                 }
 				preparePlayerFeedback(match, cfg("playerFeedback", true) !== false);
@@ -5453,6 +5484,7 @@ export function getInstalled() { return installed; }
 export function setInstalled(v) { installed = v; }
 export function getMEM() { return MEM; }
 export function clearScoreState() {
+ resetCooperativeTrickIntents();
 	settleDone = false; round = {}; _rawRound = {}; scoreLog = [];
 	resetPlanner(); gameTelemetry.reset(); matchArchive.reset(); matchReplay = null; _playerLogs = []; DECISION_LOG.length = 0; SUGGESTION_LOG.length = 0;
 	_lastDecisionTraceKey = ''; _lastDecisionTraceTs = 0;

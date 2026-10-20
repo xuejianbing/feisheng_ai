@@ -1,10 +1,16 @@
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { cfg } from '../../foundation/config/util.js?v=41a';
-import { tacticalEnabled, fireUtility } from '../strategy/tacticalOptimization.js?v=41a';
+import { tacticalEnabled, tacticalSettingsSnapshot, fireUtility } from '../strategy/tacticalOptimization.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';
+import {beginChoiceAudit} from '../../perception/journal/choiceAudit.js?v=41a';
+import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {benefitTrickEffect} from './benefitTrickEffect.js?v=41a';
+import {delayedStateImpact} from '../strategy/delayedOptimization.js?v=41a';
+import {canSupplyTrickResponse} from './responseMaterials.js?v=41a';
+import {getCurrentLinkedSet,scoreTiesuoAction} from '../cards/tiesuoEvaluator.js?v=41a';
 
 export const WUXIE_OPTIMIZED_REQUEST = '__djscWuxieOptimized';
-const supported = new Set(['wanjian','nanman','juedou','huogong','lebu','bingliang','shandian','guohe','shunshou','wuzhong','taoyuan','wugu']);
+const supported = new Set(['wanjian','nanman','juedou','huogong','tiesuo','lebu','bingliang','shandian','guohe','shunshou','wuzhong','taoyuan','wugu']);
 const clamp = (value, cap = 12) => Math.max(-cap, Math.min(cap, value));
 function relation(player, target, context) {
  if (target === player) return 1;
@@ -12,22 +18,7 @@ function relation(player, target, context) {
 }
 function count(target) { return Math.max(0, Number(target?.countCards?.('h')) || 0); }
 function skill(target, names) { return names.some(name => target?.hasSkill?.(name)); }
-function canRespond(player, id, ctx) {
- try {
-  const trigger = ctx.responseEvent;
-  const parent = trigger?.getParent?.() || trigger?.parent;
-  for (const event of [trigger, parent]) {
-   const hit = event?.directHit;
-   if (hit === true || hit?.includes?.(player) || hit?.has?.(player)) return false;
-  }
-  if (ctx.source?.hasSkillTag?.('directHit_ai', true, { target: player, card: ctx.card })) return false;
-  const requirement = id === 'shan' ? 'shanRequired' : 'shaRequired';
-  const required = Math.max(1, Number(trigger?.[requirement]) || 1,
-   Number(parent?.customArgs?.[player.playerid]?.[requirement]) || 1);
-  return player.getCards('h').filter(card => get.name(card, player) === id &&
-   typeof lib.filter.cardRespondable === 'function' && lib.filter.cardRespondable(card, player)).length >= required;
- } catch (_) { return false; }
-}
+function canRespond(player,id,ctx){return canSupplyTrickResponse(player,id,ctx);}
 function damageValue(player, target, ctx, context) {
  const rel = relation(player, target, context);
  if (!rel) return 0;
@@ -51,9 +42,20 @@ function damageValue(player, target, ctx, context) {
 }
 
 /* null means unsupported/ambiguous: leave the choice to the native AI. */
+export function tiesuoWuxieEffect(player,ctx,context={}){
+ if(!tacticalEnabled('tiesuo'))return null;
+ const targets=ctx.effectScope==='all'?[...new Set(ctx.targets||[])]:ctx.target?[ctx.target]:[];
+ const players=game.players||[];
+ if(!targets.length||targets.some(t=>!players.includes(t)))return null;
+ const delta=scoreTiesuoAction(player,{beforeLinked:getCurrentLinkedSet(players),targets},{...context,
+  classicDoudizhu:get.mode?.()==='doudizhu'&&['normal','kaihei','huanle'].includes(_status.mode)});
+ return {value:clamp(delta*3,24),scope:ctx.effectScope||'target'};
+}
 export function refinedWuxieEffect(player, ctx, context = {}) {
  const id = ctx.originalSpellId;
  if (!supported.has(id)) return null;
+ if(['taoyuan','wuzhong','wugu'].includes(id))return benefitTrickEffect(player,ctx,(a,b)=>relation(a,b,context));
+ if(id==='tiesuo')return tiesuoWuxieEffect(player,ctx,context);
  if (id === 'guohe' || id === 'shunshou') return { legacy: true };
  const targets = ctx.effectScope === 'all' ? [...new Set(ctx.targets || [])] :
   ctx.target ? [ctx.target] : id === 'wuzhong' && ctx.source ? [ctx.source] : [];
@@ -64,19 +66,12 @@ export function refinedWuxieEffect(player, ctx, context = {}) {
   if (!rel) continue;
   if (['wanjian','nanman','juedou','huogong'].includes(id)) {
    value += damageValue(player, target, ctx, context);
-  } else if (['lebu','bingliang','shandian'].includes(id)) {
-   const h = count(target);
-   let magnitude = id === 'lebu' ? 2.6 + Math.min(8, h + 2) * 0.35 :
-    id === 'bingliang' ? 3 + 2 / (h + 1) : 5;
-   if (skill(target, ['guicai','guidao','huanshi','zhenyi'])) magnitude *= 0.7;
-   if (h > 0 && skill(target, ['qiaobian','olqiaobian'])) magnitude *= 0.45;
-   value -= rel * magnitude * (id === 'shandian' ? 0.4 : 0.75);
-  } else if (id === 'taoyuan') {
-   if (target.hp < target.maxHp) value += rel * (target.hp <= 1 ? 4.2 : 2);
-  } else if (id === 'wuzhong') {
-   value += rel * (1.8 + (count(target) <= 1 ? 1.8 : 0) + (target.hp <= 1 ? 0.8 : 0));
-  } else if (id === 'wugu') {
-   value += rel * (count(target) <= 1 || target.hp <= 1 ? 2.5 : 1.3);
+  } else if (['lebu','bingliang'].includes(id)) {
+   const plan=delayedStateImpact(ctx.source,target,id);if(!plan)return null;
+   value-=rel*plan.utility*3;
+  } else if(id==='shandian'){
+   let effect;try{effect=get.effect(target,ctx.card||{name:id},ctx.source,player);}catch(_){return null;}
+   if(!Number.isFinite(effect))return null;value+=effect*3;
   }
  }
  return { value: Math.round(clamp(value, 24) * 1000) / 1000, scope: ctx.effectScope || 'target' };
@@ -111,9 +106,19 @@ export function installWuxieOptimization(evaluate) {
  if (typeof original !== 'function' || typeof evaluate !== 'function') return () => {};
  let active = true;
  function prepare(player, request) {
+   const audit=request?.type==='wuxie'?beginChoiceAudit(tacticalEnabled('diagnostic'),player,request,'response',_status.event):null;
    if (!active || !tacticalEnabled('wuxie') || cfg('responseAI', true) === false || request?.type !== 'wuxie' ||
-    player === game.me && !_status.auto || player.isOnline2?.() || request[WUXIE_OPTIMIZED_REQUEST]) return;
+    player === game.me && !_status.auto || player.isOnline2?.() || request[WUXIE_OPTIMIZED_REQUEST]) {
+    audit?.record('not-run',{reason:!active?'bridge-inactive':!tacticalEnabled('wuxie')?'optimization-off':cfg('responseAI',true)===false?'response-off':request[WUXIE_OPTIMIZED_REQUEST]?'already-prepared':'human-controlled'});
+    return;
+   }
    const decision = evaluate(player, request, { hostRequest: request });
+   const facts=d=>({originalSpellId:d?.originalSpellId||null,sourceId:playerKey(d?.source),targetId:playerKey(d?.target),
+    use:d?.use??null,score:d?.score??null,effectValue:d?.effectValue??null,resourceCost:d?.resourceCost??null,
+    hostState:d?.hostState??null,playerIntentRespected:!!d?.playerIntentRespected,cooperativeIntent:d?.cooperativeIntent||null,
+    effectBasis:d?.effectBasis||'unknown',reason:d?.reason||'unknown',executionState:'suggested'});
+   audit?.record(decision?.resolved?'evaluated':'unresolved',{...facts(decision),
+    settings:{tactical:tacticalSettingsSnapshot(),responseAI:cfg('responseAI',true)}});
    if (!decision?.resolved) return;
    if (tacticalEnabled('diagnostic')) {
     try { console.info('[无名AI·无懈优化]', { card: decision.originalSpellId, target: decision.target?.playerid, use: decision.use, score: decision.score, cost: decision.resourceCost }); } catch (_) {}
@@ -125,8 +130,14 @@ export function installWuxieOptimization(evaluate) {
      const materialCost = wuxieMaterialCost(player, item);
      if (materialCost !== null) current = evaluate(player, request, { hostRequest: request, materialCost });
     } catch (_) {}
-    if (!current?.resolved) return native ? native.apply(this, arguments) : 0;
-    return current.use ? 1 + Math.max(0, current.score) : 0;
+    if (!current?.resolved) {
+     const score=native ? native.apply(this, arguments) : 0;
+     audit?.record('native-fallback',{aiScore:Number.isFinite(score)?score:null,reason:'material-or-context-unresolved',executionState:'suggested'});
+     return score;
+    }
+    const score=current.use ? 1 + Math.max(0, current.score) : 0;
+    audit?.record('material-scored',{...facts(current),aiScore:score});
+    return score;
    };
    request[WUXIE_OPTIMIZED_REQUEST] = true;
  }

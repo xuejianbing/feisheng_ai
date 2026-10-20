@@ -91,12 +91,30 @@ export function matchFiles(match, translate = x => String(x)) {
   files['斗地主决策对账.json']=JSON.stringify(diag,null,2);
   const action=a=>!a?'无记录':a.type==='end'?'结束回合':(a.recast?'重铸':a.type==='skill'?'发动技能':'使用')+'【'+name(a.id||a.type||'?')+'】'+(a.target?' → '+(Array.isArray(a.target)?a.target:[a.target]).map(name).join('、'):'');
   const statuses={'committed':'已执行','execution-mismatch':'执行不一致','suggestion-only':'仅有建议','missing-decision-record':'缺少决策记录'};
+  const number=v=>Number.isFinite(v)?Math.round(v*10000)/10000:'未知';
   const lines=['斗地主决策对账 · '+match.matchId,'建议 '+diag.summary.transactions+' 条；执行 '+diag.summary.committed+' 条；差异 '+diag.summary.mismatched+' 条；仅建议 '+diag.summary.suggestionOnly+' 条',diag.note,'记录完整：'+(diag.recordingComplete?'是':'否'),''];
   for(const r of diag.rows){
    lines.push('玩家 '+r.actorId+'｜事务 '+r.transactionId+'｜'+statuses[r.status], '建议：'+action(r.selected),'实际：'+action(r.actual));
    for(const stage of r.stageChanges)lines.push('阶段 '+stage.stage+'：'+action(stage.before)+' → '+action(stage.after));
+   lines.push('观测细节：'+r.auditAvailability);
+   if(r.evaluationAudit){
+    lines.push('控制方式：'+r.evaluationAudit.control,'本次开关：'+JSON.stringify(r.evaluationAudit.settings));
+    for(const s of r.evaluationAudit.stages||[])lines.push('早期阶段 '+s.stage+'：'+action(s.selected)+'；分数 '+s.selected?.score);
+    const labels={'no-suggestion':'无加分建议','not-selected-same-dimension':'同维度未采用','not-selected-same-reason':'同理由重复建议未采用','limited':'受幅度上限限制','included-in-aggregate':'进入聚合'};
+    for(const c of r.evaluationAudit.candidates||[])for(const dim of c.commonSuggestions?.dimensions||[])for(const s of dim.suggestions||[])
+     lines.push('候选 '+action(c.action)+'｜'+s.source+'：建议 '+number(s.delta)+'；'+(labels[s.status]||s.status)+
+      (s.reasonKey?'；理由组 '+s.reasonKey:'')+(Number.isFinite(s.appliedDelta)?'；分摊贡献 '+number(s.appliedDelta):'')+
+      '；维度合计 '+number(dim.appliedDelta)+'；上限 '+number(dim.limit)+(s.reason?'；'+s.reason:''));
+   }
+   for(const s of r.stageSummary)if(s.status||s.error)lines.push('模块 '+s.stage+'：'+(s.status||'unknown')+(s.reason?'；'+s.reason:'')+(s.error?'；异常 '+s.error:''));
    lines.push('收益状态：'+r.rewardStatus+(r.outcome?.reward!=null?'；即时收益：'+r.outcome.reward:''),...(r.reviewReasons.length?r.reviewReasons.map(x=>'需核对：'+x):[]),'');
   }
+  for(const c of diag.choices){
+   lines.push('响应/子选择 '+c.domain+'｜玩家 '+c.actorId+'｜请求 '+c.requestId+'｜宿主动作关联 '+(c.rootActionId||'未知'));
+   for(const e of c.events)lines.push('  '+e.phase+'：'+JSON.stringify(e));
+   lines.push('说明：记录的是评分、选择返回或宿主调用；未据此确认最终生效。','');
+  }
+  lines.push('响应/子选择容量：'+JSON.stringify(diag.choiceRecording));
   files['斗地主决策对账.txt']=lines.join('\n');
  }
  if (match.replay && match.replay.encoded) files['对局录像.txt'] = match.replay.encoded;

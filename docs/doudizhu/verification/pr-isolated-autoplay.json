@@ -1,0 +1,80 @@
+{
+  "completedAt": "2026-10-20T14:49:45.996Z",
+  "status": "passed",
+  "scope": "真实斗地主宿主完整托管对局烟测；非胜率或全配置验证",
+  "browserVersion": "155.0.8059.85",
+  "report": {
+    "settings": {
+      "enabled": true,
+      "fire": true,
+      "tiesuo": true,
+      "wuxie": true,
+      "guding": true,
+      "wine": true,
+      "strip": true,
+      "rescue": true,
+      "crossbow": true,
+      "diagnostic": false,
+      "delay": true
+    },
+    "startedAt": 1792507768262,
+    "phases": 6,
+    "uses": 30,
+    "done": true,
+    "initial": [
+      {
+        "id": "724997810",
+        "role": "fan",
+        "name": "tw_zhangnan",
+        "hp": 4
+      },
+      {
+        "id": "238250011",
+        "role": "zhu",
+        "name": "jiangziya",
+        "hp": 4
+      },
+      {
+        "id": "267966612",
+        "role": "fan",
+        "name": "ol_wangrong",
+        "hp": 3
+      }
+    ],
+    "result": true,
+    "elapsedMs": 17731,
+    "hostVersion": "1.11.6",
+    "mode": "doudizhu",
+    "submode": "normal",
+    "decisions": 20,
+    "overrideStats": {
+      "use": {
+        "pass": 22,
+        "endTurn": 1
+      },
+      "respond": {},
+      "discard": {},
+      "compare": {},
+      "soft": {
+        "hit": 23
+      }
+    },
+    "alive": [
+      {
+        "role": "fan",
+        "hp": 3
+      },
+      {
+        "role": "fan",
+        "hp": 3
+      }
+    ],
+    "dead": [
+      {
+        "role": "zhu",
+        "hp": 0
+      }
+    ]
+  },
+  "errors": []
+}

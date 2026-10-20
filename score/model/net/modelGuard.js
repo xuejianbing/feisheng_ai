@@ -7,7 +7,9 @@
  * ============================================
  */
 
-import { game } from '../../foundation/adapt/host.js?v=41a';
+import {evaluateBoundJiedaoCandidate} from '../../decision/cards/jiedaoEvaluator.js?v=41a';
+import {stripPlan,tacticalSettingsSnapshot} from '../../decision/strategy/tacticalOptimization.js?v=41a';
+import { game,get } from '../../foundation/adapt/host.js?v=41a';
 import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 import { resolvePlayerByKey, playerDisplayName } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { isCandidateEligible, ensureCandidatePolicy, sameCandidateAction, PRIORITY_TIER } from '../../decision/state/actionCandidate.js?v=41a';
@@ -164,11 +166,12 @@ export function guardCheck(me, action, context) {
                 return { ok: false, rule: RED_LINES.TARGET_MISSING, reason: '目标不存在或已死亡', fallback: _fallbackAction(context) };
             }
 
+            const borrow=evaluateBoundJiedaoCandidate(me,action);
             /* 对每个目标检查红线 2/3/4（铁锁等任一同盟目标触碰红线即拦截） */
             for (const tgtObj of r.objs) {
                 /* ---- 红线 2：攻击盟友 ---- */
                 if (ATK_IDS.indexOf(action.id) >= 0 && _isAlly(me, tgtObj)) {
-                    const isTactical = (action.id === 'tiesuo' && action.reason && action.reason.indexOf('战术') >= 0);
+                    const isTactical = (action.id==='jiedao'&&borrow?.use&&tgtObj===borrow.holder)||(action.id === 'tiesuo' && action.reason && action.reason.indexOf('战术') >= 0);
                     if (!isTactical) {
                         _recordBlock(me, action, RED_LINES.ALLY_ATTACK, '目标=' + playerDisplayName(tgtObj));
                         return { ok: false, rule: RED_LINES.ALLY_ATTACK, reason: '攻击盟友', fallback: _fallbackAction(context) };
@@ -183,11 +186,10 @@ export function guardCheck(me, action, context) {
 
                 /* ---- 红线 4：顺/拆盟友非判定区 ---- */
                 if (STEAL_IDS.indexOf(action.id) >= 0 && _isAlly(me, tgtObj)) {
-                    const hasJudgeCards = (function () {
-                        try {
-                            return tgtObj.judges && tgtObj.judges.length > 0;
-                        } catch (e) { return false; }
-                    })();
+                    const card=(me.getCards?.('h')||[]).find(c=>get.name(c,me)===action.id)||{name:action.id};
+                    const plan=tacticalSettingsSnapshot().enabled?stripPlan(me,card,tgtObj):undefined;
+                    if(plan)continue;
+                    const hasJudgeCards=plan===undefined&&((tgtObj.getCards?.('j')||tgtObj.judges||[]).length>0);
                     if (!hasJudgeCards) {
                         _recordBlock(me, action, RED_LINES.ALLY_SHUN, '目标=' + playerDisplayName(tgtObj));
                         return { ok: false, rule: RED_LINES.ALLY_SHUN, reason: '顺/拆盟友非判定区', fallback: _fallbackAction(context) };

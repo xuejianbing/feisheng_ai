@@ -14,8 +14,8 @@
  *   - 桃：留到真正需要（算清存活回合）
  *   - 酒：濒死时当桃用自救
  *   - 无懈：只解关键锦囊（乐/兵/南蛮/万箭/绝境判定）
- *   - 借刀杀人：目标是队友时按武器价值权衡拒绝
- *   - 决斗：识别对手点数，若追不上则放弃跟牌保杀
+ *   - 借刀杀人：实际被杀者的杀效果与交武器分支统一比较
+ *   - 决斗：按宿主实际响应要求判断，不比较杀的点数
  * 完全不接管 chooseToRespond / chooseToDiscard 流程。
  */
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
@@ -25,9 +25,13 @@ import { onPlayerSkillInjected } from '../../foundation/config/util.js?v=41a';
 import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
 import { shouldUseWuxie } from '../response/wuxieEvaluator.js?v=41a';   /* ★ 无懈唯一权威策略源 */
 import { isAllyOf, isEnemyOf, isNeutralOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import {installJiedaoChoiceBridge} from '../cards/jiedaoChoiceBridge.js?v=41a';
+import {trickResponseContext} from '../response/trickResponseContext.js?v=41a';
+import {resolveJiedaoResponse,evaluateJiedaoResponse,installJiedaoResponseBridge} from '../response/jiedaoResponse.js?v=41a';
 
 const SKILL_ID = '_djsc_responseAI';
 let _installed = false;
+let _removeJiedaoBridge=null,_removeJiedaoChoiceBridge=null;
 
 /* ================= 闪 ================= */
 /* 判断：这张闪是否值得保留 */
@@ -182,129 +186,8 @@ function _shouldWuxie(player, target, card) {
 }
 
 /* ================= 借刀杀人 ================= */
-/* 从事件链上溯实际目标 */
-function _jiedaoTarget() {
-	try {
-		const ev = _status.event;
-		if (!ev) return null;
-		if (ev.name === 'jiedao' && ev.targets && ev.targets.length) return ev.targets[0];
-		if (ev.getParent) {
-			let p = ev;
-			for (let i = 0; i < 6; i++) {
-				p = p.getParent && p.getParent();
-				if (!p) break;
-				if (p.name === 'jiedao' && p.targets && p.targets.length) return p.targets[0];
-			}
-		}
-		if (ev._jiedao_target) return ev._jiedao_target;
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	return null;
-}
-
-/* 判断是否该拒绝借刀 */
-function _shouldRefuseJiedao(player) {
-	try {
-		const target = _jiedaoTarget();
-		if (!target) return false;
-
-		const ally = isAllyOf(player, target);
-
-		if (ally) {
-			if ((target.hp || 0) <= 1) return true;
-
-			let weaponValue = 0;
-			let weaponWeight = 1.0;
-			try {
-				const weapons = player.getCards('e').filter(function (w) {
-					try {
-						const subs = get.subtypes(w);
-						return subs && subs.indexOf('equip1') >= 0;
-					} catch (e) { return false; }
-				});
-				weapons.forEach(function (w) {
-					let v = 0;
-					try { v = get.equipValue(w, player) || get.value(w, player) || 0; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-					if (v > weaponValue) {
-						weaponValue = v;
-						try {
-							const nm = get.name(w) || '';
-							if (nm === 'zhuge') weaponWeight = 1.8;
-							else if (nm === 'qinglong') weaponWeight = 1.4;
-							else if (nm === 'qilin') weaponWeight = 1.3;
-							else if (nm === 'qinggang') weaponWeight = 1.3;
-							else weaponWeight = 1.0;
-						} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-					}
-				});
-			} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-
-			const hpAfterHit = Math.max(1, (target.hp || 0) - 1);
-			const hpRatio = hpAfterHit / Math.max(1, target.maxHp || 4);
-			const urgency = hpRatio <= 0.25 ? 2.0 : (hpRatio <= 0.5 ? 1.4 : 1.0);
-			const allyLoss = 2 * urgency;
-
-			if (weaponValue * weaponWeight > allyLoss) return false;
-			return true;
-		}
-
-		if (isNeutralOf(player, target) && (target.hp || 0) <= 1) return true;
-		return false;
-	} catch (e) { return false; }
-}
-
-/* ================= 决斗 ================= */
-/* 读取对手已打出的最后一张杀点数 */
-function _duelOpponentNumber() {
-	try {
-		const ev = _status.event;
-		if (!ev) return null;
-		let p = ev;
-		for (let i = 0; i < 6; i++) {
-			if (!p || typeof p.getParent !== 'function') break;
-			p = p.getParent();
-			if (!p) break;
-			if (p.name === 'juedou') {
-				const list = p.juedou || p._juedouCards || p.responded || p.cards;
-				if (Array.isArray(list) && list.length) {
-					const last = list[list.length - 1];
-					const n = last && (last.number || (get && get.number ? get.number(last) : null));
-					if (typeof n === 'number' && n > 0) return n;
-				}
-				if (p._lastJuedouCard) {
-					const n = p._lastJuedouCard.number || get.number(p._lastJuedouCard);
-					if (typeof n === 'number') return n;
-				}
-				return null;
-			}
-		}
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	return null;
-}
-
-/* 决斗跟牌判断：true = 放弃，false = 继续跟 */
-function _shouldFoldInDuel(player) {
-	try {
-		const oppNum = _duelOpponentNumber();
-		if (oppNum === null) return false;
-
-		const myShas = player.getCards('hs', 'sha');
-		if (!myShas.length) return false;
-
-		let myMax = 0;
-		myShas.forEach(function (c) {
-			const n = c.number || get.number(c);
-			if (typeof n === 'number' && n > myMax) myMax = n;
-		});
-
-		if (myMax <= oppNum) return true;
-
-		if (myShas.length === 1 && (player.hp || 0) >= 3) {
-			const gap = myMax - oppNum;
-			if (gap <= 2) return true;
-		}
-		return false;
-	} catch (e) { return false; }
-}
+/* 与实际 chooseToUse 评分共享持刀者/addedTarget 和分支比较。 */
+function _jiedaoTarget(player){return resolveJiedaoResponse(player,_status.event)?.victim||null;}
 
 /* ================= 响应场景辅助 ================= */
 function _isRespondingToSha() {
@@ -317,7 +200,7 @@ function _isRespondingToSha() {
 			if (p && p.name === 'chooseToRespond') return true;
 		}
 		if (ev.name === 'nanman' || ev.name === 'juedou' || ev.name === 'jiedao') return true;
-		if (_jiedaoTarget()) return true;
+		// Borrowed Sha is handled before generic retention in skillTagFilter.
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	return false;
 }
@@ -372,26 +255,18 @@ export function installResponseAI() {
 							}
 						}
 						if (tag === 'respondSha' || tag === 'sha') {
-							/* 借刀场景优先判断 */
-							if (_shouldRefuseJiedao(player)) {
-								try {
-									_status.djsc_lastResponse = {
-										kind: 'jiedao-refuse', score: -4, ts: Date.now(),
-										reason: '借刀目标是队友，拒绝',
-									};
-								} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-								return false;
+							/* A resolved branch cannot be vetoed again by generic Sha retention. */
+							const borrow=evaluateJiedaoResponse(player,_status.event);
+							if(borrow.resolved){
+								_status.djsc_lastResponse={kind:'jiedao-'+borrow.action,score:borrow.delta,ts:Date.now(),reason:borrow.reason};
+								return borrow.action==='transfer'?false:undefined;
 							}
-							/* 决斗场景：点数不够则放弃 */
-							if (_shouldFoldInDuel(player)) {
-								try {
-									_status.djsc_lastResponse = {
-										kind: 'duel-fold', score: -3, ts: Date.now(),
-										reason: '决斗点数追不上，放弃',
-									};
-								} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-								return false;
-							}
+							if(_jiedaoTarget(player))return;
+
+                            // Standard duel responds with legal Sha, regardless of rank. Native AI owns
+                            // Sha requirements, conversion skills and voluntary damage decisions.
+                            if(trickResponseContext(player,_status.event,['juedou']))return;
+
 							/* 其它响应场景：杀保留判断 */
 							if (_isRespondingToSha() && _shouldKeepSha(player, arg)) {
 								try {
@@ -440,6 +315,8 @@ export function installResponseAI() {
 			} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		});
 		_hookAddSkill();
+		_removeJiedaoBridge=installJiedaoResponseBridge();
+		_removeJiedaoChoiceBridge=installJiedaoChoiceBridge();
 
 		_installed = true;
 		log.info('response', '响应/弃牌 AI 增强已安装');
@@ -465,6 +342,8 @@ function _hookAddSkill() {
 
 export function uninstallResponseAI() {
 	try {
+		_removeJiedaoChoiceBridge?.();_removeJiedaoChoiceBridge=null;
+		_removeJiedaoBridge?.();_removeJiedaoBridge=null;
 		try { delete lib.skill[SKILL_ID]; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		(game.players || []).forEach(function (p) {
 			try { p.removeSkill(SKILL_ID); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }

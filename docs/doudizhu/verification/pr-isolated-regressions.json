@@ -1,0 +1,92 @@
+{
+  "scope": "本次独立PR分支；不包含并行2v2改动",
+  "suites": 17,
+  "checks": 1014,
+  "rows": [
+    {
+      "test": "tools/test-ai-boundaries.mjs",
+      "checks": 12,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-decision-audit.mjs",
+      "checks": 32,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-decision-state-fingerprint.mjs",
+      "checks": 12,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-friendly-strip-plan.mjs",
+      "checks": 15,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-identity.mjs",
+      "checks": 44,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-jiedao-pair.mjs",
+      "checks": 22,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-jiedao-response.mjs",
+      "checks": 17,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-manual-fire-control.mjs",
+      "checks": 8,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-regressions.mjs",
+      "checks": 94,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-removal-cooperation.mjs",
+      "checks": 17,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-response-material-packing.mjs",
+      "checks": 17,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-suggestion-fusion.mjs",
+      "checks": 19,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-trick-boundaries.mjs",
+      "checks": 22,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-trick-cooperation.mjs",
+      "checks": 25,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-utility-boundaries.mjs",
+      "checks": 7,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-weights.mjs",
+      "checks": 637,
+      "result": "passed"
+    },
+    {
+      "test": "tools/test-wuxie-player-intent.mjs",
+      "checks": 14,
+      "result": "passed"
+    }
+  ]
+}

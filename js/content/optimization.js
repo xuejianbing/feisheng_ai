@@ -1,5 +1,6 @@
 import {identityHostEffect,identityHostDamageEffect,identityHostAttitude} from '../../score/perception/observer/identityDiagnostics.js?v=41a';
-import { installTacticalOptimization } from '../../score/decision/strategy/tacticalOptimization.js?v=41a';
+import {bestJiedaoPair,supportedJiedaoShape} from '../../score/decision/cards/jiedaoEvaluator.js?v=41a';
+import { installTacticalOptimization,tacticalSettingsSnapshot } from '../../score/decision/strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
  * // Wydawca: Feisheng Original
@@ -17,6 +18,15 @@ import { hostTiesuoDecision, hostTiesuoTargetEffect } from '../../score/decision
 function tiesuoModeContext() {
  return {classicDoudizhu: typeof get.mode === 'function' && get.mode() === 'doudizhu' && ['normal','kaihei','huanle'].includes(_status.mode)};
 }
+
+/* Identity-card overrides consume the same public plan when supported. */
+export function hostJiedaoPlan(player,holder=null,selected=false){
+ if(selected&&ui.selected?.cards?.length===1&&get.name(ui.selected.cards[0],player)==='jiedao')holder=ui.selected.targets?.[0]||holder;
+ if(!tacticalSettingsSnapshot().enabled||!supportedJiedaoShape())return null;
+ const r=bestJiedaoPair(player,holder?{holder}:{});
+ return r.resolved?r:null;
+}
+
 export function createTiesuoHostAI() {
 	return {
 		wuxie(target, card, player, viewer, status) {
@@ -1367,6 +1377,8 @@ guohe: {
          order(item, player) {
              /* 基础 order */
              let order = 5.5;
+             const plan=hostJiedaoPlan(player);
+             if(plan)return plan.use?order+Math.min(2,plan.score*.1):0;
              try {
                  /* 敌方有武器且血量低 → 借刀价值高 */
                  let bestTargetVal = 0;
@@ -1401,7 +1413,9 @@ guohe: {
          value: 3,
      },
      result: {
-         player(player) {
+         player(player,target) {
+             const plan=hostJiedaoPlan(player,target,true);
+             if(plan)return plan.use?plan.score:0;
              /* 整体评估：能否形成"借敌之刀"的收益 */
              let enemyWithWeaponAndSha = 0;
              let enemyWeaponValue = 0;
@@ -1431,6 +1445,8 @@ guohe: {
              return score;
          },
          target(player, target) {
+             const plan=hostJiedaoPlan(player,target,true);
+             if(plan)return 0; // Pair utility is owned by result.player, not counted twice.
              const att = identityHostAttitude(player, target);
              /* 友方 / 中立：不借（避免消耗队友资源或招惹中立） */
              if (att >= 0) return 0;
