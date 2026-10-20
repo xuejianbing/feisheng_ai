@@ -23,7 +23,7 @@ export const CONFIG_SECTIONS = [
 	{scope:'player',id:'player_report',title:'02 · 对局记录',accent:'blue',
 	 entries:['narrator','showReport','archiveGames','logRetain','recordStatus','openArchivePanel','clearArchive','clearGameLogs',subsection('帮助改进 AI','自愿提供反馈数据；本地记录与学习数据保留。'),'cloudShowButton','cloudAutoUpload','cloudUploadNow','cloudUploadStatus','exportGameFeedback']},
 	{scope:'player',id:'player_modes',title:'03 · 模式增强',accent:'blue',
-	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicEffectReport','openModeLearningProgress']} ,
+	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicEffectReport','openModeLearningProgress',{kind:'endSubsection'},{kind:'subsection',title:'2v2',fold:'versus2v2'},'versusStrategy','versusSeatProtection','versusReserve','openVersusStatus']} ,
 	{scope:'player',id:'player_data',title:'04 · 帮助与反馈',accent:'gold',
 	 entries:['openPlayerHelp','openUpdateLog']},
 	{
@@ -51,6 +51,10 @@ export const CONFIG_SECTIONS = [
 ];
 
 export const CONFIG_ITEMS = {
+ versusStrategy:{compact:true,type:'bool',default:true,label:'2v2策略增强'},
+ versusSeatProtection:{compact:true,type:'bool',default:true,label:'座次配合与队友保护'},
+ versusReserve:{compact:true,type:'bool',default:true,label:'关键牌保留'},
+ openVersusStatus:{compact:true,type:'action',label:'专项状态',actionLabel:'查看'},
  tacticalOptimization:{compact:true,type:'bool',default:true,label:'启用打法优化覆盖',description:'实验功能，下一局生效；关闭后保持原判断。'},
  tacticalFire:{compact:true,type:'bool',default:true,label:'火攻与铁索联动优化',description:'统一火攻、自伤传导和无懈的收益方向；弃牌同时检查成本。下一局生效。'},
  tacticalTiesuo:{compact:true,type:'bool',default:true,label:'铁索使用与重铸优化',description:'适时提前重铸，摸牌后重新安排出牌；保留斩杀与已开始的酒杀。下一局生效。'},

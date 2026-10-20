@@ -24,6 +24,7 @@ const _antiPiracy = {
 
 import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 import { openStateCardPanel } from '../../score/view/dashboard/stateCards.js?v=41a';
+import { openVersusStatus } from '../../score/view/dashboard/versusStatus.js?v=41a';
 import { arrangeConfig } from './configLayout.js?v=41a';
 import { applyConfigSchema } from './configSchema.js?v=41a';
 import { changelog } from './changelog.js?v=41a';
@@ -598,6 +599,10 @@ export let config = {
 
 	/* ===== 战报/日志 ===== */
 	reportBd: { clear: true, name: '<div style="color: #9ad8ff; text-align:center; padding: 4px;">▸ 战报/日志</div>' },
+	versusStrategy:{name:'2v2策略增强'},
+	versusSeatProtection:{name:'座次配合与队友保护'},
+	versusReserve:{name:'关键牌保留'},
+	openVersusStatus:{name:'专项状态',clear:true,onclick:function(){openVersusStatus();return false;}},
 	tacticalOptimization:{name:'启用打法优化覆盖'},
 	tacticalFire:{name:'火攻与铁索联动优化'},
 	tacticalTiesuo:{name:'铁索使用与重铸优化'},
