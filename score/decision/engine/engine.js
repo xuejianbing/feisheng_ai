@@ -4173,7 +4173,7 @@ function bestActionCore() {
         let championEvidence={domain:'learned-preference',status:'not-triggered'};
 		_markPhase('planner');
 
-		/* ★ P0-1 精度模式：给所有动作算特征，学得最全 */
+		/* ★ 按选择优先级采集特征：必保留当前 best，其余候选设数量与总耗时上限，减轻每次响应的同步工作。 */
 		try {
 			const _buf = new Int8Array(FEATURE_DIM);
 			const ctx = {
@@ -4182,15 +4182,17 @@ function bestActionCore() {
 				isEnemy: bestT ? _isEnemyMemo(bestT) : false,
 				focusTarget: focus ? focus.target : null,
 			};
-			/* 手机优化：只给前15个动作算特征，时间限制20ms */
-			const MAX_FEAT_ACTS = 15;
-			for (let i = 0; i < acts.length && i < MAX_FEAT_ACTS; i++) {
+			const featureCandidates = best ? [best, ...acts.filter(a => a !== best)] : acts;
+			const MAX_FEAT_ACTS = 8;
+			const MAX_FEATURE_CAPTURE_MS = 12;
+			for (let i = 0; i < featureCandidates.length && i < MAX_FEAT_ACTS; i++) {
 				try {
-					/* 手机优化：时间限制 20ms，防止卡顿 */
-					if (performance.now() - _perfT0 > 20) break;
-					if (acts[i]._feat) continue;
-					const f = extractFeatures(me, acts[i], ctx, _buf, alivePlayers);
-					acts[i]._feat = Array.from(f);
+					/* 已选动作即使总预算到达也确保写入有效特征；其余候选共享 12ms 决策预算。 */
+					if (i > 0 && performance.now() - _perfT0 > MAX_FEATURE_CAPTURE_MS) break;
+					const candidate = featureCandidates[i];
+					if (candidate._feat?.length === FEATURE_DIM) continue;
+					const f = extractFeatures(me, candidate, ctx, _buf, alivePlayers);
+					candidate._feat = Array.from(f);
 				} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			}
 		} catch (eFeat) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eFeat); }

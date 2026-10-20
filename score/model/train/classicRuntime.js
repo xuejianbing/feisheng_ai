@@ -1,13 +1,14 @@
 import {loadClassicActive,createClassicActiveSession} from '../weights/modeModelStore.js?v=41a';
 import {isCandidateEligible,sameCandidatePolicyBand,compareActionCandidates,candidateTargetValue} from '../../decision/state/actionCandidate.js?v=41a';
 import {applyOwnedUtility} from '../../decision/utility/utilityPipeline.js?v=41a';
+import {FEATURE_DIM} from '../features/features.js?v=41a';
 let cachedId=null,session=null;
 let runtime=null;
 export function classicRuntimeSummary(sessionId){return runtime?.sessionId===sessionId?{...runtime}:{attempts:0,participated:0,changed:0,lastStatus:'not-run',modelId:null};}
 export function applyClassicPredictions(acts,predict,modelId){
  const eligible=acts.filter(isCandidateEligible).sort(compareActionCandidates),reference=eligible[0];
  if(!reference)return {status:'no-candidates',modelId};
- const rows=eligible.filter(a=>a.type!=='end'&&sameCandidatePolicyBand(a,reference)&&a._feat?.length===130&&Array.from(a._feat).every(Number.isFinite)).slice(0,12);
+ const rows=eligible.filter(a=>a.type!=='end'&&sameCandidatePolicyBand(a,reference)&&a._feat?.length===FEATURE_DIM&&Array.from(a._feat).every(Number.isFinite)).slice(0,12);
  if(!rows.includes(reference)||rows.length<2)return {status:'insufficient-candidates',modelId};
  // 所有推理先通过校验再计分，异常不得留下部分改分。
  const predictions=rows.map(a=>({a,value:predict(a._feat)?.value}));
@@ -39,7 +40,7 @@ function applyModel(acts,context,prepareFeatures){
    const eligible=acts.filter(isCandidateEligible).sort(compareActionCandidates),reference=eligible[0],start=performance.now();
    for(const a of eligible.filter(a=>a.type!=='end'&&sameCandidatePolicyBand(a,reference)).slice(0,12)){
     if(performance.now()-start>8)break;
-    if(!a._feat)a._feat=Array.from(prepareFeatures(a));
+     if(a._feat?.length!==FEATURE_DIM)a._feat=Array.from(prepareFeatures(a));
    }
   }
   if(cachedId!==model.id){session=createClassicActiveSession(model);cachedId=model.id;}

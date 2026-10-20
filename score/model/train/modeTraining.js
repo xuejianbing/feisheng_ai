@@ -10,6 +10,7 @@ import {saveClassicCandidateDurable,retryClassicModelRestore,modeModelsReady,cla
 import {modeContext,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
 import {writeTrainingSnapshot} from './trainingExportFile.js?v=41a';
+import {FEATURE_DIM} from '../features/features.js?v=41a';
 let busy=false,progress={phase:'未训练'},lastReport=null;
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 export function classicTrainingStatus(){const data=selectClassicDataset(getSamples()),qualified=new Set(data.samples.map(s=>JSON.stringify([s.m.sessionId,s.m.actorId,s.m.transactionId]))),context=modeContext();return {storage:classicModelStorageStatus(),busy,progress:{...progress},candidate:classicCandidateInfo(),active:classicActiveInfo(),lastReport,context,runtime:classicRuntimeSummary(context.sessionId),data:data.stats,demonstrations:playerDemonstrationSummary(getSamples(),qualified)};}
@@ -62,7 +63,7 @@ export function classicCandidateShadow(best,acts,context){
   const info=classicCandidateInfo();if(!info)return {...base,status:'no-candidate'};
   if(!info.ruleKeys.includes(context.ruleKey))return {...base,status:'rule-not-covered',candidateId:info.id};
   if(shadowId!==info.id){shadowSession=createClassicCandidateSession();shadowId=info.id;}
-  if(!best||best._feat?.length!==130)return {...base,status:'no-best-features',candidateId:info.id};
+  if(!best||best._feat?.length!==FEATURE_DIM)return {...base,status:'no-best-features',candidateId:info.id};
   for(const feature of best._feat)if(!Number.isFinite(feature))return {...base,status:'invalid-best-features',candidateId:info.id};
   const p=shadowSession.predict(best._feat),predictions=[{type:best.type,id:best.id,target:typeof best.target==='string'?best.target:playerKey(best.target)||null,value:p?.value??null,label:p?p.logits.indexOf(Math.max(...p.logits)):null}];
   return {...base,status:'shadow',candidateId:info.id,actualSuggestion:{type:best?.type,id:best?.id},classicPreference:best?.classicPreference||null,predictions,note:'预测记录不改变评分，不是实际收益或训练标签'};

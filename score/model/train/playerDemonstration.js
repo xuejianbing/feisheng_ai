@@ -1,4 +1,5 @@
 /* 手动出牌示范：独立执行凭据，不借用 AI 建议；顺序证据不等于连招因果标签。 */
+import {FEATURE_DIM} from '../features/features.js?v=41a';
 export function directPlayPhase(event, actor, recast=false) {
  const seen=new Set();let phase=null,choice=false;
  while(event&&!seen.has(event)&&seen.size<128){
@@ -19,7 +20,7 @@ export function createPlayerDemonstrationCollector({key,features,observer,record
   if(!manual||!context?.captured||!context.enabled||!context.collect||!context.playerDemonstrations||context.group!=='doudizhu-classic'||!['farmer','landlord'].includes(context.role))return null;
   const phase=directPlayPhase(event,actor,!!action?.recast);if(!phase||!action?.id||!['card','equip'].includes(action.type))return null;
   try{
-   const f=Array.from(features(actor,action));if(f.length!==130||!f.every(Number.isFinite))return null;
+   const f=Array.from(features(actor,action));if(f.length!==FEATURE_DIM||!f.every(Number.isFinite))return null;
    const snapshot=observer.before(actor,event,true);if(!snapshot)return null;
    return {actor,phase,action:{...action,target:action.target||null},f,snapshot,context,generation};
   }catch(_){return null;}

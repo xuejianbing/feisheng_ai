@@ -33,7 +33,8 @@ try:
         BLACKLIST = set(json.load(f))
 except Exception:
     pass
-POOL_SAVE_INTERVAL = 60   # 合并池最小落盘间隔秒（节流：大池全量 dump 慢，逐请求 dump 会拖住响应致客户端超时断开）
+POOL_SAVE_INTERVAL = 60   # 合并池最小落盘间隔秒（大池快照移出请求路径）
+MAX_MERGED_POOL_LOAD_BYTES = 256 * 1024 * 1024  # 超过此值时避免启动高峰内存膨胀；小时归档仍是完整数据源
 _last_pool_save = [0.0]   # 上次池落盘时间戳
 _pool_dirty = [False]     # 池有无未落盘增量
 _pool_saving = [False]    # 后台落盘进行中守卫（PR6-4：落盘已移出请求路径）
@@ -74,16 +75,19 @@ last_hour_key = datetime.now().strftime("%Y-%m-%dT%H")  # 按小时重置
 merged_samples = []
 merged_hashes = set()
 total_deduped_count = 0  # 累计去掉的重复条数
+_pool_degraded = False  # 大池降级时保护旧快照，避免用不完整内存池覆盖历史数据
 
 
 def load_merged_pool():
     """启动时加载已有的合并数据"""
-    global merged_samples, merged_hashes, _legacy_pool_total
+    global merged_samples, merged_hashes, _legacy_pool_total, _pool_degraded
+    _legacy_pool_total = 0
+    _pool_degraded = False
     if os.path.exists(MERGED_FILE):
         try:
             _pool_size = os.path.getsize(MERGED_FILE)
-            if _pool_size > 50 * 1024 * 1024:
-                # ★1015：超大池不整载（600MB+ json.loads 拖死启动/OOM）——读头部 total_unique 保留计数，池从空重建
+            if _pool_size > MAX_MERGED_POOL_LOAD_BYTES:
+                # 不把过大的 JSON 一次性解码；保留旧池计数和文件，禁止后续用不完整快照覆盖它。
                 try:
                     with open(MERGED_FILE, "r", encoding="utf-8") as f:
                         _head = f.read(2048)
@@ -92,7 +96,8 @@ def load_merged_pool():
                         _legacy_pool_total = int(_m.group(1))
                 except Exception:
                     pass
-                print(f"  合并池过大({_pool_size // 1024 // 1024}MB, 历史 {_legacy_pool_total} 条)——降级启动：计数展示保留，新池从空重建")
+                _pool_degraded = True
+                print(f"  合并池过大({_pool_size // 1024 // 1024}MB, 历史 {_legacy_pool_total} 条)——保留旧快照；新数据继续写入小时归档")
                 merged_samples = []
                 merged_hashes = set()
                 return
@@ -117,6 +122,10 @@ def compute_sample_hash(sample):
 
 def save_merged_pool():
     """保存合并池到文件（PR6-4：后台线程调用；先快照再 dump，避免 dump 期间主线程 append 引发迭代异常/数据撕裂）"""
+    if _pool_degraded:
+        # 小时归档是完整源数据；绝不能用降级后只含增量的内存池覆盖历史快照。
+        _pool_dirty[0] = False
+        return
     if _pool_saving[0]:
         return
     _pool_saving[0] = True
@@ -193,6 +202,83 @@ def _salvage_hour_array(raw_bytes):
         return []
 
 
+def _find_last_non_whitespace(file_obj):
+    """从文件尾部按块定位 JSON 数组的最后一个非空白字节。"""
+    end = file_obj.seek(0, os.SEEK_END)
+    while end > 0:
+        start = max(0, end - 4096)
+        file_obj.seek(start)
+        block = file_obj.read(end - start)
+        for offset in range(len(block) - 1, -1, -1):
+            if block[offset] not in b" \t\r\n":
+                return start + offset, block[offset:offset + 1]
+        end = start
+    return None, None
+
+
+def _array_has_items(file_obj, closing_pos):
+    """判断首尾括号之间是否已有内容，兼容格式化空数组。"""
+    remaining = max(0, closing_pos - 1)
+    file_obj.seek(1)
+    while remaining:
+        block = file_obj.read(min(4096, remaining))
+        if not block:
+            break
+        if any(byte not in b" \t\r\n" for byte in block):
+            return True
+        remaining -= len(block)
+    return False
+
+
+def _write_hour_array_atomic(path, records):
+    """损坏恢复时使用原子重写；正常请求走追加写。"""
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, path)
+
+
+def append_hour_record(path, record):
+    """以 O(新增记录大小) 追加 JSON 数组元素，避免每个请求重写整小时文件。"""
+    encoded = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if not os.path.exists(path):
+        with open(path, "wb") as f:
+            f.write(b"[" + encoded + b"]\n")
+            f.flush()
+            os.fsync(f.fileno())
+        return
+
+    with open(path, "r+b") as f:
+        f.seek(0)
+        if f.read(1) != b"[":
+            closing_pos, closing_byte = None, None
+        else:
+            closing_pos, closing_byte = _find_last_non_whitespace(f)
+        if closing_byte == b"]":
+            has_items = _array_has_items(f, closing_pos)
+            f.seek(closing_pos)
+            f.write((b"," if has_items else b"") + encoded + b"]\n")
+            f.truncate()
+            f.flush()
+            os.fsync(f.fileno())
+            return
+
+    # 文件尾部不完整时保留原件，再抢救所有完整前缀项后原子修复。
+    with open(path, "rb") as f:
+        corrupt = f.read()
+    backup = path + ".corrupt_%d.bak" % int(time.time())
+    with open(backup, "wb") as f:
+        f.write(corrupt)
+        f.flush()
+        os.fsync(f.fileno())
+    recovered = _salvage_hour_array(corrupt)
+    print("[ingest] 小时文件尾部异常，已备份 %s（抢救 %d 条）" % (os.path.basename(backup), len(recovered)))
+    recovered.append(record)
+    _write_hour_array_atomic(path, recovered)
+
+
 def compute_hash(data_str):
     return hashlib.sha256(data_str.encode("utf-8")).hexdigest()
 
@@ -231,8 +317,9 @@ class IngestHandler(BaseHTTPRequestHandler):
             "status": "ok",
             "service": "wuming-ingest",
             "time": datetime.now().isoformat(),
-            "merged_samples": len(merged_samples),
+            "merged_samples": _legacy_pool_total + len(merged_samples),
             "legacy_pool_total": _legacy_pool_total,
+            "merged_pool_degraded": _pool_degraded,
             "total_deduped": total_deduped_count
         }
         self.wfile.write(json.dumps(stats, ensure_ascii=False).encode("utf-8"))
@@ -417,8 +504,6 @@ class IngestHandler(BaseHTTPRequestHandler):
                         "msg": "重复数据已跳过"
                     }, None)
                 else:
-                    dedup_hashes.add(h)
-
                     # 追加到小时文件
                     hour_file = get_hour_filepath(current_hour)
                     samples = payload.get("samples", []) if isinstance(payload, dict) else payload
@@ -448,34 +533,9 @@ class IngestHandler(BaseHTTPRequestHandler):
                                 else:
                                     record[extra] = payload[extra]
 
-                    # 读取现有文件，追加记录
-                    existing = []
-                    if os.path.exists(hour_file):
-                        try:
-                            with open(hour_file, "r", encoding="utf-8") as f:
-                                existing = json.load(f)
-                        except Exception:
-                            # ★1015 修复：损坏文件不再静默清空（旧逻辑会丢整小时数据）——备份后抢救完整前缀
-                            try:
-                                with open(hour_file, "rb") as fr:
-                                    _corrupt = fr.read()
-                                _bak = hour_file + ".corrupt_%d.bak" % int(time.time())
-                                with open(_bak, "wb") as fw:
-                                    fw.write(_corrupt)
-                                existing = _salvage_hour_array(_corrupt)
-                                print("[ingest] 小时文件损坏已备份 %s（抢救 %d 条）" % (os.path.basename(_bak), len(existing)))
-                            except Exception:
-                                existing = []
-
-                    existing.append(record)
-
-                    # ★1015：原子写（tmp+replace）——写中途被杀不再损坏正式文件
-                    _tmpf = hour_file + ".tmp"
-                    with open(_tmpf, "w", encoding="utf-8") as f:
-                        json.dump(existing, f, ensure_ascii=False, indent=2)
-                        f.flush()
-                        os.fsync(f.fileno())
-                    os.replace(_tmpf, hour_file)
+                    append_hour_record(hour_file, record)
+                    # 只有归档持久化成功后才记入请求去重集合；失败时客户端重试仍可补写。
+                    dedup_hashes.add(h)
 
                     # === 自动合并到全局池 ===
                     new_count = 0
@@ -513,10 +573,10 @@ class IngestHandler(BaseHTTPRequestHandler):
                         "new_unique": new_count,
                         "deduped_in_batch": dup_in_batch,
                         "rejected_unlabeled": rejected_unlabeled,
-                        "total_merged": len(merged_samples),
+                        "total_merged": _legacy_pool_total + len(merged_samples),
                         "total_deduped": total_deduped_count,
                         "hour": current_hour
-                    }, f"[{datetime.now().strftime('%H:%M:%S')}] 收到 {client_ip}，{len(samples)}条样本，新增{new_count}条，去重{dup_in_batch}条，过滤古早无标签{rejected_unlabeled}条，池内{len(merged_samples)}条")
+                    }, f"[{datetime.now().strftime('%H:%M:%S')}] 收到 {client_ip}，{len(samples)}条样本，新增{new_count}条，去重{dup_in_batch}条，过滤古早无标签{rejected_unlabeled}条，池内{_legacy_pool_total + len(merged_samples)}条")
 
         # 响应发送（锁外网络 IO）
         status, obj, logline = _resp
