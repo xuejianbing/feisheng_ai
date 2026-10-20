@@ -23,7 +23,7 @@ export const CONFIG_SECTIONS = [
 	{scope:'player',id:'player_report',title:'02 · 对局记录',accent:'blue',
 	 entries:['narrator','showReport','archiveGames','logRetain','recordStatus','openArchivePanel','clearArchive','clearGameLogs',subsection('帮助改进 AI','自愿提供反馈数据；本地记录与学习数据保留。'),'cloudShowButton','cloudAutoUpload','cloudUploadNow','cloudUploadStatus','exportGameFeedback']},
 	{scope:'player',id:'player_modes',title:'03 · 模式增强',accent:'blue',
-	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicEffectReport','openModeLearningProgress']} ,
+	 entries:[{kind:'subsection',title:'斗地主',fold:'doudizhu'},'hideFarmerTeammateHand','classicDoudizhu','classicModelEnabled','classicCandidateShadow','classicEffectReport','openModeLearningProgress']} ,
 	{scope:'player',id:'player_data',title:'04 · 帮助与反馈',accent:'gold',
 	 entries:['openPlayerHelp','openUpdateLog']},
 	{
@@ -200,6 +200,7 @@ export const CONFIG_ITEMS = {
 	classicDoudizhuCollect: { type: 'bool', default: true, label: '采集常规斗地主专项数据', description: '记录实际执行且收益已确认的专项样本；修改于下一局生效。' },
 	playerDemonstrations: {type:'bool',default:true,label:'采集玩家手动出牌示范',description:'在本机常规斗地主出牌阶段记录手动用牌、重铸与顺序；实际收益校验合格的动作进入专项训练，托管及触发动作不算玩家示范。下一局生效。'},
 	classicModelEnabled: {type:'bool',default:false,label:'专项模型参与实际选择',description:'启用已保存的专项试用版本，收益预测参与动作比较；无版本或规则不匹配时沿用公共引擎，下一局生效。'},
+	classicCandidateShadow: {type:'bool',default:false,label:'专项候选影子评估',description:'默认关闭以避免每次出牌或响应时额外运行候选模型；仅诊断时开启，修改后立即生效。'},
 	classicEffectReport: {type:'bool',default:true,label:'结算显示AI效果',description:'在斗地主结算战报显示玩家简报和开发者诊断；区分模型建议、实际执行、即时收益与局间更新。'},
 	modeTrainingCenter: { type: 'action', label: '斗地主专项训练中心', description: '查看地主／农民的数据统计，训练、验证候选模型及导出专项数据。候选验证后可启用试用，下一局参与真实选择。', actionLabel: '打开' },
 	exportAllData: { type: 'action', label: '完整数据备份', description: '将主要面板、训练、日志、知识与权重数据合并导出。', actionLabel: '导出' },

@@ -58,6 +58,7 @@ export function classicCandidateShadow(best,acts,context){
  const base={domain:'classic-candidate-shadow',executionState:'suggested',changesSelection:false};
  try{
   if(!context.enabled||context.group!=='doudizhu-classic')return {...base,status:'not-enabled'};
+  if(cfg('classicCandidateShadow',false)!==true)return {...base,status:'disabled'};
   const storage=classicModelStorageStatus();if(!storage.ready)return {...base,status:'storage-loading'};if(storage.backend==='unavailable')return {...base,status:'storage-error',reason:storage.error};
   const info=classicCandidateInfo();if(!info)return {...base,status:'no-candidate'};
   if(!info.ruleKeys.includes(context.ruleKey))return {...base,status:'rule-not-covered',candidateId:info.id};
