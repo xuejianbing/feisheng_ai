@@ -29,7 +29,7 @@
 本仓库基于 **飞升** 原版无名AI持续维护，重点处理实际对局中的 AI 决策错误、策略一致性、模块稳定性与可测试性。
 
 - **原作者 / Original Author：飞升**
-- **当前维护者 / Current Maintainer：WeiqiaoCode（微雀qiao）**
+- **当前维护者 / Current Maintainer：WeiqiaoCode（微雀qiao）、飞升、子右**
 - **当前版本：v4.1.2.8-beta.3（15人内测，2026-10-20）**
 - **许可证：GPL-3.0**
 - **上游游戏项目：[无名杀 / libnoname/noname](https://github.com/libnoname/noname)**
