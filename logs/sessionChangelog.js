@@ -17,6 +17,37 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-21 · 数据上报回执与专项训练诊断",
+    "date": "2026-10-21",
+    "changes": [
+        {
+            "file": "score/foundation/cloud/cloudIngest.js / score/foundation/cloud/ingestReceipt.js",
+            "lines": "上报响应与结果提示",
+            "desc": "新增 ingest-receipt-v1 解析及批次汇总，显示归档、合并池新增、重复、未标记结果数量；兼容没有回执的旧服务，重试回执不重复累计，并保留 HTTP 429 退避标记。回执不代表最终训练资格。"
+        },
+        {
+            "file": "backend/server.py / backend/test_server.py / backend/README.md",
+            "lines": "POST / 接收契约",
+            "desc": "8787 接收器新增成功回执并保留既有字段；原样请求在当前进程内重放时复用回执，小时归档与合并候选池数量分开统计。补充 HTTP 契约测试和运行／响应说明；跨进程回执持久化仍待后续实现。"
+        },
+        {
+            "file": "score/model/train/modeTraining.js / score/view/dashboard/modeTrainingPanel.js",
+            "lines": "专项训练状态与开发者面板",
+            "desc": "新增最近一局从捕获、执行、收益确认、有效标签到最终合格的样本漏斗，并展示运行期按类型汇总的采样接受／拒绝原因；训练门槛调整为 4500 条、150 局、训练集 3000 条、整局验证集 450 条及每个适用验证组 150 条。低于门槛不生成新候选，现有模型权重不被本项改写。"
+        },
+        {
+            "file": "backend/ROADMAP.md / CHANGELOG.md / README.md",
+            "lines": "维护与发布记录",
+            "desc": "补充后端训练闭环分阶段方案、回执限制、验收边界和待发布说明；明确进入合并池不等于训练合格，离线指标不等于真实胜率。"
+        },
+        {
+            "file": "tools/test-ingest-contract.mjs / backend/test_server.py",
+            "lines": "契约验证",
+            "desc": "Node 客户端回执契约检查通过；Python HTTP 接收契约 2 项通过；后端语法编译及 git diff 空白检查通过。"
+        }
+    ]
+},
+{
     "phase": "2026-10-20 · 斗地主配合意图与决策衔接（PR #6）",
     "date": "2026-10-20",
     "changes": [
