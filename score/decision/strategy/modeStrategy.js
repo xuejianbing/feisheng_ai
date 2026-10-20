@@ -18,6 +18,7 @@ import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { identityOfFor, beliefOfFor, confidenceOfFor, isLikelyEnemy } from '../../perception/observer/identity.js?v=41a';
 import { spyAttackBonus } from './identityStance.js?v=41a';
 import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 // Author: Feisheng Original | License: GPL-3.0
 
 /* ===== 工具函数 ===== */
@@ -156,10 +157,7 @@ const IDENTITY_STRATEGY = Object.assign({}, DEFAULT_STRATEGY, {
         try {
             if (!player) return 'unknown';
             /* getCamp 是“公开规则阵营”接口，不允许读取未明置 target.identity。 */
-            let id = null;
-            if (player === game.zhu) id = 'zhu';
-            else if (player.identity === 'mingzhong') id = 'zhong';
-            else if (player.identityShown) id = player.identity;
+            const id = publicIdentityRole(player);
             if (id === 'zhu' || id === 'zhong') return 'loyal';
             if (id === 'fan') return 'rebel';
             if (id === 'nei') return 'nei';

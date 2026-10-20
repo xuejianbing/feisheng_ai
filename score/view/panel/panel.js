@@ -30,7 +30,7 @@ import { trainExportAndDownload, trainClearBuffer, trainStats, trainRetrySave, g
 import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=41a';
 import { cfg } from '../../foundation/config/util.js?v=41a';
 import { getObs, explainObs, relationOf, observedStance, hostilityOf, friendlinessOf, styleOf } from '../../perception/observer/observer.js?v=41a';
-import { identityOf, confidenceOf, beliefOf, explainIdentity, updateBelief, currentMode } from '../../perception/observer/identity.js?v=41a';
+import { identityOf, confidenceOf, beliefOf, explainIdentity, updateBelief, currentMode, identityView, identityOfFor } from '../../perception/observer/identity.js?v=41a';
 import { teamPlan } from '../../perception/team/team.js?v=41a';
 import { resourceBalance, sellHpValue, equipStripRisk } from '../../decision/resource/economy.js?v=41a';
 import { storeStats, resetStore, importStore, clearStore, exportStore } from '../../perception/memory/memory.js?v=41a';
@@ -863,7 +863,7 @@ function _showExportMenu() {
 			{ key: 'feedback',       icon: '🔄', label: '学习反馈',      desc: '技能/决策/风格学习数据' },
 			{ key: 'archive',        icon: '📁', label: '战报归档',      desc: '历史对局统计' },
 			{ key: 'observer',       icon: '👁️', label: '行为观察',      desc: '谁打过谁/谁救过谁' },
-			{ key: 'identity',       icon: '🎭', label: '身份推理',      desc: '信念矩阵 + 置信度' },
+			{ key: 'identity',       icon: '🎭', label: '身份推理',      desc: '身份矩阵 + 推断权重' },
 			{ key: 'perf',           icon: '⏱️', label: '性能监控',      desc: '决策耗时统计' },
 			{ key: 'health',         icon: '🩺', label: '健康度',        desc: '引擎自检结果' },
 			{ key: 'compat',         icon: '🔍', label: '兼容性自检',    desc: '与其它扩展的冲突' },
@@ -2674,12 +2674,12 @@ function _openLegacyScorePanel() {
 				});
 			}
 		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-		html += "<br><b>⑧j 身份推理矩阵</b><br>";
+		html += "<br><b>⑧j 身份推理矩阵（推断权重，未经校准）</b><br>";
 		try {
 			if (currentMode() !== "identity") {
 				html += "· 仅身份局生效<br>";
 			} else {
-				const alivePlayers = (game.players || []).filter(function (p) { return p.alive; });
+				const alivePlayers = (game.players || []).filter(function (p) { return p && p.alive !== false; });
 				html += "<div style='font-size:11px;'>";
 				html += "<span style='display:inline-block;width:60px;color:#9ad8ff'>玩家</span>";
 				html += "<span style='display:inline-block;width:60px;color:#9ad8ff'>推理</span>";
@@ -2687,8 +2687,8 @@ function _openLegacyScorePanel() {
 				html += "<span style='display:inline-block;width:52px;color:#9ad8ff'>忠</span>";
 				html += "<span style='display:inline-block;width:52px;color:#9ad8ff'>内</span><br>";
 				alivePlayers.forEach(function (p) {
-					const b = beliefOf(p) || { fan: 0, zhong: 0, nei: 0 };
-					const inf = identityOf(p);
+					const b = identityView(game.me,p)?.probabilities || { zhu:0,fan:0,zhong:0,nei:0 };
+					const inf = identityOfFor(game.me,p);
 					const infColor = inf === "fan" ? "#ff9c9c" : (inf === "zhong" ? "#7fe3a0" : (inf === "nei" ? "#ffd479" : "#666"));
 					html += "<span style='display:inline-block;width:60px'>" + (p.name || "?").slice(0, 4) + "</span>";
 					html += "<span style='display:inline-block;width:60px;color:" + infColor + "'>" + inf + "</span>";

@@ -1,3 +1,4 @@
+import {identityHostEffect,identityHostDamageEffect,identityHostAttitude} from '../../score/perception/observer/identityDiagnostics.js?v=41a';
 import { installTacticalOptimization } from '../../score/decision/strategy/tacticalOptimization.js?v=41a';
 /*
  * ============================================
@@ -20,7 +21,7 @@ export function createTiesuoHostAI() {
 	return {
 		wuxie(target, card, player, viewer, status) {
 			if (
-				status * get.attitude(viewer, player._trueMe || player) > 0 ||
+				status * identityHostAttitude(viewer, player._trueMe || player) > 0 ||
 				target.hasSkillTag('noLink') ||
 				target.hasSkillTag('nodamage') ||
 				target.hasSkillTag('nofire') ||
@@ -29,8 +30,8 @@ export function createTiesuoHostAI() {
 				return 0;
 			}
 			if (
-				get.damageEffect(target, player, viewer, 'thunder') >= 0 ||
-				get.damageEffect(target, player, viewer, 'fire') >= 0
+				identityHostDamageEffect(target, player, viewer, 'thunder') >= 0 ||
+				identityHostDamageEffect(target, player, viewer, 'fire') >= 0
 			) {
 				return 0;
 			}
@@ -155,7 +156,7 @@ export function initAICardOpt() {
 // 顺手牵羊
 shunshou: {
     wuxie(target, card, player, viewer) {
-        if (!target.countCards('hej') || get.attitude(viewer, player._trueMe || player) > 0) {
+        if (!target.countCards('hej') || identityHostAttitude(viewer, player._trueMe || player) > 0) {
             return 0;
         }
     },
@@ -167,7 +168,7 @@ shunshou: {
         value(card, player) {
             let max = 0;
             game.countPlayer((cur) => {
-                max = Math.max(max, lib.card.shunshou.ai.result.target(player, cur) * get.attitude(player, cur));
+                max = Math.max(max, lib.card.shunshou.ai.result.target(player, cur) * identityHostAttitude(player, cur));
             });
             if (max <= 0) return 2;
             return 0.53 * max;
@@ -190,7 +191,7 @@ shunshou: {
         if (!lib.filter.canBeGained(button.link, player, target)) {
             return 0;
         }
-        const att = get.attitude(player, target),
+        const att = identityHostAttitude(player, target),
             pos = get.position(button.link),
             name = get.name(button.link);
         let val = get.value(button.link, player) / 60,
@@ -235,7 +236,7 @@ shunshou: {
         if (
             subs.includes('equip3') &&
             !game.hasPlayer((cur) => {
-                if (get.attitude(cur, target) >= 0) return false;
+                if (identityHostAttitude(cur, target) >= 0) return false;
                 return (
                     get.distance(cur, target) === 2 || get.distance(cur, target, 'attack') - cur.getAttackRange() === 1
                 );
@@ -253,14 +254,14 @@ shunshou: {
             const hs = target.getGainableCards(player, 'h');
             const es = target.getGainableCards(player, 'e');
             const js = target.getGainableCards(player, 'j');
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
             if (att < 0) {
                 if (!hs.length && !es.length && !js.length) return 0;
             } else if (att > 1) {
                 return es.some((card) => get.value(card, target) <= 0) ||
                     js.some((card) => {
                         var cardj = card.viewAs ? { name: card.viewAs } : card;
-                        return cardj.name === 'xumou_jsrg' ? false : get.effect(target, cardj, target, player) < 0;
+                        return cardj.name === 'xumou_jsrg' ? false : identityHostEffect(target, cardj, target, player) < 0;
                     })
                     ? 1.5
                     : 0;
@@ -271,7 +272,7 @@ shunshou: {
             const hs = target.getGainableCards(player, 'h');
             const es = target.getGainableCards(player, 'e');
             const js = target.getGainableCards(player, 'j');
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
 
 
             if (att <= 0) {
@@ -298,7 +299,7 @@ shunshou: {
                     var cardj = card.viewAs ? { name: card.viewAs } : card;
                     return cardj.name === 'xumou_jsrg'
                         ? false
-                        : cardj.name === 'lebu' && get.effect(target, cardj, target, target) < 0;
+                        : cardj.name === 'lebu' && identityHostEffect(target, cardj, target, target) < 0;
                 })
             ) {
                 return 10;
@@ -322,7 +323,7 @@ shunshou: {
             return es.some((card) => get.value(card, target) <= 0) ||
                 js.some((card) => {
                     var cardj = card.viewAs ? { name: card.viewAs } : card;
-                    return cardj.name === 'xumou_jsrg' ? false : get.effect(target, cardj, target, target) < 0;
+                    return cardj.name === 'xumou_jsrg' ? false : identityHostEffect(target, cardj, target, target) < 0;
                 })
                 ? 1.5
                 : -1.5;
@@ -337,7 +338,7 @@ guohe: {
     wuxie(target, card, player, viewer, status) {
         if (
             !target.countCards('hej') ||
-            status * get.attitude(viewer, player._trueMe || player) > 0 ||
+            status * identityHostAttitude(viewer, player._trueMe || player) > 0 ||
             (target.hp > 2 &&
                 !target.hasCard((i) => {
                     let val = get.value(i, target),
@@ -370,7 +371,7 @@ guohe: {
                     );
                 const hasPriorityHand = cur.hasCard((c) => get.name(c) === 'shan' || get.name(c) === 'tao', 'h');
                 const weight = hasPriorityEquip ? 1.5 : hasPriorityHand ? 1.2 : 1;
-                max = Math.max(max, lib.card.guohe.ai.result.target(player, cur) * get.attitude(player, cur) * weight);
+                max = Math.max(max, lib.card.guohe.ai.result.target(player, cur) * identityHostAttitude(player, cur) * weight);
             });
             if (max <= 0) {
                 return 5;
@@ -390,7 +391,7 @@ guohe: {
     nopop: true,
     silent: true,
     yingbian(card, player, targets, viewer) {
-        if (get.attitude(viewer, player) <= 0) {
+        if (identityHostAttitude(viewer, player) <= 0) {
             return 0;
         }
         if (
@@ -398,7 +399,7 @@ guohe: {
                 (current) =>
                     !targets.includes(current) &&
                     lib.filter.targetEnabled2(card, player, current) &&
-                    get.effect(current, card, player, player) > 0
+                    identityHostEffect(current, card, player, player) > 0
             )
         ) {
             return 6;
@@ -411,7 +412,7 @@ guohe: {
         if (!lib.filter.canBeDiscarded(button.link, player, target)) {
             return 0;
         }
-        let att = get.attitude(player, target),
+        let att = identityHostAttitude(player, target),
             val = get.buttonValue(button),
             pos = get.position(button.link),
             name = get.name(button.link),
@@ -458,7 +459,7 @@ guohe: {
             if (subtypes.includes('equip3')) {
                 if (
                     !game.hasPlayer((cur) => {
-                        if (get.attitude(cur, target) >= 0) return false;
+                        if (identityHostAttitude(cur, target) >= 0) return false;
                         return (
                             get.distance(cur, target) === 2 ||
                             get.distance(cur, target, 'attack') - cur.getAttackRange() === 1
@@ -475,7 +476,7 @@ guohe: {
     },
     result: {
         target(player, target) {
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
             const hs = target.getDiscardableCards(player, 'h');
             const es = target.getDiscardableCards(player, 'e');
             const js = target.getDiscardableCards(player, 'j');
@@ -487,9 +488,9 @@ guohe: {
                 js.forEach(function (c) {
                     const cardj = c.viewAs ? { name: c.viewAs } : c;
                     if (cardj.name === 'xumou_jsrg') return;
-                    if (cardj.name === 'lebu' && get.effect(target, cardj, target, target) < 0) {
+                    if (cardj.name === 'lebu' && identityHostEffect(target, cardj, target, target) < 0) {
                         best = Math.max(best, 10);   // 拆友方乐 → 救命
-                    } else if (cardj.name === 'bingliang' && get.effect(target, cardj, target, target) < 0) {
+                    } else if (cardj.name === 'bingliang' && identityHostEffect(target, cardj, target, target) < 0) {
                         best = Math.max(best, 6);    // 拆友方兵 → 帮出牌
                     } else if (cardj.name === 'shandian' || cardj.name === 'fulei') {
                         best = Math.max(best, 3);    // 拆友方雷 → 防炸
@@ -548,7 +549,7 @@ guohe: {
 									(current) =>
 										get.distance(player, current) <= 1 &&
 										player.canUse('sha', current) &&
-										get.effect(current, { name: 'sha' }, player, player) > 0
+										identityHostEffect(current, { name: 'sha' }, player, player) > 0
 								)
 							) {
 								return 1;
@@ -575,7 +576,7 @@ guohe: {
 										(current) =>
 											get.distance(player, current) <= 1 &&
 											player.canUse('sha', current) &&
-											get.effect(current, { name: 'sha' }, player, player) > 0
+											identityHostEffect(current, { name: 'sha' }, player, player) > 0
 									)
 								) {
 									return 1;
@@ -592,7 +593,7 @@ guohe: {
 										(current) =>
 											get.distance(player, current) <= 1 &&
 											player.canUse('sha', current) &&
-											get.effect(current, { name: 'sha' }, player, player) > 0
+											identityHostEffect(current, { name: 'sha' }, player, player) > 0
 									)
 								) {
 									let num = player.countCards('hs', 'sha') - player.getCardUsable('sha');
@@ -623,8 +624,8 @@ guohe: {
 				// 火攻
 				huogong: {
 					wuxie(target, card, player, viewer, status) {
-						if (get.attitude(viewer, player._trueMe || player) > 0) return 0;
-						if (status * get.attitude(viewer, target) * get.effect(target, card, player, target) >= 0) return 0;
+						if (identityHostAttitude(viewer, player._trueMe || player) > 0) return 0;
+						if (status * identityHostAttitude(viewer, target) * identityHostEffect(target, card, player, target) >= 0) return 0;
 						if (_status.event.getRand('huogong_wuxie') * 4 > player.countCards('h')) return 0;
 					},
 					basic: { order: 9.2, value: [3, 1], useful: 0.6 },
@@ -716,7 +717,7 @@ guohe: {
 										try {
 											if (p.hasSkillTag('nofire') || p.hasSkillTag('nodamage')) continue;
 										} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-										const att = get.attitude(player, p);
+										const att = identityHostAttitude(player, p);
 										if (att < 0) enemyLink++;
 										else if (att > 0) allyLink++;
 									}
@@ -768,7 +769,7 @@ guohe: {
 				tao: {
 					viewHandcard: true,
 					skillTagFilter(player, tag, arg) {
-						if (arg && get.attitude(player, arg) <= 0) return false;
+						if (arg && identityHostAttitude(player, arg) <= 0) return false;
 						return true;
 					},
 					basic: {
@@ -783,7 +784,7 @@ guohe: {
 							) {
 								return 2 / (1 + i);
 							}
-							let fs = game.filterPlayer((current) => get.attitude(player, current) > 0 && current.hp <= 2),
+							let fs = game.filterPlayer((current) => identityHostAttitude(player, current) > 0 && current.hp <= 2),
 								damaged = 0,
 								needs = 0;
 							fs.forEach((f) => {
@@ -798,7 +799,7 @@ guohe: {
 							return Math.max(1, 7.2 - i);
 						},
 						value(card, player) {
-							let fs = game.filterPlayer((current) => get.attitude(_status.event.player, current) > 0),
+							let fs = game.filterPlayer((current) => identityHostAttitude(_status.event.player, current) > 0),
 								damaged = 0,
 								needs = 0;
 							fs.forEach((f) => {
@@ -839,7 +840,7 @@ guohe: {
 						}
 
 						// 统计其他友方玩家的桃
-						const friends = game.filterPlayer((f) => f !== player && f !== target && get.attitude(f, target) > 0);
+						const friends = game.filterPlayer((f) => f !== player && f !== target && identityHostAttitude(f, target) > 0);
 						for (let f of friends) {
 							need -= f.countCards('hs', (c) => get.name(c) === 'tao' && lib.filter.cardEnabled(c, f, 'forceEnable'));
 							if (need <= 0) return true;
@@ -902,7 +903,7 @@ guohe: {
 											current.identity === 'zhu' &&
 											current.hp < 3 &&
 											(mode === 'identity' || mode === 'versus' || mode === 'chess') &&
-											get.attitude(player, current) > 0
+											identityHostAttitude(player, current) > 0
 									)
 								) {
 									keep = 3;
@@ -917,7 +918,7 @@ guohe: {
 											player !== current &&
 											current.hp < 3 &&
 											player.hp > current.hp &&
-											get.attitude(player, current) > 2
+											identityHostAttitude(player, current) > 2
 										) {
 											keep += player.hp - current.hp;
 											return true;
@@ -932,13 +933,13 @@ guohe: {
 							if (target.isZhu2() || target === game.boss) return 2;
 							if (player !== target) {
 								if (target.hp < 0 && taos.length + target.hp <= 0) return 0;
-								if (Math.abs(get.attitude(player, target)) < 1) return 0;
+								if (Math.abs(identityHostAttitude(player, target)) < 1) return 0;
 							}
 							if (!player.getFriends().length) return 2;
 							let tri = _status.event.getTrigger(),
 								num = game.countPlayer(
 									(current) =>
-										get.attitude(current, target) > 0 &&
+										identityHostAttitude(current, target) > 0 &&
 										current.countCards(
 											'hs',
 											(i) => get.name(i) === 'tao' && lib.filter.cardEnabled(i, target, 'forceEnable')
@@ -947,7 +948,7 @@ guohe: {
 								dis = 1,
 								t = _status.currentPhase || game.me;
 							while (t !== target) {
-								const att = get.attitude(player, t);
+								const att = identityHostAttitude(player, t);
 								att < -2 ? dis++ : att < 1 && (dis += 0.45);
 								t = t.next;
 							}
@@ -1009,11 +1010,11 @@ guohe: {
 								enemyLoseHp = 0;
 							game.countPlayer((current) => {
 								if (!current.isIn()) return;
-								const att = get.attitude(player, current);
+								const att = identityHostAttitude(player, current);
 								const loseHp = current.getDamagedHp();
 								att > 0 ? (allyLoseHp += loseHp) : att < 0 && (enemyLoseHp += loseHp);
 							});
-							return game.hasPlayer((current) => current.hp <= 1 && get.attitude(player, current) > 0) ||
+							return game.hasPlayer((current) => current.hp <= 1 && identityHostAttitude(player, current) > 0) ||
 								allyLoseHp > enemyLoseHp
 								? 10
 								: 1;
@@ -1027,11 +1028,11 @@ guohe: {
 								enemyLoseHp = 0;
 							game.countPlayer((current) => {
 								if (!current.isIn()) return;
-								const att = get.attitude(player, current);
+								const att = identityHostAttitude(player, current);
 								const loseHp = current.getDamagedHp();
 								att > 0 ? (allyLoseHp += loseHp) : att < 0 && (enemyLoseHp += loseHp);
 							});
-							const hasAllyLowHp = game.hasPlayer((current) => current.hp <= 1 && get.attitude(player, current) > 0);
+							const hasAllyLowHp = game.hasPlayer((current) => current.hp <= 1 && identityHostAttitude(player, current) > 0);
 							return hasAllyLowHp || allyLoseHp > enemyLoseHp ? 1 : -1;
 						},
 						target(player, target) {
@@ -1109,7 +1110,7 @@ guohe: {
             /* ★ 击杀奖励：对敌方 HP ≤ 1 的目标，杀的价值大幅提升。
              * 击杀价值 = 1 点伤害 + 战略收益（去掉一个敌人 + 概率带走他的手牌）。
              * 下游用 attitude × eff 求收益，敌方 attitude 为负 → eff 更负 = 收益更大。 */
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
             const hp = target.hp || 0;
             if (att < 0) {
                 if (hp <= 1) eff -= 2.0;      // HP=1：击杀窗口
@@ -1133,7 +1134,7 @@ guohe: {
                      eff = -0.5;
                  } else {
                      num = 2;
-                     eff = get.attitude(player, target) > 0 ? -7 : -4;
+                     eff = identityHostAttitude(player, target) > 0 ? -7 : -4;
                  }
              }
              if (
@@ -1204,8 +1205,8 @@ guohe: {
  nanman: {
      ...(lib.card.nanman.ai || {}),
      wuxie(target, card, player, viewer, status) {
-         if (get.attitude(viewer, player._trueMe || player) > 0) return 0;
-         if (get.attitude(viewer, target) > 0) {
+         if (identityHostAttitude(viewer, player._trueMe || player) > 0) return 0;
+         if (identityHostAttitude(viewer, target) > 0) {
              if (target.countCards('hs', 'sha') > 0) return 0;
          }
      },
@@ -1218,7 +1219,7 @@ guohe: {
                 if (cur.countCards("hs", "sha") > 0) return;   // 有杀 → 消耗一张，不计风险/收益
                 const hp = cur.hp || 0;
                 const w = hp <= 1 ? 3 : (hp <= 2 ? 2 : 1);
-                const att = get.attitude(player, cur);
+                const att = identityHostAttitude(player, cur);
                 if (att > 0 && cur !== player) allyRisk += w;
                 else if (att < 0) enemyGain += w;
             });
@@ -1244,7 +1245,7 @@ guohe: {
                  if (cur.countCards('hs', 'sha') > 0) return;   // 有杀 → 打出，不受伤
                  const hp = cur.hp || 0;
                  const w = hp <= 1 ? 3 : (hp <= 2 ? 2 : 1.5);
-                 if (get.attitude(player, cur) < 0) theirs += w;
+                 if (identityHostAttitude(player, cur) < 0) theirs += w;
                  else mine += w;    // 含玩家自身（原代码漏算）
              });
              return theirs - mine;
@@ -1297,7 +1298,7 @@ guohe: {
                  if (cur.countCards('hs', 'shan') > 0) return;
                  const hp = cur.hp || 0;
                  const w = hp <= 1 ? 3 : (hp <= 2 ? 2 : 1);
-                 const att = get.attitude(player, cur);
+                 const att = identityHostAttitude(player, cur);
                  if (att > 0 && cur !== player) allyRisk += w;
                  else if (att < 0) enemyGain += w;
              });
@@ -1322,7 +1323,7 @@ guohe: {
                  if (cur.countCards('hs', 'shan') > 0) return;
                  const hp = cur.hp || 0;
                  const w = hp <= 1 ? 3 : (hp <= 2 ? 2 : 1.5);
-                 if (get.attitude(player, cur) < 0) theirs += w;
+                 if (identityHostAttitude(player, cur) < 0) theirs += w;
                  else mine += w;
              });
              return theirs - mine;
@@ -1371,7 +1372,7 @@ guohe: {
                  let bestTargetVal = 0;
                  game.countPlayer(function (cur) {
                      if (!cur || cur === player || cur.alive === false) return;
-                     if (get.attitude(player, cur) >= 0) return;   /* 只借敌人 */
+                     if (identityHostAttitude(player, cur) >= 0) return;   /* 只借敌人 */
                      const hasWeapon = cur.getCards('e').some(function (e) {
                          try {
                              const subs = get.subtypes(e);
@@ -1406,7 +1407,7 @@ guohe: {
              let enemyWeaponValue = 0;
              game.countPlayer(function (cur) {
                  if (!cur || cur === player || cur.alive === false) return;
-                 if (get.attitude(player, cur) >= 0) return;
+                 if (identityHostAttitude(player, cur) >= 0) return;
                  const hasWeapon = cur.getCards('e').some(function (e) {
                      try {
                          const subs = get.subtypes(e);
@@ -1430,7 +1431,7 @@ guohe: {
              return score;
          },
          target(player, target) {
-             const att = get.attitude(player, target);
+             const att = identityHostAttitude(player, target);
              /* 友方 / 中立：不借（避免消耗队友资源或招惹中立） */
              if (att >= 0) return 0;
              /* 敌方：检查是否值得借 */
@@ -1495,7 +1496,7 @@ guohe: {
              let score = 0;
              for (const p of (game.players || [])) {
                  if (!p || p === player || p.alive === false) continue;
-                 const att = get.attitude(player, p);
+                 const att = identityHostAttitude(player, p);
                  if (att < 0) {
                      const hc = p.countCards ? p.countCards('h') : 0;
                      const hp = p.hp || 0;
@@ -1519,7 +1520,7 @@ guohe: {
                  /* 目标的盟友中有改判者 */
                  for (const p of (game.players || [])) {
                      if (!p || p === target || p.alive === false) continue;
-                     if (get.attitude(p, target) > 0 && p.hasSkill &&
+                     if (identityHostAttitude(p, target) > 0 && p.hasSkill &&
                          (p.hasSkill('guicai') || p.hasSkill('guidao'))) {
                          resist += 0.3;
                          break;
@@ -1562,7 +1563,7 @@ guohe: {
              let score = 0;
              for (const p of (game.players || [])) {
                  if (!p || p === player || p.alive === false) continue;
-                 const att = get.attitude(player, p);
+                 const att = identityHostAttitude(player, p);
                  if (att < 0) {
                      /* 敌方手牌少时跳摸牌收益降低（本来就不缺牌）；
                       * 手牌多时收益高（断了补给线） */
@@ -1583,7 +1584,7 @@ guohe: {
                  }
                  for (const p of (game.players || [])) {
                      if (!p || p === target || p.alive === false) continue;
-                     if (get.attitude(p, target) > 0 && p.hasSkill &&
+                     if (identityHostAttitude(p, target) > 0 && p.hasSkill &&
                          (p.hasSkill('guicai') || p.hasSkill('guidao'))) {
                          resist += 0.3;
                          break;
@@ -1615,7 +1616,7 @@ juedou: {
             try {
                 const hasLowHpEnemy = game.hasPlayer(function (p) {
                     if (!p || p === player || p.alive === false) return false;
-                    if (get.attitude(player, p) >= 0) return false;
+                    if (identityHostAttitude(player, p) >= 0) return false;
                     return (p.hp || 0) <= 1;
                 });
                 if (hasLowHpEnemy && player.countCards('hs', 'sha') > 0) base += 3;
@@ -1640,7 +1641,7 @@ juedou: {
             try {
                 const hasLowHpEnemy = game.hasPlayer(function (p) {
                     if (!p || p === player || p.alive === false) return false;
-                    if (get.attitude(player, p) >= 0) return false;
+                    if (identityHostAttitude(player, p) >= 0) return false;
                     return (p.hp || 0) <= 1;
                 });
                 if (hasLowHpEnemy) score += 3;
@@ -1655,7 +1656,7 @@ juedou: {
             return score;
         },
         target(player, target) {
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
             const tgtSha = target.countCards('hs', 'sha');
             const tgtHand = target.countCards('h');
             const hp = target.hp || 0;
@@ -1717,7 +1718,7 @@ wugu: {
             let allyN = 0;
             for (const p of (game.players || [])) {
                 if (!p || p === player || p.alive === false) continue;
-                if (get.attitude(player, p) > 0) allyN++;
+                if (identityHostAttitude(player, p) > 0) allyN++;
             }
             if (allyN >= 3) return 8.0;
             if (allyN >= 1) return 6.5;
@@ -1731,7 +1732,7 @@ wugu: {
             let score = 0;
             for (const p of (game.players || [])) {
                 if (!p || p === player || p.alive === false) continue;
-                const att = get.attitude(player, p);
+                const att = identityHostAttitude(player, p);
                 if (att > 0) score += 1.5;   /* 友方摸牌是收益 */
                 else if (att < 0) score -= 0.8;  /* 敌方摸牌是损失 */
             }
@@ -1813,7 +1814,7 @@ jiu: {
             try {
                 const hasLowHpEnemy = game.hasPlayer(function (p) {
                     if (!p || p === player || p.alive === false) return false;
-                    if (get.attitude(player, p) >= 0) return false;
+                    if (identityHostAttitude(player, p) >= 0) return false;
                     return (p.hp || 0) <= 2;
                 });
                 if (hasLowHpEnemy) score += 3;
@@ -1840,7 +1841,7 @@ jiu: {
         },
         target(player, target) {
             if (target.hasSkillTag('nodamage')) return 0;
-            const att = get.attitude(player, target);
+            const att = identityHostAttitude(player, target);
             /* 从 target 视角：被酒杀伤害翻倍 */
             const hp = target.hp || 0;
             if (att < 0) {
@@ -1909,7 +1910,7 @@ jiu: {
 			viewHandcard: true,
 			skillTagFilter(player, tag, arg) {
 				if (player.storage.guohe_viewhand && player.storage.guohe_viewhand.includes(arg)) {
-					return get.attitude(player, arg) <= 0;
+					return identityHostAttitude(player, arg) <= 0;
 				}
 				return false;
 			},

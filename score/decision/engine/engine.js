@@ -1,3 +1,9 @@
+import {identityModelCompatibility} from '../../model/features/identityCompatibility.js?v=41a';
+import {identityView} from '../../perception/observer/identityView.js?v=41a';
+import {identityAuditStats,resetIdentityAudit} from '../../perception/observer/identityDiagnostics.js?v=41a';
+import {identityEvidenceReport} from '../../perception/observer/identityEvidence.js?v=41a';
+import {createIdentityEvidenceCollector} from '../../perception/observer/identityEvidenceHost.js?v=41a';
+import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import {selectClassicDataset} from '../../model/train/modeDataset.js?v=41a';
 import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
 import { activePlaySkills, trackSkillOutcome } from '../skills/activeSkillEligibility.js?v=41a';
@@ -365,6 +371,10 @@ try {
 
     /* identity - 身份推理（修正：挂载成object，不是function） */
     window.__DJSC.identity = {
+        view: identityView,
+        compatibility: identityModelCompatibility,
+        evidence: identityEvidenceReport,
+        audit: identityAuditStats,
         readIdentity: _identityOf,
         belief: beliefOf,
         updateBelief: updateBelief,
@@ -487,7 +497,11 @@ try {
  * 只要权重未 ready，任何模型消费者都必须拿到 skip，而不是随机初始化权重的概率。 */
 export function safeModelPredict(features) {
 	try {
-		if (!weightsReady()) {
+		if (!identityModelCompatibility().allowed) {
+            return {action:'skip',label:null,probs:null,confidence:0,maxProb:0,value:0,ready:false,
+                reason:'identity-feature-schema-migration',compatibility:identityModelCompatibility()};
+        }
+        if (!weightsReady()) {
 			return {
 				action: 'skip',
 				label: null,
@@ -818,12 +832,10 @@ function _campOf(player) {
 	try {
 		const mode = (get && typeof get.mode === 'function') ? get.mode() : '';
 		if (mode === 'identity') {
-			if (player === game.zhu) return 'loyal';
-			if (player && (player.identityShown || player.identity === 'mingzhong')) {
-				if (player.identity === 'zhu' || player.identity === 'zhong' || player.identity === 'mingzhong') return 'loyal';
-				if (player.identity === 'fan') return 'rebel';
-				if (player.identity === 'nei') return 'nei';
-			}
+            const role=publicIdentityRole(player);
+            if (role==='zhu'||role==='zhong')return 'loyal';
+            if (role==='fan')return 'rebel';
+            if (role==='nei')return 'nei';
 			return 'unknown';
 		}
 	} catch (eMode) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eMode); }
@@ -1515,6 +1527,7 @@ const delayedOutcomes = createDelayedOutcomeTracker({ key: targetKey, onResult: 
   matchArchive.recordOutcome('actionCredit',feedback,{playerId:feedback.actorId,round:_getRoundNumber()});
  }
 } });
+const identityEvidenceCollector = createIdentityEvidenceCollector();
 const publicSources = createPublicProvenanceTracker({players:()=>[...(game.players||[]),...(game.dead||[])],key:targetKey,onResult:result=>{
  for(const id of result.transactionIds){const entry=DECISION_LOG.find(e=>e.transactionId===id);if(entry){entry.delayedEvidence=[...(entry.delayedEvidence||[]),result].slice(-64);}}
  matchArchive.recordOutcome('delayedEvidence',result,{playerId:result.actorId,round:_getRoundNumber()});
@@ -1676,6 +1689,7 @@ function installHooks() {
 			const host = invokeObservedHost({ orig: oUse, thisArg: this, args: Array.from(args), decisionPoint: 'useCard' });
 			if (!host.ok) return host.result;
 			const next = host.result;
+            try { identityEvidenceCollector.beginUse(next,me,args[0],next?.targets || args[1],_status.event); } catch (_) {}
             let completeOutcome = null;
             let outcomeCommitted = null, outcomeResult = null;
             function finishOutcome() {
@@ -1880,6 +1894,15 @@ function installHooks() {
         async content(event,trigger){publicSources.beginPhase(trigger);},
     };
     game.addGlobalSkill('_djsc_publicSources');
+    lib.skill._djsc_identityEvidence = {
+        trigger:{global:['useCardAfter','damageEnd','recoverEnd','dieAfter']},
+        forced:true,popup:false,charlotte:true,forceDie:true,lastDo:true,
+        filter(event,player) { return event.player===player; },
+        async content(event,trigger) {
+            try { identityEvidenceCollector.complete(trigger,trigger.name); } catch (_) {}
+        },
+    };
+    game.addGlobalSkill('_djsc_identityEvidence');
 
 	/* ★ Decision Transaction Commit：技能只有真正进入宿主 logSkill 才提交。
 	 * 目标在部分技能中由后续 choice stage 决定，因此 skill 事务只校验技能 id。 */
@@ -2042,7 +2065,7 @@ function installHooks() {
 				 *   显式记录死者身份，供 _publicRoleOf 公开层直接读取，
 				 *   修复「已阵亡玩家名字/身份已知但 AI 认知不清晰」（宿主不同版本
 				 *   identityShown 标志行为不一，这里补齐扩展侧事实源）。 */
-				try { me.__djsc_revealedRole = String(me.identity || ''); } catch (eReveal) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eReveal); }
+                /* 身份亮置由确认死亡后的 dieAfter 采集，不在创建死亡事件时读取。 */
 				try { giveVs(me, -6, "阵亡"); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 				/* 击杀奖励：从事件链上溯到造成致命伤的伤害事件源 */
 				try {
@@ -2185,6 +2208,8 @@ function uninstallHooks() {
         delayedOutcomes.reset();
         try{game.removeGlobalSkill('_djsc_publicSources');}catch(_){}
         delete lib.skill._djsc_publicSources;publicSources.reset();
+        try{game.removeGlobalSkill('_djsc_identityEvidence');}catch(_){}
+        delete lib.skill._djsc_identityEvidence;
         skillOutcomes.reset(); actionOutcomes.reset(); playerDemonstrations.reset();
 
 		/* ★ 还原 get.cards */
@@ -4199,7 +4224,7 @@ function bestActionCore() {
 		/* ★ 用训练好的模型微调（best 已确定，可安全访问 best._feat） */
 		try {
 			if (best && best._feat) {  /* ★ 4.1.2.5 解耦：冠军策略不再依赖 v5 模型开关（冠军=查表学习，不修改权重） */
-				if (weightsReady() && cfg('useTrainedModel', true)) {
+				if (identityModelCompatibility().allowed && weightsReady() && cfg('useTrainedModel', true)) {
 					const feat = new Int8Array(FEATURE_DIM);  /* ★ FEATURE_DIM 与 features.js 对齐（唯一真源，避免魔法数字漂移） */
 					for (let i = 0; i < FEATURE_DIM && i < best._feat.length; i++) feat[i] = best._feat[i];
 					modelConf = window.__DJSC && window.__DJSC.confidence ? window.__DJSC.confidence(feat) : null;
@@ -5297,10 +5322,8 @@ function settle() {
 					const observer = game.me || ((_status && _status.currentPhase) || null);
 					(game.players || []).forEach(function (p) {
 						if (!p) return;
-						const publicIdentity = p === game.zhu
-							? 'zhu'
-							: ((p.identityShown || p.identity === 'mingzhong') ? (p.identity || '?') : '?');
-						beliefs[p.name || "?"] = {
+						const publicIdentity = publicIdentityRole(p) || '?';
+						beliefs[targetKey(p)] = {
 							public: publicIdentity,
 							inferred: observer ? _identityOfFor(observer, p) : _identityOf(p),
 							belief: observer ? _beliefOfFor(observer, p) : beliefOf(p),
@@ -5439,7 +5462,7 @@ export function clearScoreState() {
 	memReset();
 	try { clearThreatCache(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try { resetObs(); resetOpponentPrediction(); actionOutcomes.reset(); playerDemonstrations.reset(); skillOutcomes.reset(); delayedOutcomes.reset(); publicSources.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { resetBelief(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { resetBelief(); resetIdentityAudit(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try { deckReset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try { clearCompensation(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	_turnUse = 0; _lastTurnPlayer = null;

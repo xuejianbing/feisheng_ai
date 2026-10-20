@@ -15,6 +15,8 @@ import { getStored } from '../memory/memory.js?v=41a';
 import { getTagConf, getPlayerShanFactor } from '../feedback/styleFeedback.js?v=41a';
 import { suitRemaining } from '../memory/deckMemory.js?v=41a';
 import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {resetIdentityEvidence} from './identityEvidence.js?v=41a';
+import {resetIdentityFacts,identityFactsState} from './identityFacts.js?v=41a';
 
 const OBS = Object.create(null);
 
@@ -87,7 +89,8 @@ export function observeAid(source, target, weight) {
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 }
 
-const CARD_ATTACK_W = { sha: 1.0, juedou: 1.0, huogong: 0.8, guohe: 0.5, shunshou: 0.6, lebu: 0.6, bingliang: 0.6, jiedao: 0.5, zhujin: 1.2 };
+// 拆顺/借刀只记录出牌事实；移除哪张牌、是否被迫须看实际结果。
+const CARD_ATTACK_W = { sha: 1.0, juedou: 1.0, huogong: 0.8, lebu: 0.6, bingliang: 0.6, zhujin: 1.2 };
 const CARD_AID_W = { tao: 1.5, taoyuan: 0.3 };
 
 export function observeKill(source, victim) {
@@ -322,6 +325,8 @@ export function styleShanFactor(p) {
 export function getObs() { return OBS; }
 export function resetObs() {
 	for (const k in OBS) delete OBS[k];
+	resetIdentityFacts();
+	resetIdentityEvidence(identityFactsState(null).sessionId);
 	_touchObservation();
 }
 

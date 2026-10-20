@@ -41,7 +41,8 @@
 import { game, get } from '../../foundation/adapt/host.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
-import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor } from '../../perception/observer/identity.js?v=41a';
+import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
+import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import { spyDispositionOf } from '../strategy/identityStance.js?v=41a';
 import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
@@ -67,20 +68,25 @@ function exposureOf(me, t) {
 	try {
 		if (!t) return { shown: false, known: 0, source: 'none', inferConfidence: 0 };
 		const identityMode = _isIdentityMode();
+		const publicRole = identityMode ? publicIdentityRole(t) : null;
 		/* 身份局严格只认公开身份；国战等其它模式保留原有“公开 group”语义。 */
 		let shown = identityMode
-			? (!!t.identityShown || t === game.zhu || t.identity === 'mingzhong')
+			? !!publicRole
 			: (!!t.identityShown || (!!t.group && t.identityShown !== false));
 		let source = 'none';
 		let known = 0;
 
-		/* 主公必然明置（身份局） */
-		try {
+		if (identityMode) {
+			/* 来源与知晓程度均以公开事实为准；濒死血量不等于已确认死亡。 */
+			if (publicRole) {
+				known = 1;
+				source = (game.dead || []).includes(t) ? 'dead_id'
+					: t === game.zhu && publicRole === 'zhu' ? 'shown_lord' : 'shown_id';
+			}
+		} else {
 			if (t === game.zhu) { shown = true; source = 'shown_lord'; known = 1; }
-		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-
-		if (t.identityShown) { shown = true; source = 'shown_id'; known = 1; }
-		else if ((t.hp !== undefined && t.hp <= 0) && t.identityShown) { shown = true; source = 'dead_id'; known = 1; }
+			if (t.identityShown) { shown = true; source = 'shown_id'; known = 1; }
+		}
 
 		/* 行为推断置信度（identity 局才有非零值） */
 		let conf = 0;
@@ -225,7 +231,9 @@ function relationStateKey(me) {
 			const k = playerKey(p);
 			const ex = exposureOf(me, p);
 			const d = dispositionOf(me, p);
-			out.push(k + ':' + d + ':' + (ex.source || 'none') + ':' + Number(ex.known || 0).toFixed(2));
+			const view = identityView(me,p);
+			out.push(k + ':' + d + ':' + (ex.source || 'none') + ':' + Number(ex.known || 0).toFixed(2) +
+				(view ? ':' + JSON.stringify([view.sessionId,view.observerId,view.privateVersion,view.publicRevision,view.evidenceRevision,view.ruleVersion,view.beliefVersion]) : ''));
 		}
 		out.sort();
 		return out.join('|');

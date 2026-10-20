@@ -1,3 +1,4 @@
+import {identityHostEffect} from '../../perception/observer/identityDiagnostics.js?v=41a';
 /* One policy for delayed control: public state only, no real-deck inspection. */
 import {lib, game, get} from '../../foundation/adapt/host.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
@@ -57,7 +58,7 @@ function immediateDelayedKill(p){
  checkingDelayedKill=true;
  try{
   const slashes=(p.getCards('h')||[]).filter(c=>get.name(c,p)==='sha'&&lib.filter.cardEnabled(c,p)&&lib.filter.cardUsable(c,p));
-  return game.players.some(t=>t!==p&&dispositionOf(p,t)<0&&t.hp<=1&&t.countCards('h')===0&&slashes.some(c=>p.canUse(c,t)&&get.effect(t,c,p,p)>0));
+  return game.players.some(t=>t!==p&&dispositionOf(p,t)<0&&t.hp<=1&&t.countCards('h')===0&&slashes.some(c=>p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0));
  }finally{checkingDelayedKill=false;}
 }
 export function delayCardOrder(p,card,original){

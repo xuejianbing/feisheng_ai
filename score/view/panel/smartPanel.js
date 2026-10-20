@@ -24,6 +24,7 @@ import { shaHitRate, wuxieRisk, duelWinRate, riskScore, describeRisk, taoNecessi
 import { taoTiming, wuxieTiming, jiuTiming, resourceScarcity } from '../../decision/resource/resourceManage.js?v=41a';
 import { analyzeOpponentMood, describeMood, moodStrategyBonus, getAllMoods } from '../../cognition/moodState.js?v=41a';
 import { inferIdentity, describeIdentity, getAllIdentities, identityPanelData } from '../dashboard/identityVisual.js?v=41a';
+import {dispositionOf} from '../../decision/relations/relations.js?v=41a';
 import { recordDecision, getDecisionLog, clearDecisionLog, analyzeReplay, replayPanelData } from '../../perception/replay/replayAnalysis.js?v=41a';
 import { getMutualRelations, isCountering, isBeingCountered, counterRelationBonus } from '../../knowledge/counters/mutualRelations.js?v=41a';
 import { getCardPriority, recommendOrder, orderBonus, recommendFlow } from '../../decision/tuning/orderOptimizer.js?v=41a';
@@ -40,7 +41,7 @@ import { cached, clearAllCache, cacheStats, perfStart, perfEnd, perfReport } fro
 /* ================= 1. 生成智能面板 HTML ================= */
 export function generateSmartPanelHtml() {
 	try {
-		const me = _status.currentPhase || game.me;
+		const me = game.me || _status.currentPhase;
 		if (!me) return '<div>没有当前玩家</div>';
 
 		let html = '';
@@ -116,7 +117,7 @@ export function generateSmartPanelHtml() {
 		const identities = getAllIdentities(me);
 		identities.forEach(function (id) {
 			html += '<div style="margin:4px 0;color:#dbe7f5;">';
-			html += '<b style="color:' + id.color + '">' + id.name + '</b>：' + id.identityLabel + '（置信度 ' + Math.round(id.confidence * 100) + '%）';
+			html += '<b style="color:' + id.color + '">' + id.name + '</b>：' + id.identityLabel + '（推断权重 ' + Math.round(id.confidence * 100) + '%）';
 			html += '</div>';
 		});
 
@@ -168,7 +169,7 @@ export function generateSmartPanelHtml() {
 			if (p === me) return;
 
 			let isAlly = false;
-			try { if (get.attitude(me, p) > 0) isAlly = true; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+			try { if (dispositionOf(me, p) > 0) isAlly = true; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			if (!isAlly) return;
 
 			hasAlly = true;
@@ -210,7 +211,7 @@ export function generateSmartPanelHtml() {
 			if (p === me) return;
 
 			let isEnemy = false;
-			try { if (get.attitude(me, p) < 0) isEnemy = true; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+			try { if (dispositionOf(me, p) < 0) isEnemy = true; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			if (!isEnemy) return;
 
 			const name = p.name1 || p.name || '?';
@@ -308,7 +309,7 @@ function showIdentity(me) {
 		let text = '=== 身份推理 ===\n\n';
 
 		identities.forEach(function (id) {
-			text += id.name + '：' + id.identityLabel + '（置信度 ' + Math.round(id.confidence * 100) + '%）\n';
+			text += id.name + '：' + id.identityLabel + '（推断权重 ' + Math.round(id.confidence * 100) + '%）\n';
 		});
 
 		alert(text);

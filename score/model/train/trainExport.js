@@ -1,4 +1,6 @@
 import {beginModeContext,modeSampleMeta} from '../../foundation/runtime/modeContext.js?v=41a';
+import {identityModelCompatibility} from '../features/identityCompatibility.js?v=41a';
+import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=41a';
 /*
  * ============================================
@@ -312,6 +314,11 @@ function _inferScene(meta) {
 }
 
 export function pushSample(features, reward, meta) {
+    const compatibility = identityModelCompatibility();
+    if (!compatibility.sampleAllowed || meta?.modeContext?.mode === 'identity') {
+        _diagBump(_sampleDiag.rejected,(meta?.action || 'unknown') + ':identity-feature-schema-migration');
+        return false;
+    }
     if (_clearTask) return false;
     const arr = new Array(features.length);
     for (let i = 0; i < features.length; i++) arr[i] = features[i] | 0;
@@ -698,6 +705,10 @@ export function trainStartGame(me) {
 
 export function trainRecordSample(me, best, sit, score, features, execution = {}) {
     try {
+        if (!identityModelCompatibility().sampleAllowed) {
+            _diagBump(_sampleDiag.rejected,(best?.type || 'unknown') + ':identity-feature-schema-migration');
+            return null;
+        }
         if (!me || !best || !(Array.isArray(features) || ArrayBuffer.isView(features)) || features.length !== FEATURE_DIM || !features.every(Number.isFinite)) {
             /* ★ 4.0.24：拒绝原因细分（此前只记 type，无法区分 noMe/noFeat/维度失配/非有限值） */
             const _rej = [];
@@ -756,7 +767,7 @@ export function trainRecordSample(me, best, sit, score, features, execution = {}
             rewardSchema: 'action-outcome-v1', rewardStatus: 'pending', transactionId: execution.transactionId || null,
             actorId: execution.actorId || null, target: execution.target || null,
             identity: me.identity || null,   /* ★ fix7: 采样者身份明文（zhu/zhong/fan/nei），后端可按身份分层训练评估 */
-            tgtIdentity: (function () { try { const t = best && best.target; return (t && typeof t === 'object' && t.identity) ? t.identity : null; } catch (eTI) { return null; } })(),   /* ★ fix7: 目标身份明文（best.target 为字符串名时为 null，可从 f[130..133] 反解） */
+            tgtIdentity: publicIdentityRole(best && typeof best.target === 'object' ? best.target : null),
             modeContext: modeSampleMeta(me),
             v5: execution.v5 || null,   /* ★ PR5e.4：v5 双种子集成对最终动作的评分 {ens,s42,s456}，样本级 shadow 对比随 m 上传 */
             negative: null,   /* ★ 负收益样本标记（AI 造成的负收益动作） */

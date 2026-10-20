@@ -24,6 +24,9 @@ import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { attackBy, aidBy, hostilityOf, friendlinessOf, getObservationRevision, getObs } from './observer.js?v=41a';
 import { probHasCard } from '../../model/predict/handInference.js?v=41a';
 import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import { identityCampRelation, publicIdentityRole, selfIdentityRole, identityRoleInventory, remainingIdentitySlots, identityFactsState, resetIdentityFacts, identityRuleCapabilities } from './identityFacts.js?v=41a';
+import {resetIdentityEvidence} from './identityEvidence.js?v=41a';
+export {identityModelCompatibility} from '../../model/features/identityCompatibility.js?v=41a';
 
 /* 计算某玩家打反贼的总次数（内奸也会打反贼） */
 function attackFans(p, zhu) {
@@ -41,6 +44,7 @@ function attackFans(p, zhu) {
 }
 
 const BELIEF = Object.create(null);
+const IDENTITY_VIEWS = new Map();
 let _beliefRound = -1;
 let _beliefEvidenceRevision = -1;
 let _beliefPublicKey = '';
@@ -53,21 +57,8 @@ function keyOf(p) {
 /* 只读取公开身份/存活等可观测字段，不读取隐藏身份。
  * 用于同一回合内“身份明置/阵营公开”后立即刷新信念。 */
 function _publicIdentityFingerprint() {
-	try {
-		const all = (game.players || []).concat(game.dead || []);
-		const out = [];
-		for (const p of all) {
-			if (!p) continue;
-			const k = keyOf(p);
-			if (!k) continue;
-			const shown = !!p.identityShown || p === game.zhu || p.identity === 'mingzhong';
-			const pubId = shown ? String(p.identity || (p === game.zhu ? 'zhu' : '')) : '?';
-			const group = (shown && p.group) ? String(p.group) : '';
-			out.push(k + ':' + (p.alive === false ? '0' : '1') + ':' + (shown ? '1' : '0') + ':' + pubId + ':' + group);
-		}
-		out.sort();
-		return out.join('|');
-	} catch (e) { return ''; }
+    const state = identityFactsState(null);
+    return state.sessionId + ':' + state.publicRevision + ':' + state.ruleVersion;
 }
 
 /* 内联模式判断：identity 局才启用 */
@@ -117,133 +108,10 @@ function _normalizeRole(role) {
 }
 
 /* 公开事实：只允许读取已经明置的身份；主公天然公开。 */
-function _publicRoleOf(p) {
-	try {
-		if (!p) return null;
-		if (p === game.zhu) return 'zhu';
-		if (p.identity === 'mingzhong') return 'zhong'; /* 明忠是规则上的公开身份 */
-		/* ★ 死亡亮身份：engine die 接管在死亡时刻记录的公开身份事实——
-		 *   宿主不同版本 identityShown 行为不一，这里优先读扩展侧事实源，
-		 *   保证「已阵亡玩家的名字/身份」被 AI 认知为确定事实（参与槽位扣除）。 */
-		if (p.__djsc_revealedRole) {
-			const rr = _normalizeRole(p.__djsc_revealedRole);
-			if (rr) return rr;
-		}
-		if (!p.identityShown) return null;
-		return _normalizeRole(p.identity);
-	} catch (e) { return null; }
-}
-
-/* 观察者知道自己的真实身份；这不是透视，而是玩家自身私有信息。 */
-function _selfRoleOf(observer) {
-	try {
-		if (!observer) return null;
-		if (observer === game.zhu) return 'zhu';
-		return _normalizeRole(observer.identity);
-	} catch (e) { return null; }
-}
-
-/**
- * 当前身份场的规则身份配额。
- * 优先调用无名杀本体 get.identityList(numberOfPlayers)；该 API 会读取当前 mode_config，
- * 包括标准人数表以及双内等已由模式规则改写过的身份列表。
- * 若宿主版本没有该 API，再退回 mode_config / 官方公式。
- */
-export function roleInventory() {
-	const out = { counts: { zhu: 0, zhong: 0, fan: 0, nei: 0 }, total: 0, source: 'none', constrainable: false };
-	try {
-		const mode = currentMode();
-		/* 真实宿主这里是字符串；Node 最小 Proxy 桩会让 get/_status 共享函数属性，
-		 * 非字符串值不能被误当成身份子模式。 */
-		const subRaw = _status && _status.mode;
-		const sub = typeof subRaw === 'string' ? subRaw : '';
-		const identityLike = mode === 'identity' || sub === 'normal' || sub === 'identity';
-		if (!identityLike) return out;
-		/* 只有真实字符串子模式才做特殊模式保护。 */
-		if (sub && ['normal', 'identity'].indexOf(sub) < 0) return out;
-
-		const total = _allPlayers().length || ((game.players || []).length + (game.dead || []).length);
-		if (total < 2) return out;
-		let list = null;
-
-		try {
-			if (get && typeof get.identityList === 'function') {
-				const x = get.identityList(total);
-				if (Array.isArray(x)) { list = x.slice(); out.source = 'host_identityList'; }
-			}
-		} catch (e) { /* fallback below */ }
-
-		if (!list) {
-			try {
-				const cfg = lib && lib.config && lib.config.mode_config && lib.config.mode_config.identity;
-				const lists = cfg && cfg.identity;
-				const x = Array.isArray(lists) ? lists[total - 2] : null;
-				if (Array.isArray(x)) { list = x.slice(); out.source = 'mode_config'; }
-			} catch (e) { /* fallback below */ }
-		}
-
-		if (!list) {
-			const n = total - 1;
-			const loyal = Math.round((n * 3) / 9);
-			const spy = Math.round((n * 2) / 9);
-			list = ['zhu']
-				.concat(Array.from({ length: loyal }, function () { return 'zhong'; }))
-				.concat(Array.from({ length: spy }, function () { return 'nei'; }))
-				.concat(Array.from({ length: n - loyal - spy }, function () { return 'fan'; }));
-			out.source = 'official_formula';
-		}
-
-		let unsupported = false;
-		for (const raw of list) {
-			const role = _normalizeRole(raw);
-			if (!role) { unsupported = true; continue; }
-			out.counts[role] = (out.counts[role] || 0) + 1;
-			out.total++;
-		}
-		out.constrainable = !unsupported && out.total === total && out.counts.zhu === 1;
-		return out;
-	} catch (e) { return out; }
-}
-
-/**
- * 从规则配额中扣除：
- *   - 所有公开身份（含阵亡公开）
- *   - observer 自己的私有身份
- * 得到该观察者视角下尚未分配的身份槽位。
- */
-export function remainingRoleSlots(observer) {
-	const inv = roleInventory();
-	const rem = {
-		zhu: inv.counts.zhu || 0,
-		zhong: inv.counts.zhong || 0,
-		fan: inv.counts.fan || 0,
-		nei: inv.counts.nei || 0,
-	};
-	const seen = Object.create(null);
-	try {
-		if (!inv.constrainable) return { counts: rem, source: inv.source, constrainable: false, unknownCount: 0 };
-
-		for (const p of _allPlayers()) {
-			if (!p) continue;
-			const k = keyOf(p);
-			if (!k || seen[k]) continue;
-			seen[k] = 1;
-			let role = _publicRoleOf(p);
-			if (!role && observer && p === observer) role = _selfRoleOf(observer);
-			if (role && rem[role] > 0) rem[role]--;
-		}
-
-		let unknownCount = 0;
-		for (const p of _allPlayers()) {
-			if (!p) continue;
-			if (observer && p === observer) continue;
-			if (!_publicRoleOf(p)) unknownCount++;
-		}
-		return { counts: rem, source: inv.source, constrainable: true, unknownCount: unknownCount };
-	} catch (e) {
-		return { counts: rem, source: inv.source, constrainable: false, unknownCount: 0 };
-	}
-}
+function _publicRoleOf(p) { return publicIdentityRole(p); }
+function _selfRoleOf(observer) { return selfIdentityRole(observer); }
+export function roleInventory() { return identityRoleInventory(); }
+export function remainingRoleSlots(observer) { return remainingIdentitySlots(observer); }
 
 /**
  * 只有“公开事实”或“规则槽位唯一解”才算 hard identity。
@@ -292,36 +160,9 @@ function _computeBelief(p) {
 	const b = { zhu: 0, zhong: 0, fan: 0, nei: 0, updated: (_status && _status.roundNumber) || 0 };
 	if (!p) return b;
 
-	/* ★ 本体身份感知屏蔽：不再直接读 identity 字段
-	 * 只有主公明置（明置身份）或身份已公开时才确定
-	 * 其他情况全部通过行为推断 */
-
-	/* ★ 主公身份必然暴露：开局就知道谁是主公，直接确定 */
-	try {
-		if (p === game.zhu) {
-			return Object.assign(b, { zhu: 1, zhong: 0, fan: 0, nei: 0 });
-		}
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-
-	if (p.identityShown) {
-		try {
-			/* 身份已公开 → 直接用公开身份 */
-			if (p.identity === "zhu") return Object.assign(b, { zhu: 1, zhong: 0, fan: 0, nei: 0 });
-			if (p.identity === "zhong") return Object.assign(b, { zhu: 0, zhong: 1, fan: 0, nei: 0 });
-			if (p.identity === "fan") return Object.assign(b, { zhu: 0, zhong: 0, fan: 1, nei: 0 });
-			if (p.identity === "nei") return Object.assign(b, { zhu: 0, zhong: 0, fan: 0, nei: 1 });
-		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	}
-
-	/* ★ 阵亡后100%确定身份：如果角色阵亡了，身份已明置，直接确定 */
-	try {
-		if (p.hp <= 0 && p.identityShown && p.identity) {
-			if (p.identity === "zhu") return Object.assign(b, { zhu: 1, zhong: 0, fan: 0, nei: 0 });
-			if (p.identity === "zhong") return Object.assign(b, { zhu: 0, zhong: 1, fan: 0, nei: 0 });
-			if (p.identity === "fan") return Object.assign(b, { zhu: 0, zhong: 0, fan: 1, nei: 0 });
-			if (p.identity === "nei") return Object.assign(b, { zhu: 0, zhong: 0, fan: 0, nei: 1 });
-		}
-	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+    const publicRole = _publicRoleOf(p);
+    if (publicRole) return Object.assign(b, Object.fromEntries(_ROLE_IDS.map(r=>[r, r === publicRole ? 1 : 0])));
+    if (!identityRuleCapabilities().standard) return Object.assign(b,{zhu:.25,zhong:.25,fan:.25,nei:.25});
 
 	const zhu = game.zhu;
 	if (!zhu || zhu === p) return b;
@@ -546,8 +387,8 @@ function _computeBelief(p) {
 
 	/* 若本体已公开 identityShown，直接覆盖 */
 	try {
-		if (p.identityShown || p.identity === "mingzhong") {
-			const shownRole = _normalizeRole(p.identity);
+		if (_publicRoleOf(p)) {
+			const shownRole = _publicRoleOf(p);
 			if (shownRole === "fan") { b.fan = 1; b.zhong = 0; b.nei = 0; }
 			else if (shownRole === "zhong") { b.zhong = 1; b.fan = 0; b.nei = 0; }
 			else if (shownRole === "nei") { b.nei = 1; b.fan = 0; b.zhong = 0; }
@@ -608,6 +449,7 @@ function _roundBelief(b) {
 function _copyBelief(b) {
 	if (!b) return null;
 	return {
+        zhu: Number(b.zhu) || 0,
 		fan: Number(b.fan) || 0,
 		zhong: Number(b.zhong) || 0,
 		nei: Number(b.nei) || 0,
@@ -701,6 +543,33 @@ export function identityOf(p) { return identityOfFor(null, p); }
 export function confidenceOf(p) { return confidenceOfFor(null, p); }
 export function beliefOf(p) { return beliefOfFor(null, p); }
 
+/* 新接口保留旧评分模型作对照；概率未校准，不以 maxProb 冒充可信度。 */
+export function identityView(observer, target, context = {}) {
+    if (!target || currentMode() !== 'identity') return null;
+    const state = identityFactsState(observer, context);
+    const evidenceRevision = getObservationRevision();
+    const key = JSON.stringify([state.sessionId,state.observerId,state.privateVersion,state.publicRevision,
+        evidenceRevision,state.ruleVersion,(_status && _status.roundNumber) || 0]);
+    const pair = JSON.stringify([state.observerId,keyOf(target)]);
+    const cached = IDENTITY_VIEWS.get(pair);
+    if (cached && cached.key === key) return cached.value;
+    const hard = hardIdentityOf(observer,target);
+    const b = beliefOfFor(observer,target) || {};
+    const probabilities = hard.role
+        ? Object.fromEntries(_ROLE_IDS.map(r=>[r,hard.role === r ? 1 : 0]))
+        : {zhu:b.zhu || 0,zhong:b.zhong || 0,fan:b.fan || 0,nei:b.nei || 0};
+    const slots = remainingRoleSlots(observer);
+    const possibleRoles = hard.role ? [hard.role] : _ROLE_IDS.filter(r=>!slots.constrainable || slots.counts[r]>0);
+    const entropy = -Object.values(probabilities).reduce((s,p)=>s+(p>0?p*Math.log(p):0),0);
+    const value = Object.freeze({...state,targetId:keyOf(target),probabilities:Object.freeze(probabilities),hardRole:hard.role,
+        source:hard.source === 'unique_remaining_slot' ? 'constraint' : hard.role ? hard.source : 'inference',
+        possibleRoles:Object.freeze(possibleRoles),evidenceRevision,beliefVersion:'legacy-score-v1',calibrated:false,
+        diagnostics:Object.freeze({evidenceGroups:0,entropy,maxProbability:Math.max(...Object.values(probabilities)),
+            reasonCodes:Object.freeze([...slots.reasonCodes,...(!hard.role?['legacy-uncalibrated-belief']:[])])})});
+    IDENTITY_VIEWS.set(pair,{key,value});
+    return value;
+}
+
 /* ---------- 推理级敌友：Identity 固定，Stance 可动态 ---------- */
 
 function _roleOfSelf(me) {
@@ -718,6 +587,7 @@ export function isLikelyEnemy(me, other) {
 		if (!myId || myId === 'nei') return false;
 
 		const hard = hardIdentityOf(me, other);
+		if (hard.role) return identityCampRelation(myId, hard.role) < 0;
 		if (myId === 'zhu' || myId === 'zhong') {
 			if (hard.role === 'fan') return true;
 		} else if (myId === 'fan') {
@@ -749,6 +619,7 @@ export function isLikelyAlly(me, other) {
 		/* “敌方身份已排除”只代表不该打，不等于可以当确定队友喂资源。
 		 * 忠/内 50:50 这类剩余槽位保持 neutral；只有 hard fact 或明显 posterior 优势才视为 ally。 */
 		const hard = hardIdentityOf(me, other);
+		if (hard.role) return identityCampRelation(myId, hard.role) > 0;
 		if (myId === 'zhu' || myId === 'zhong') {
 			if (hard.role === 'zhong') return true;
 			return (b.zhong || 0) >= 0.65 && (b.zhong || 0) - (b.nei || 0) >= 0.20 && (b.fan || 0) < 0.25;
@@ -790,6 +661,9 @@ export function identityBiasOf(me, tgt, weight) {
 
 /* ---------- 生命周期 ---------- */
 export function resetBelief() {
+    resetIdentityFacts();
+    resetIdentityEvidence(identityFactsState(null).sessionId);
+    IDENTITY_VIEWS.clear();
 	for (const k in BELIEF) delete BELIEF[k];
 	_beliefRound = -1;
 	_beliefEvidenceRevision = -1;

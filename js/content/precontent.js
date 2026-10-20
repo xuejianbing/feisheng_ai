@@ -1,3 +1,4 @@
+import {identityHostEffect,identityHostAttitude} from '../../score/perception/observer/identityDiagnostics.js?v=41a';
 /*
  * ============================================
  * // Wydawca: Feisheng Original
@@ -226,7 +227,7 @@ export function precontent(config, pack) {
 						get.tag(card, 'damage') &&
 						card.name !== 'huogong' &&
 						(!lib.config.extension_无名AI_ntAoe || (get.info(card) && get.info(card).selectTarget !== -1)) &&
-						get.attitude(player, target) > 0
+						identityHostAttitude(player, target) > 0
 					) {
 						let num = 0;
 						if (holdFireCfg === 'ph') num = player.hp;
@@ -239,7 +240,7 @@ export function precontent(config, pack) {
 							return;
 						}
 						player._holdFire_temp = true;
-						let eff = get.effect(target, card, player, player);
+						let eff = identityHostEffect(target, card, player, player);
 						delete player._holdFire_temp;
 						/* 从使用者视角看，对友方出伤害牌 → eff < 0；此时应抑制 */
 						if (eff < 0) {
@@ -367,7 +368,7 @@ export function precontent(config, pack) {
 				effect: {
 					player(card, player, target, current) {
 						let name = get.name(card, player);
-						if (get.tag(card, 'damage') && Math.abs(get.attitude(player, target)) < 0.5) {
+						if (get.tag(card, 'damage') && Math.abs(identityHostAttitude(player, target)) < 0.5) {
 							if (name === 'juedou') return [1, player.countCards('hs') / 400];
 							if (name === 'huogong') return [1, player.countCards('h') / 200];
 							if (name === 'sha' && !game.hasNature(card)) {
@@ -384,7 +385,7 @@ export function precontent(config, pack) {
 							) {
 								if (!player.getEquip('qinggang')) return 'zeroplayertarget';
 							}
-							if (get.attitude(player, target) === 0) return [1, 0.005];
+							if (identityHostAttitude(player, target) === 0) return [1, 0.005];
 						}
 						if (
 							name === 'guohe' ||
@@ -396,7 +397,7 @@ export function precontent(config, pack) {
 							name === 'caochuanjiejian' ||
 							name === 'toulianghuanzhu'
 						) {
-							if (get.attitude(player, target) === 0) return [1, 0.01];
+							if (identityHostAttitude(player, target) === 0) return [1, 0.01];
 						}
 					},
 				},
@@ -432,7 +433,7 @@ export function precontent(config, pack) {
 						)
 							return;
 						player._aiyh_zhuAi_temp = true;
-						let att = get.attitude(player, target),
+						let att = identityHostAttitude(player, target),
 							name = get.name(card, player);
 						delete player._aiyh_zhuAi_temp;
 						if (Math.abs(att) < 1 && player.needsToDiscard()) {
@@ -452,7 +453,7 @@ export function precontent(config, pack) {
 					target(card, player, target) {
 						if (typeof card !== 'object' || target._zhuCx_temp || get.itemtype(player) !== 'player') return 1;
 						target._zhuCx_temp = true;
-						let eff = get.effect(target, card, player, target);
+						let eff = identityHostEffect(target, card, player, target);
 						delete target._zhuCx_temp;
 						if (!eff) return;
 						if (get.tag(card, 'damage')) return [1, -Math.min(3, 0.8 * target.getDamagedHp()) - 0.6];
@@ -635,11 +636,11 @@ export function precontent(config, pack) {
 					charlotte: true,
 					superCharlotte: true,
 					async content(event, trigger, player) {
-						if (player.ai.shown >= 0.95 || get.attitude(game.zhu, player) < 0) player.removeSkill('gjcx_neiAi_expose');
+						if (player.ai.shown >= 0.95 || identityHostAttitude(game.zhu, player) < 0) player.removeSkill('gjcx_neiAi_expose');
 						else if (trigger.card.name === 'tao') {
 							for (let i of trigger.targets) {
 								if (player === i) continue;
-								if (get.attitude(game.zhu, i) > 0) player.ai.shown -= 0.5;
+								if (identityHostAttitude(game.zhu, i) > 0) player.ai.shown -= 0.5;
 								else if (i.identity === 'fan') player.ai.shown = 0.99;
 							}
 						} else if (
@@ -648,7 +649,7 @@ export function precontent(config, pack) {
 							player !== trigger.targets[0] &&
 							!player.hasSkill('gjcx_neiZhong') &&
 							!player.hasSkill('gjcx_neiJiang') &&
-							get.attitude(game.zhu, trigger.targets[0]) * get.effect(trigger.targets[0], trigger.card, player, game.zhu) <
+							identityHostAttitude(game.zhu, trigger.targets[0]) * identityHostEffect(trigger.targets[0], trigger.card, player, game.zhu) <
 								0
 						) {
 							player.removeSkill('gjcx_neiAi_expose');
@@ -679,13 +680,13 @@ export function precontent(config, pack) {
 					player(card, player, target) {
 						if (typeof card !== 'object' || player._aiyh_neiZhong_temp || get.itemtype(target) !== 'player') return 1;
 						player._aiyh_neiZhong_temp = true;
-						let eff = get.effect(target, card, player, player),
+						let eff = identityHostEffect(target, card, player, player),
 							name = get.name(card, player);
 						delete player._aiyh_neiZhong_temp;
 						if (!eff) return;
 						if ((get.tag(card, 'damage') && name !== 'huogong') || name === 'lebu' || name === 'bingliang') {
 							if (target.identity === 'zhu') return [1, -3];
-							if (target.ai.shown < 0.95 && get.attitude(game.zhu, target) <= 0) {
+							if (target.ai.shown < 0.95 && identityHostAttitude(game.zhu, target) <= 0) {
 								if (player.needsToDiscard()) return [1, 0.5];
 								return [0, 0];
 							}
@@ -719,7 +720,7 @@ export function precontent(config, pack) {
 					player(card, player, target) {
 						if (typeof card !== 'object' || player._aiyh_neiFan_temp || get.itemtype(target) !== 'player') return;
 						player._aiyh_neiFan_temp = true;
-						let eff = get.effect(target, card, player, player),
+						let eff = identityHostEffect(target, card, player, player),
 							name = get.name(card, player);
 						delete player._aiyh_neiFan_temp;
 						if (!eff) return;
