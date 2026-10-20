@@ -22,6 +22,7 @@ import { collectSkillBreakdownLite } from '../../decision/skills/skills.js?v=41a
 import { learnedChains } from '../../decision/strategy/comboChain.js?v=41a';
 import { log } from '../diag/logger.js?v=41a';
 import { safeGet, safeSet } from '../storage/storage.js?v=41a';
+import { createIngestReceiptSummary, addIngestReceipt, describeIngestReceipt, parseIngestHttpResponse } from './ingestReceipt.js?v=41a';
 
 const ENDPOINT = 'https://data.feiqiaoai.uno/';
 const LAST_KEY = 'djsc_ingest_last';      /* 游标：{ watermark, keyFp, lastOk, lastErr } */
@@ -374,18 +375,7 @@ function postJSON(bodyObj) {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },  /* 简单请求，免 OPTIONS 预检 */
         body: _stableStringify(bodyObj)
-    }).then(r => {
-        if (r && r.ok) return true;
-        if (r && r.status === 429) {
-            /* ★P2 修复：给限流错误打标记——原实现只把中文提示作为 message 抛出，
-             * 而消费端用 /rate_limit|429/ 匹配 message，恒不命中 → 30 分钟退避从未生效，
-             * 反而退回"每小时重试一次"。标记比文案匹配可靠，文案仍保留给玩家看。 */
-            const err = new Error('HTTP 429 触发服务端限流，请稍后自动重试，数据已保留待传，稍后自动重试');
-            err.rateLimited = true;
-            throw err;
-        }
-        throw new Error('HTTP ' + (r ? r.status : '?'));
-    });
+    }).then(parseIngestHttpResponse);
 }
 
 /* ---------------- 主流程 ---------------- */
@@ -428,6 +418,7 @@ function _uploadRun(cur, force) {
     for (let i = 0; i < pick.list.length; i += BATCH_LIMIT) batches.push(pick.list.slice(i, i + BATCH_LIMIT));
     if (!batches.length || (snap.changed || force)) batches.push(null);   /* 终批：携带快照/统计/配置 */
     let idx = 0, sentSamples = 0, failed = false, failMsg = '', rateLimited = false;
+    let receiptSummary = createIngestReceiptSummary();
     function step() {
         if (idx >= batches.length) return Promise.resolve();
         const list = batches[idx];
@@ -435,7 +426,8 @@ function _uploadRun(cur, force) {
             idx === batches.length - 1 ? snap.storagePayload : null,
             (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null,
             (idx === 0) ? skbdPend : null);   /* ★PR7：首批携带 */   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
-        return postJSON(env).then(() => {
+        return postJSON(env).then(response => {
+            receiptSummary = addIngestReceipt(receiptSummary, response);
             if (list) sentSamples += list.length;
             idx++;
         }).catch(e => {
@@ -453,7 +445,7 @@ function _uploadRun(cur, force) {
             saveCursor(cur);
             _lastResult = { at: Date.now(), ok: false, detail: failMsg };
             try { log.warn('cloud', '上报失败（保留待传，本地数据未动）：' + failMsg); } catch (e) {}
-            return { ok: false, error: failMsg, sentSamples };
+            return { ok: false, error: failMsg, sentSamples, serverReceipt: receiptSummary, receiptText: describeIngestReceipt(receiptSummary) };
         }
         /* 全部成功：只推进游标 + 记样本指纹 + 丢弃内存组包（"删除备份"），原始数据一律保留 */
         cur.watermark = pick.maxTs || cur.watermark;
@@ -466,9 +458,11 @@ function _uploadRun(cur, force) {
         saveCursor(cur);
         commitShadowV5(shadowBatch.ids);
         commitSkillBreakdown(skbdPend);   /* ★PR7：成功才推进去重集合 */   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
-        _lastResult = { at: Date.now(), ok: true, detail: sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '') };
+        const receiptText = describeIngestReceipt(receiptSummary);
+        const detail = sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '');
+        _lastResult = { at: Date.now(), ok: true, detail: detail + (receiptText ? '；' + receiptText : ''), serverReceipt: receiptSummary, receiptText };
         try { log.info('cloud', '上报成功：' + _lastResult.detail); } catch (e) {}
-        return { ok: true, sentSamples, snapshotChanged: snap.changed };
+        return { ok: true, sentSamples, snapshotChanged: snap.changed, serverReceipt: receiptSummary, receiptText };
     });
 }
 
@@ -523,7 +517,7 @@ function _ensureCloudBtn() {
                 b.style.opacity = '.95';
                 const restore = function () { setTimeout(function () { b.textContent = '☁️'; b.style.background = 'rgba(20,20,20,.45)'; b.style.opacity = '.6'; b.__busy = false; }, 1400); };
                 uploadNow(true).then(function (r) {
-                    if (r && r.ok) { b.textContent = '✓'; b.style.background = 'rgba(30,110,50,.7)'; restore(); _cloudToast('已上传：' + (r.sentSamples || 0) + ' 条新样本，本地学习数据保留' + (r.snapshotChanged ? '（含快照）' : ''), true); }
+                    if (r && r.ok) { b.textContent = '✓'; b.style.background = 'rgba(30,110,50,.7)'; restore(); _cloudToast('已上传：' + (r.sentSamples || 0) + ' 条新样本，本地学习数据保留' + (r.snapshotChanged ? '（含快照）' : '') + (r.receiptText ? '；' + r.receiptText : ''), true); }
                     else if (r && r.skipped === 'busy') { b.textContent = '☁️'; b.style.opacity = '.6'; b.__busy = false; _cloudToast('正在上传中，请稍候'); }
                     else { b.textContent = '✗'; b.style.background = 'rgba(140,30,30,.7)'; restore(); _cloudToast('上传失败：' + ((r && r.error) || '未知') + '；数据已保留', false); }
                 }).catch(function (eUp) { b.textContent = '✗'; b.style.background = 'rgba(140,30,30,.7)'; restore(); _cloudToast('上传失败：' + eUp + '；数据已保留', false); });
@@ -544,7 +538,7 @@ function refreshCloudSettings() {
 }
 function installCloudIngest() { refreshCloudSettings(); }
 function feedbackToast(result) {
-    if (result && result.ok) _cloudToast('已上传 ' + (result.sentSamples || 0) + ' 条新样本，本地学习数据保留', true);
+    if (result && result.ok) _cloudToast('已上传 ' + (result.sentSamples || 0) + ' 条新样本，本地学习数据保留' + (result.receiptText ? '；' + result.receiptText : ''), true);
     else if (result && result.skipped === 'busy') _cloudToast('正在上传中，请稍候');
     else if (result && result.skipped === 'no-new-data') _cloudToast('暂无新增反馈数据');
     else _cloudToast('上传失败，数据已保留，请稍后重试', false);

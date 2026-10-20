@@ -67,7 +67,8 @@ _post_lock = threading.Lock()  # POST 状态操作临界区锁（限流/去重/�
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # 内存中的去重集合和限流计数
-dedup_hashes = set()
+# 请求级重复检测。保留已处理请求的样本回执，客户端在响应丢失后重试时可恢复原计数。
+dedup_hashes = {}
 ip_hourly_counts = defaultdict(int)
 last_hour_key = datetime.now().strftime("%Y-%m-%dT%H")  # 按小时重置
 
@@ -498,11 +499,16 @@ class IngestHandler(BaseHTTPRequestHandler):
                 h = compute_hash(data_str)
                 if h in dedup_hashes:
                     ip_hourly_counts[client_ip] += 1
-                    _resp = (200, {
+                    duplicate_response = {
                         "ok": True,
                         "deduped": True,
+                        "duplicate_request": True,
                         "msg": "重复数据已跳过"
-                    }, None)
+                    }
+                    cached_receipt = dedup_hashes.get(h)
+                    if cached_receipt:
+                        duplicate_response["receipt"] = cached_receipt
+                    _resp = (200, duplicate_response, None)
                 else:
                     # 追加到小时文件
                     hour_file = get_hour_filepath(current_hour)
@@ -534,8 +540,9 @@ class IngestHandler(BaseHTTPRequestHandler):
                                     record[extra] = payload[extra]
 
                     append_hour_record(hour_file, record)
-                    # 只有归档持久化成功后才记入请求去重集合；失败时客户端重试仍可补写。
-                    dedup_hashes.add(h)
+                    # 小时归档已落盘后先记录请求指纹，异常重试不重复追加原始事件；
+                    # 完整统计稍后补入同一个键。进程重启后的持久幂等由后续存储阶段承担。
+                    dedup_hashes[h] = None
 
                     # === 自动合并到全局池 ===
                     new_count = 0
@@ -566,16 +573,31 @@ class IngestHandler(BaseHTTPRequestHandler):
 
                     ip_hourly_counts[client_ip] += 1
 
+                    # 回执区分“原始归档”与“进入已标记的合并候选池”；该服务不判断最终训练资格。
+                    receipt = {
+                        "schema": "ingest-receipt-v1",
+                        "receivedSamples": len(samples),
+                        "archivedSamples": len(samples),
+                        "mergedNewSamples": new_count,
+                        "duplicateSamples": dup_in_batch,
+                        "rejectedUnlabeledSamples": rejected_unlabeled,
+                        "mergedPoolTotal": _legacy_pool_total + len(merged_samples),
+                        "hour": current_hour,
+                    }
+                    # 只有小时归档成功且统计完成后才缓存回执，避免失败响应被误报为已完成。
+                    dedup_hashes[h] = receipt
                     _resp = (200, {
                         "ok": True,
                         "deduped": False,
+                        "duplicate_request": False,
                         "samples": len(samples),
                         "new_unique": new_count,
                         "deduped_in_batch": dup_in_batch,
                         "rejected_unlabeled": rejected_unlabeled,
                         "total_merged": _legacy_pool_total + len(merged_samples),
                         "total_deduped": total_deduped_count,
-                        "hour": current_hour
+                        "hour": current_hour,
+                        "receipt": receipt,
                     }, f"[{datetime.now().strftime('%H:%M:%S')}] 收到 {client_ip}，{len(samples)}条样本，新增{new_count}条，去重{dup_in_batch}条，过滤古早无标签{rejected_unlabeled}条，池内{_legacy_pool_total + len(merged_samples)}条")
 
         # 响应发送（锁外网络 IO）
