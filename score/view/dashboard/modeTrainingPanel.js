@@ -110,6 +110,10 @@ export function openModeTrainingPanel(){
   config.append(node('p','当前对局：'+(c.mode==='doudizhu'?(DOUDIZHU_NAMES[c.submode]||'未知子模式'):c.mode)+' · '+(modeSessionActive()?'本局设置已锁定，修改于下一局生效':'可修改下一局设置'),'djsc-mode-note'));
   const switches=node('div',undefined,'djsc-mode-switches');switches.append(checkbox('classicDoudizhu','启用常规斗地主专项规则','沿用公共 AI，加入地主／农民专项偏好。'),checkbox('classicDoudizhuCollect','采集常规斗地主专项数据','仅收录实际执行、收益已确认且标签有效的样本。'));switches.append(checkbox('playerDemonstrations','采集玩家手动出牌示范','记录手动用牌、重铸及顺序；合格动作参与专项训练。'));switches.append(checkbox('classicModelEnabled','专项模型参与实际选择','使用已启用的试用版本，影响幅度封顶，修改下一局生效。'),checkbox('classicAutoUpdate','局间自动学习与更新','结算后对比公共基线与当前试用版，地主、农民分组通过才更新。'));config.append(switches);content.append(config);
   const grid=node('div',undefined,'djsc-mode-grid');for(const [label,value] of [['有效事务',s.data.accepted],['来源局数',s.data.sessions],['重复事务',s.data.duplicates],['冲突事务',s.data.conflicts]]){const stat=node('div',undefined,'djsc-mode-stat');stat.append(node('span',label),node('strong',String(value)));grid.append(stat);}content.append(grid);
+  const flow=s.collection||{},diag=s.sampleDiagnostics||{accepted:{},rejected:{}};
+  content.append(node('p',flow.sessionId?'最近一局样本流：已记录 '+flow.sampled+' · 成功捕获 '+flow.captured+' · 已执行 '+flow.committed+' · 收益确认 '+flow.observed+' · 待回填 '+flow.pending+' · 未解析 '+flow.unresolved+' · 有效标签 '+flow.labelReady+' · 最终合格 '+flow.trainable:'尚未发现斗地主专项对局样本；可检查本局模式、采集开关和采样诊断。','djsc-mode-note'));
+  const acceptedDiag=Object.values(diag.accepted||{}).reduce((a,b)=>a+(Number(b)||0),0),rejectedDiag=Object.values(diag.rejected||{}).reduce((a,b)=>a+(Number(b)||0),0);
+  content.append(node('p','当前运行期累计采样诊断：已接收 '+acceptedDiag+' 条 · 采集阶段拒绝 '+rejectedDiag+' 条'+(rejectedDiag?'（'+Object.entries(diag.rejected||{}).map(([reason,count])=>reason+' '+count).join('；')+'）':''),'djsc-mode-note'));
   const stats=card('玩法与角色统计'),wrap=node('div',undefined,'djsc-mode-table-wrap'),table=node('table'),head=node('thead'),header=node('tr'),body=node('tbody');
   for(const label of ['玩法／角色','有效事务','来源局数','战绩'])header.append(node('th',label));head.append(header);table.append(head,body);
   const results=classicMatchSummary();for(const subtype of ['normal','kaihei','huanle'])for(const role of ['landlord','farmer']){const k=subtype+'/'+role,d=s.data.breakdown[k]||{},r=results.groups[k]||{},row=node('tr');for(const value of [DOUDIZHU_NAMES[subtype]+' · '+(role==='landlord'?'地主':'农民'),d.samples||0,d.sessions||0,(r.wins||0)+'胜 / '+(r.losses||0)+'负 / '+(r.unknown||0)+'未知'])row.append(node('td',String(value)));body.append(row);}
@@ -138,7 +142,7 @@ export function openModeTrainingPanel(){
    const button=node('button',label);button.type='button';button.disabled=s.busy&&label!=='刷新统计';
    button.onclick=async()=>{button.disabled=true;let result;try{const task=action();render();result=await task;}catch(e){result={ok:false,err:String(e.message||e)};}lastResult={label,result};safeSet('djsc_mode_fold_'+label+'结果','true');render();};buttons.append(button);
   }
-  training.append(buttons,node('p','训练门槛：300 条有效事务、10 局，按整局留出验证。每个适用角色分组至少 10 条；新候选对比公共基线和当前试用版，分组指标不退步才可启用。标签准确率和价值误差不代表胜率；未执行建议、未知收益及模式未知的旧数据不参与专项训练。','djsc-mode-note'));content.append(training);renderResult();
+  training.append(buttons,node('p','训练门槛：至少 4500 条有效事务、150 局；训练集至少 3000 条，整局留出验证至少 450 条；每个适用玩法／角色验证组至少 150 条。候选需与公共基线和当前试用版比较，分组指标不退步才可启用。标签准确率和价值误差不代表胜率；未执行建议、未确认收益及模式不匹配的数据不参与专项训练。','djsc-mode-note'));content.append(training);renderResult();
  }
  render();
  modeModelsReady.then(()=>{if(panel.isConnected)render();});
