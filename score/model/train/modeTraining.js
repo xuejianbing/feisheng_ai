@@ -3,7 +3,7 @@ import {classicRuntimeSummary} from './classicRuntime.js?v=41a';
 import {game,lib} from '../../foundation/adapt/host.js?v=41a';
 import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=41a';
 import {dirOf,downloadText} from '../../foundation/storage/storagePaths.js?v=41a';
-import {getSamples} from './trainExport.js?v=41a';
+import {getSamples,getSampleDiagnostics} from './trainExport.js?v=41a';
 import {selectClassicDataset,splitClassicByGame,sampleLabel} from './modeDataset.js?v=41a';
 import {createIsolatedModelSession} from '../weights/weights.js?v=41a';
 import {saveClassicCandidateDurable,retryClassicModelRestore,modeModelsReady,classicModelStorageStatus,classicCandidateInfo,createClassicCandidateSession,createClassicActiveSession,loadClassicCandidate,loadClassicActive,classicActiveInfo,promoteClassicCandidateDurable,rollbackClassicActiveDurable} from '../weights/modeModelStore.js?v=41a';
@@ -13,7 +13,18 @@ import {writeTrainingSnapshot} from './trainingExportFile.js?v=41a';
 import {FEATURE_DIM} from '../features/features.js?v=41a';
 let busy=false,progress={phase:'未训练'},lastReport=null;
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
-export function classicTrainingStatus(){const data=selectClassicDataset(getSamples()),qualified=new Set(data.samples.map(s=>JSON.stringify([s.m.sessionId,s.m.actorId,s.m.transactionId]))),context=modeContext();return {storage:classicModelStorageStatus(),busy,progress:{...progress},candidate:classicCandidateInfo(),active:classicActiveInfo(),lastReport,context,runtime:classicRuntimeSummary(context.sessionId),data:data.stats,demonstrations:playerDemonstrationSummary(getSamples(),qualified)};}
+function summarizeCollection(samples,context,qualified){
+ const classic=(samples||[]).filter(s=>s?.m?.modeContext?.group==='doudizhu-classic');
+ const newest=classic.reduce((best,s)=>!best||(s.ts||0)>(best.ts||0)?s:best,null);
+ const sessionId=(context.group==='doudizhu-classic'&&context.sessionId)||newest?.m?.sessionId||null;
+ const rows=sessionId?classic.filter(s=>s.m?.sessionId===sessionId):[];
+ const count=predicate=>rows.filter(predicate).length;
+ const trainable=new Set(rows.filter(s=>qualified.has(JSON.stringify([s.m?.sessionId,s.m?.actorId,s.m?.transactionId]))).map(s=>JSON.stringify([s.m?.sessionId,s.m?.actorId,s.m?.transactionId])));
+ return {sessionId,sampled:rows.length,captured:count(s=>s.m?.modeContext?.captured===true),committed:count(s=>s.m?.executionState==='committed'),
+  observed:count(s=>s.m?.rewardStatus==='observed'),pending:count(s=>s.m?.rewardStatus==='pending'),unresolved:count(s=>s.m?.rewardStatus==='unresolved'),
+  labelReady:count(s=>sampleLabel(s)!==null),trainable:trainable.size};
+}
+export function classicTrainingStatus(){const samples=getSamples()||[],data=selectClassicDataset(samples),qualified=new Set(data.samples.map(s=>JSON.stringify([s.m.sessionId,s.m.actorId,s.m.transactionId]))),context=modeContext();return {storage:classicModelStorageStatus(),busy,progress:{...progress},candidate:classicCandidateInfo(),active:classicActiveInfo(),lastReport,context,runtime:classicRuntimeSummary(context.sessionId),data:data.stats,collection:summarizeCollection(samples,context,qualified),sampleDiagnostics:getSampleDiagnostics(),demonstrations:playerDemonstrationSummary(samples,qualified)};}
 async function evaluate(session,rows){let correct=0,error=0,missing=0;const groups={};
  let visited=0;for(const s of rows){if(++visited%32===0)await pause();const p=session.predict(s.f),key=s.m.modeContext.submode+'/'+s.m.modeContext.role,g=groups[key]||(groups[key]={count:0,correct:0,valueError:0});if(!p||!Number.isFinite(p.value)||p.logits.some(v=>!Number.isFinite(v))){missing++;continue;}
   const predicted=p.logits.indexOf(Math.max(...p.logits)),hit=predicted===sampleLabel(s)?1:0,sq=(p.value-s.value_target)**2;correct+=hit;error+=sq;g.count++;g.correct+=hit;g.valueError+=sq;
