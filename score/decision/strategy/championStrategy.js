@@ -9,6 +9,7 @@ import { decisionActionSnapshot } from '../analysis/decisionStages.js?v=41a';
  * ============================================
  */
 import { trainingLabelOf } from '../../model/train/labelPolicy.js?v=41a';
+import { SUPPORTED_DIMS } from '../../model/features/dimensionAdapter.js?v=41a';
 import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';
 import { normalizedMargin, DECISION_MARGIN } from '../state/decisionMargin.js?v=41a';
 import { isCandidateEligible, sameCandidatePolicyBand } from '../state/actionCandidate.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
@@ -75,7 +76,7 @@ export function championSampleEligibility(s) {
     if(!m || m.rewardSchema!=='action-outcome-v1')return 'missing-execution-evidence';
     try { if(trainingLabelOf(s)===null)return 'invalid-training-label'; } catch (_) { return 'invalid-training-label'; }
     if(!m.player || !m.id || !(m.type||m.action))return 'missing-action-identity';
-    if(!Array.isArray(s.f)||s.f.length!==130||s.f.some(v=>!Number.isFinite(v)))return 'invalid-context';
+    if(!Array.isArray(s.f)||!SUPPORTED_DIMS.includes(s.f.length)||s.f.some(v=>!Number.isFinite(v)))return 'invalid-context';
     if(!outcome || outcome.normalization!==12 || !Array.isArray(outcome.deltas)||!outcome.deltas.length)return 'missing-result-evidence';
     const fields=['hp','hand','equip','judging','alive','linked','turned','wine'];
     if(outcome.deltas.some(d=>!d?.playerId || ![-1,0,1].includes(d.camp) || fields.some(k=>!Number.isFinite(d[k]))))return 'invalid-result-deltas';

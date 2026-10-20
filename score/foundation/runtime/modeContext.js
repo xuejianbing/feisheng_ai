@@ -1,4 +1,5 @@
 import {classicActiveInfo,classicModelStorageStatus} from '../../model/weights/modeModelStore.js?v=41a';
+import {CURRENT_DIM} from '../../model/features/dimensionAdapter.js?v=41a';
 import {game,get,lib,_status} from '../adapt/host.js?v=41a';
 import {cfg} from '../config/util.js?v=41a';
 export const CLASSIC_SUBMODES=Object.freeze(['normal','kaihei','huanle']);
@@ -11,7 +12,7 @@ export function resolveModeContext({mode='unknown',submode='unknown',settings={}
  const rules={feiyang:settings.feiyang_version??'unknown',farmerLegacy:settings.enhance_nongmin??'unknown',landlordEnhance:settings.enhance_dizhu??'unknown',doubleCharacter:!!settings.double_character,doubleHp:settings.double_hp??'unknown',pile:hash(JSON.stringify(pile))};
  const ruleKey=mode+'/'+submode+'/'+hash(JSON.stringify(rules));
  return {schema:'mode-context-v1',mode,submode,name:DOUDIZHU_NAMES[submode]||submode,group:classic?'doudizhu-classic':special?'doudizhu-special':mode,
-  ruleVersion:1,ruleKey,rules,enabled:classic&&enabled===true,collect:classic&&collect===true,modelVersion:'public-runtime',featureVersion:130,networkProfile:'public-runtime'};
+  ruleVersion:1,ruleKey,rules,enabled:classic&&enabled===true,collect:classic&&collect===true,modelVersion:'public-runtime',featureVersion:CURRENT_DIM,networkProfile:'public-runtime'};
 }
 export function readModeContext(){
  let mode='unknown';try{mode=get.mode?.()||'unknown';}catch(_){}

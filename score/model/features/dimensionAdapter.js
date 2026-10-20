@@ -16,14 +16,15 @@ export const ORIGINAL_DIM_MARKER = '_originalDim';
 
 /**
  * 判断样本的特征维度
- * 优先级：sample.featureDim > sample.m.modeContext.featureVersion > 默认130
+ * 特征数组长度是实际存储维度；元数据只作回退，避免旧版错误元数据
+ * 将新维度向量误判为旧维度并清掉新增特征。
  */
 export function detectDim(sample) {
+  const actualDim = sample?.f?.length;
+  if (Number.isInteger(actualDim) && actualDim > 0) return actualDim;
   if (sample && typeof sample.featureDim === 'number') return sample.featureDim;
   const ctx = sample?.m?.modeContext;
   if (ctx && typeof ctx.featureVersion === 'number') return ctx.featureVersion;
-  // 回退：从特征数组长度推断
-  if (sample && sample.f && sample.f.length) return sample.f.length;
   return 130;
 }
 

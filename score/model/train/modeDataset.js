@@ -3,7 +3,7 @@
  */
 import {trainingLabelOf} from './labelPolicy.js?v=41a';
 import {championSampleEligibility} from '../../decision/strategy/championStrategy.js?v=41a';
-import {adaptToCurrentDim, SUPPORTED_DIMS} from '../features/dimensionAdapter.js?v=41a';
+import {adaptToCurrentDim, detectDim, SUPPORTED_DIMS} from '../features/dimensionAdapter.js?v=41a';
 import {SAMPLE_STATES, stampEligibility} from './sampleEligibility.js?v=41a';
 
 const DEFAULT_SPLIT_SEED = 20261019;
@@ -29,16 +29,17 @@ export function selectClassicDataset(samples) {
   const reject=(r)=>{rejected[r]=(rejected[r]||0)+1;};
   for (const s of samples||[]) {
     const m=s?.m, c=m?.modeContext;
+    const featureDim=detectDim(s);
     let reason=null;
     if (!c || c.schema!=='mode-context-v1' || c.captured!==true) reason='模式来源未知';
     else if (c.group!=='doudizhu-classic' || c.mode!=='doudizhu' || !['normal','kaihei','huanle'].includes(c.submode)) reason='非本专项';
     else if (!c.collect) reason='采集未开启';
     else if (!['landlord','farmer'].includes(c.role)) reason='角色未确认';
     else if (!c.ruleKey || c.ruleVersion!==1) reason='规则版本不兼容';
-    else if (!SUPPORTED_DIMS.includes(c.featureVersion)) reason='特征维度不支持:'+c.featureVersion;
+    else if (!SUPPORTED_DIMS.includes(featureDim)) reason='特征维度不支持:'+featureDim;
     else reason=championSampleEligibility(s);
-    if (c?.featureVersion===130) dimStats.dim130++;
-    else if (c?.featureVersion===134) dimStats.dim134++;
+    if (featureDim===130) dimStats.dim130++;
+    else if (featureDim===134) dimStats.dim134++;
     else if (c) dimStats.other++;
     if (reason) {
       reject(reason); stampEligibility(s,SAMPLE_STATES.REJECTED,reason);
