@@ -24,10 +24,11 @@ import {identityView} from '../../perception/observer/identity.js?v=41a';
  * 120-124 全卡牌分组概率（新增：控制/AOE/延时/爆发/过牌）
  * 125-129 完整技能标签（新增：摸牌/回复/辅助/生存/目标防御）
  * 130-133 合法已知目标身份 one-hot；隐藏未知全零。
+ * 134-141 契约预留 8 位（Int8Array 初始化为 0，不参与任何赋值，供云端 142 维契约对齐）。
  * 身份场的旧权重和采样由 identityCompatibility 暂停，不能以同维度偷换语义。
  */
 
-export const FEATURE_DIM = 134;
+export const FEATURE_DIM = 142;
 
 /* ---------- 语义槽位（由游戏档案注入，引用稳定，不随档案替换而失效） ---------- */
 const ATK_IDS   = bucketIds(BUCKET.ATK);
@@ -208,6 +209,8 @@ export function extractFeatures(me, act, ctx, out, allPlayers) {
         f[131] = (_tid === 'zhong' || _tid === 'mingzhong') ? 127 : 0;
         f[132] = _tid === 'fan' ? 127 : 0;
         f[133] = _tid === 'nei' ? 127 : 0;
+        /* f[134..141] 为云端 142 维契约预留位：out 由 new Int8Array(FEATURE_DIM) 分配，
+         * 这 8 位恒为 0、不做任何赋值，保证线上 142 维定长且不引入动作泄露。 */
     }
 
     /* ========== ★ 48-63 时序特征 ========== */
@@ -728,4 +731,6 @@ export const FEATURE_NAMES = [
     '预留',
     /* 130-133 目标身份（★ fix7） */
     '目标主公','目标忠臣','目标反贼','目标内奸',
+    /* 134-141 云端契约预留（恒为 0） */
+    '预留','预留','预留','预留','预留','预留','预留','预留',
 ];

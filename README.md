@@ -66,7 +66,7 @@
 | **关系与状态层** | 统一玩家状态快照、敌我关系、威胁与动作效用 |
 | **特殊牌 Evaluator** | 铁索连环、借刀杀人、桃园结义、五谷丰登等专项策略 |
 | **安全护栏** | 对明显错误动作进行保护，例如敌方濒死时误出桃 |
-| **模型系统** | 正式 134 维特征（兼容旧 130 维样本）→ 128 → 64 → 6 标签 + Critic 价值头 |
+| **模型系统** | 正式 142 维特征（130 本体 + f130..133 目标身份 + f134..141 云端契约预留，兼容旧 130/134 维样本）→ 128 → 64 → 6 标签 + Critic 价值头 |
 | **学习与校准** | localTrainer、自动学习、校准器、A/B 模型状态机、策略进化 |
 | **感知与记忆** | 身份观察、玩家/牌堆记忆、对手预测、团队意图与对局日志 |
 | **可视化工具** | AI 大脑总览、校准趋势、决策回放、决策对比、自检面板 |
@@ -87,7 +87,7 @@
 
 ## 当前模型契约
 
-> **FEATURE_DIM = 134；网络 134 → 128（GELU + LayerNorm）→ 64（GELU + LayerNorm）→ 6 标签 + Critic 价值头；权重 Int8（SCALE=128）／偏置 Int16；权重快照 VERSION=7。训练集兼容 130 维旧样本，适配会标记 `_dimAdapted`。**
+> **FEATURE_DIM = 142；网络 142 → 128（GELU + LayerNorm）→ 64（GELU + LayerNorm）→ 6 标签 + Critic 价值头；权重 Int8（SCALE=128）／偏置 Int16；权重快照 VERSION=7（旧 134/130 维权重加载时输入层尾部补零，数学等价）。训练集兼容 130/134 维旧样本，适配会标记 `_dimAdapted`。f134..141 为云端契约预留位，恒为 0。**
 
 旧 48 / 96 维模型与训练数据与当前契约不兼容，载入时会被版本/维度校验拒收。
 
@@ -196,7 +196,7 @@ modelGuard 最终护栏
 
 ### 3.1 核心模块
 
-#### features.js — 特征提取（134维，FEATURE_DIM）
+#### features.js — 特征提取（142维，FEATURE_DIM）
 
 ```javascript
 // 维度分配（权威清单以 features.js 内的 DIM_NAMES / 段注释为准）
@@ -204,13 +204,14 @@ modelGuard 最终护栏
 48-95  时序特征 + AI 自我状态 + 相对强度 + 元认知干预 + 概率/牌堆/全局校准
 96-129 技能标签/身份/阶段等扩展特征（含少量预留位）
 130-133 目标身份 one-hot
+134-141 云端契约预留位（恒为 0，不赋值）
 
 // 使用
-const f = new Int8Array(FEATURE_DIM); // FEATURE_DIM = 134
+const f = new Int8Array(FEATURE_DIM); // FEATURE_DIM = 142
 window.__DJSC.extractFeatures(me, act, ctx, f);
 ```
 
-#### weights.js — 多层网络（134→128→64→6 + Critic）
+#### weights.js — 多层网络（142→128→64→6 + Critic）
 
 ```javascript
 // 结构：GELU 激活 + 每层 LayerNorm；"残差"为并联可训练线性投影（非 identity shortcut）
@@ -546,8 +547,8 @@ closeBtn.addEventListener('click', () => {
 ### 4.4 特征系统规范
 
 ```javascript
-// 1. 不新增维度，只填充预留位；扩容必须同步升 FEATURE_DIM 与权重快照 VERSION
-// 134维固定，目标身份 one-hot 位于 130..133；不得静默补齐新旧样本
+// 1. 新增维度必须同步升 FEATURE_DIM；纯预留零位扩容可保持 VERSION 不变，旧权重输入层尾部补零（数学等价）
+// 142维固定，目标身份 one-hot 位于 130..133，134..141 为云端契约预留恒零位；不得静默补齐新旧样本语义位
 
 // 2. Int8 范围 [-127, 127]
 // 量化函数：q(v) = Math.round(v * 127)
@@ -618,7 +619,7 @@ closeBtn.addEventListener('click', () => {
 
 | 项 | 说明 |
 |---|---|
-| 134维正式特征 | 兼容 130 维旧样本并显式标记适配；48/96 维旧模型不兼容，会被契约校验拒收 |
+| 142维正式特征 | 兼容 130/134 维旧样本并显式标记适配；旧 134/130 维权重输入层尾部补零；150 实验体与 48/96 维旧模型不兼容，会被契约校验拒收 |
 | 旧训练数据 | 需执行 `window.__DJSC.trainBufferClear()` |
 | 面板系统 | 全屏遮罩版，兼容所有无名杀版本 |
 | 本地持久化 | 业务层统一走 `foundation/storage`；底层可落到浏览器本地存储，清理本地站点数据会重置相应状态 |
@@ -674,8 +675,8 @@ localStorage.removeItem('djsc_weights_v3');
 
 | 参数 | 值 |
 |---|---|
-| 特征维度 | 134 维（FEATURE_DIM；可适配 130 维旧样本） |
-| 网络结构 | 134 → 128(GELU+LayerNorm) → 64(GELU+LayerNorm) → 6 + Critic |
+| 特征维度 | 142 维（FEATURE_DIM；可适配 130/134 维旧样本；134..141 为目标身份+预留位） |
+| 网络结构 | 142 → 128(GELU+LayerNorm) → 64(GELU+LayerNorm) → 6 + Critic |
 | 权重快照版本 | VERSION=7（Int8 权重 / Int16 偏置） |
 | Int8 范围 | [-127, 127] |
 | 权重 SCALE | 128 |

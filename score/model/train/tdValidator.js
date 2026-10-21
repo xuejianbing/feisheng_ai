@@ -17,7 +17,7 @@ export const REWARD_SOFT_MIN = -10, REWARD_SOFT_MAX = 10;
 
 export function validateTdTransition(t, options = {}) {
   const errors = [], warnings = [];
-  const expectedStateDim = options.expectedStateDim ?? 134;
+  const expectedStateDim = options.expectedStateDim ?? 142;  /* 须与 features.js 的 FEATURE_DIM 同步 */
   if (!t) return {valid:false, errors:['null-transition'], warnings:[], fields:{}};
   if (t.state == null) errors.push(TD_ERROR_CODES.MISSING_STATE);
   if (t.action == null) errors.push(TD_ERROR_CODES.MISSING_ACTION);

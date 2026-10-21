@@ -21,7 +21,7 @@ import { log } from '../../foundation/diag/logger.js?v=41a';  /* ★ 自动导�
 import { cfg } from '../../foundation/config/util.js?v=41a';    /* ★ 读取配置（满额一条龙需要群号等） */
 import { dirOf, downloadText, fileOf } from '../../foundation/storage/storagePaths.js?v=41a';  /* ★ 统一导出路径（手机端兜底下载） */
 import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
-import { FEATURE_DIM } from '../features/features.js?v=41a';  /* ★ 4.0.24 根因修复：维度单一来源改从 features.js 导入（130→134，fix7 目标身份四维）。旧硬编码 130 与 features.js 134 失配，导致 trainRecordSample 入口全拒、样本线 15:18 起全灭 */
+import { FEATURE_DIM } from '../features/features.js?v=41a';  /* ★ 维度单一来源：features.js 现为 142（130→134 fix7 目标身份四维 → 142 云端契约预留 8 位）。4.0.24 根因修复：改从 features.js 导入，旧硬编码 130 与 features.js 失配曾导致 trainRecordSample 入口全拒、样本线 15:18 起全灭 */
 
 /* ================= 训练数据缓冲（1万样本自动导出版） ================= */
 
@@ -243,8 +243,8 @@ function _sanitizeBuffer(arr) {
     for (let i = 0; i < arr.length; i++) {
         const r = _sanitizeSample(arr[i]);
         if (!r.sample) { dropped++; continue; }
-        /* ★ 4.0.24：丢弃与当前 FEATURE_DIM 不符的存量样本（旧 130 维已在服务器合并池有备份，
-           留在缓冲只会与 134 维新样本混维，训练端无法对齐） */
+        /* ★ 4.0.24：丢弃与当前 FEATURE_DIM(142) 不符的存量样本（旧 130/134 维由 dimensionAdapter 适配或在服务器合并池有备份，
+           留在缓冲只会与 142 维新样本混维，训练端无法对齐） */
         if (r.sample.f && Array.isArray(r.sample.f) && r.sample.f.length !== FEATURE_DIM) { dimMismatch++; continue; }
         if (r.repaired) repaired++;
         list.push(r.sample);
@@ -1061,8 +1061,8 @@ export function importFromJson(jsonStr) {
         }
 
         let added = 0, merged = 0, skipped = 0, repaired = 0;
-        /* ★ P1-19：导入强校验——维度必须等于 FEATURE_DIM(134)，且每项都是有限数。
-         * 否则旧 48/96 维样本或含 NaN/字符串的样本会被静默零填充成伪 134 维样本污染训练。
+        /* ★ P1-19：导入强校验——维度必须等于 FEATURE_DIM(142)，且每项都是有限数。
+         * 否则旧 48/96/130/134 维样本或含 NaN/字符串的样本会被静默零填充成伪 142 维样本污染训练。
          * ★ 数据隔离：统一过 _sanitizeSample——旧版 reward 损坏样本（reward 与 meta.score 脱节）
          *   以 score 为准修复后再入库，杜绝客户旧导出文件污染当前训练。 */
         let skippedWrongDim = 0, skippedNonFinite = 0, skippedInvalidLabels = 0;

@@ -1,16 +1,17 @@
 /*
  * dimensionAdapter.js
  * 训练与模型专项修复 · 批次B
- * 130/134 维样本安全适配层
+ * 130/134/142 维样本安全适配层
  *
  * 关键规则：
- * - SUPPORTED_DIMS 只包含正式契约维度，142 维实验不进入
- * - 130→134 适配时目标身份位 [130..133] 显式标记为 _dimAdapted，不静默补零
+ * - SUPPORTED_DIMS 只包含正式契约维度，150 维实验体不进入
+ * - 130→142 适配时目标身份位 [130..133] 与预留位 [134..141] 显式标记为 _dimAdapted，不静默补零
+ * - 134→142 适配时仅预留位 [134..141] 补零
  * - 适配后的样本可被训练流程识别并单独统计
  */
 
-export const SUPPORTED_DIMS = [130, 134];
-export const CURRENT_DIM = 134;
+export const SUPPORTED_DIMS = [130, 134, 142];
+export const CURRENT_DIM = 142;
 export const DIM_ADAPTED_MARKER = '_dimAdapted';
 export const ORIGINAL_DIM_MARKER = '_originalDim';
 
@@ -29,11 +30,12 @@ export function detectDim(sample) {
 }
 
 /**
- * 将样本适配到当前正式维度（134）
+ * 将样本适配到当前正式维度（142）
  * 返回 { sample, adapted, dim, error }
  * - 已是当前维度：adapted=false，原样返回
- * - 130→134：adapted=true，目标身份位补零并带标记
- * - 不支持的维度（如142）：sample=null，error='unsupported-dim'
+ * - 130→142：adapted=true，目标身份位 [130..133] 与预留位 [134..141] 补零并带标记
+ * - 134→142：adapted=true，预留位 [134..141] 补零并带标记
+ * - 不支持的维度（如 150 实验体）：sample=null，error='unsupported-dim'
  */
 export function adaptToCurrentDim(sample) {
   if (!sample) return { sample: null, adapted: false, dim: 0, error: 'null-sample' };
@@ -48,7 +50,7 @@ export function adaptToCurrentDim(sample) {
     return { sample: null, adapted: false, dim, error: 'unsupported-dim' };
   }
 
-  // 130 → 134：前130维原样复制，后4维（目标身份）初始化为0并带标记
+  // 130/134 → 142：前 srcLen 维原样复制，尾部（目标身份位与预留位）初始化为0并带标记
   const srcLen = Math.min(dim, CURRENT_DIM);
   const f = new Int8Array(CURRENT_DIM);
   if (sample.f && sample.f.length >= srcLen) {

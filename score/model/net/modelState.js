@@ -576,7 +576,7 @@ async function _trainOnSnapshot(snapshot, te, wm) {
         const live = _snapshotWeights(wm);
         const liveMom = (wm.__getMoments ? wm.__getMoments() : null);
         if (!_snapshotComplete(live) || !_snapshotComplete(snapshot)) {
-            log.warn('hotswap', '快照结构与主网络(130→128→64→6)不符，跳过候选训练以避免权重错位');
+            log.warn('hotswap', '快照结构与主网络(142→128→64→6)不符，跳过候选训练以避免权重错位');
             return;
         }
 

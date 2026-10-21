@@ -25,7 +25,7 @@ function cloneTrainingSample(sample) {
 export function selectClassicDataset(samples) {
   const map=new Map(), conflicts=new Set(), rejected={};
   let duplicates=0, dimAdaptedCount=0;
-  const dimStats={dim130:0,dim134:0,other:0};
+  const dimStats={dim130:0,dim134:0,dim142:0,other:0};
   const reject=(r)=>{rejected[r]=(rejected[r]||0)+1;};
   for (const s of samples||[]) {
     const m=s?.m, c=m?.modeContext;
@@ -40,6 +40,7 @@ export function selectClassicDataset(samples) {
     else reason=championSampleEligibility(s);
     if (featureDim===130) dimStats.dim130++;
     else if (featureDim===134) dimStats.dim134++;
+    else if (featureDim===142) dimStats.dim142++;
     else if (c) dimStats.other++;
     if (reason) {
       reject(reason); stampEligibility(s,SAMPLE_STATES.REJECTED,reason);

@@ -247,7 +247,7 @@ export const paramsDigest = (params, dims) => {
  * 返回 { ok, errors[], digest, size, decoded, probe }：任何一项不满足都不允许应用。 */
 export const validateBundle = (bundle, expect) => {
     const errors = [];
-    const dims = (expect && expect.dims) || [134, 128, 64, 6];
+    const dims = (expect && expect.dims) || [142, 128, 64, 6];  /* 仅 expect 缺失时的兜底，须与 weights.js MODEL_SCHEMA.dims 同步 */
     const spec = paramSpec(dims);
     const push = m => { if (errors.length < 12) errors.push(m); };
 

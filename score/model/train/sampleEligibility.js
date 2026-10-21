@@ -66,7 +66,8 @@ export function classifySample(sample, championEligibilityFn) {
 
   // 特征维度（由 dimensionAdapter 统一判断，这里只检查是否在支持列表）
   const featureDim = sample.f?.length || sample.featureDim || c.featureVersion || 0;
-  if (![130, 134].includes(featureDim)) {
+  /* 与 dimensionAdapter.SUPPORTED_DIMS 保持同步（150 实验体不接受）；旧维样本先经适配层补零 */
+  if (![130, 134, 142].includes(featureDim)) {
     return { state: SAMPLE_STATES.REJECTED, reason: REJECT_REASONS.FEATURE_DIM_UNSUPPORTED };
   }
 

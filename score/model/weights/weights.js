@@ -37,7 +37,26 @@ import { safeGet as _lsGet } from '../../foundation/storage/storage.js?v=41a';  
 
 const STORE_KEY = 'djsc_weights_v3';
 const VERSION = 7;  /* ★ 版本升级：统一前向几何 + softmax温度 + 随机舍入，旧权重(饱和退化)作废重训 */
-const IN_DIM = 134, HID1_DIM = 128, HID2_DIM = 64, OUT_DIM = 6;  /* ★ fix7：输入维度134（新增 f[130..133] 目标身份 one-hot），和 features.js 对齐 */
+const IN_DIM = 142, HID1_DIM = 128, HID2_DIM = 64, OUT_DIM = 6;  /* ★ 142 维契约：f[0..129] 本体 + f[130..133] 目标身份 one-hot + f[134..141] 预留（恒0），和 features.js 对齐 */
+/* 旧输入维度（升维时旧权重矩阵尾部补零，数学等价：新增维度初始零贡献） */
+const LEGACY_IN_DIMS = [134, 130];
+/* 解码输入层权重矩阵（w1/pr1），旧 134/130 维快照在尾部补零行到当前 IN_DIM。
+ * 矩阵按行主序展平（每 HID1_DIM 个元素一行），尾部补零等价于追加零输入行。 */
+function _decodeInputMat(str) {
+    const raw = _decodeInt8(str);
+    const cur = IN_DIM * HID1_DIM;
+    if (raw.length === cur) return raw;
+    for (const oldIn of LEGACY_IN_DIMS) {
+        if (raw.length === oldIn * HID1_DIM) {
+            const padded = new Int8Array(cur);
+            padded.set(raw.subarray(0, oldIn * HID1_DIM));
+            try { log.info('weights', '输入权重升维兼容 ' + oldIn + '->' + IN_DIM + '：尾部补 ' + (IN_DIM - oldIn) + ' 行零权重'); }
+            catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+            return padded;
+        }
+    }
+    throw new Error('InputMat shape mismatch: ' + raw.length + ' (期望 ' + IN_DIM + 'x' + HID1_DIM + ' 或旧版 ' + LEGACY_IN_DIMS.join('/') + 'x' + HID1_DIM + ')');
+}
 /* ★ §7：单一模型契约 MODEL_SCHEMA —— 版本 / 维度 / 数值类型 / 架构的唯一权威定义。
  *   DIM_CHECK、A/B 快照护栏（modelState.js 的 NET）等全部由此派生，禁止别处再手写维度。 */
 const MODEL_SCHEMA = {
@@ -190,7 +209,7 @@ function _decodeDefault() {
     try {
         /* 全部先解码到局部变量，任一 shape 不符即抛错 → 不产生半解码副本 */
         const snap = {
-            W1: _decodeInt8(d.w1, IN_DIM * HID1_DIM),
+            W1: _decodeInputMat(d.w1),
             B1: _decodeInt16(d.b1, HID1_DIM),
             W2: _decodeInt8(d.w2, HID1_DIM * HID2_DIM),
             B2: _decodeInt16(d.b2, HID2_DIM),
@@ -198,7 +217,7 @@ function _decodeDefault() {
             B3: _decodeInt16(d.b3, OUT_DIM),
             W4: _decodeInt8(d.w4, HID2_DIM * 1),
             B4: _decodeInt16(d.b4, 1),
-            W_proj1: _decodeInt8(d.pr1, IN_DIM * HID1_DIM),
+            W_proj1: _decodeInputMat(d.pr1),
             W_proj2: _decodeInt8(d.pr2, HID1_DIM * HID2_DIM),
             trained: d.trained || 0,
             accuracy: d.accuracy || 0,
@@ -264,7 +283,7 @@ export function loadWeights() {
             return false;
         }
         /* ★ P0-04：按真实 dtype 解码（Int8 权重 / Int16 偏置），shape 不符直接抛错 → 走 fail-closed */
-        W1 = _decodeInt8(obj.w1, IN_DIM * HID1_DIM); B1 = _decodeInt16(obj.b1, HID1_DIM);
+        W1 = _decodeInputMat(obj.w1); B1 = _decodeInt16(obj.b1, HID1_DIM);
         W2 = _decodeInt8(obj.w2, HID1_DIM * HID2_DIM); B2 = _decodeInt16(obj.b2, HID2_DIM);
         W3 = _decodeInt8(obj.w3, HID2_DIM * OUT_DIM); B3 = _decodeInt16(obj.b3, OUT_DIM);
         /* ★ 加载Critic头权重（如果旧版本没有就随机初始化） */
@@ -277,7 +296,7 @@ export function loadWeights() {
             for (let i = 0; i < B4.length; i++) B4[i] = 0;
         }
         /* ★ 加载残差投影（旧存档没有则重用当前/随机，避免 NaN 崩坏） */
-        W_proj1 = (obj.pr1 && _decodeInt8(obj.pr1, IN_DIM * HID1_DIM).length === IN_DIM * HID1_DIM) ? _decodeInt8(obj.pr1, IN_DIM * HID1_DIM) : (W_proj1 || _initRandomPrj(IN_DIM * HID1_DIM));
+        W_proj1 = obj.pr1 ? _decodeInputMat(obj.pr1) : (W_proj1 || _initRandomPrj(IN_DIM * HID1_DIM));
         W_proj2 = (obj.pr2 && _decodeInt8(obj.pr2, HID1_DIM * HID2_DIM).length === HID1_DIM * HID2_DIM) ? _decodeInt8(obj.pr2, HID1_DIM * HID2_DIM) : (W_proj2 || _initRandomPrj(HID1_DIM * HID2_DIM));
         META.trained = obj.trained || 0;
         META.accuracy = obj.accuracy || 0;

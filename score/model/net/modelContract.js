@@ -1,9 +1,9 @@
 /*
  * modelContract.js — model input/output contract validation.
  */
-export const FORMAL_CONTRACT={featureDim:134,hiddenDims:[128,64],actionOutputs:6,criticOutputs:1,weightType:'int8',version:7};
+export const FORMAL_CONTRACT={featureDim:142,hiddenDims:[128,64],actionOutputs:6,criticOutputs:1,weightType:'int8',version:7};
 export const LEGACY_CONTRACT={featureDim:130,hiddenDims:[128,64],actionOutputs:6,criticOutputs:1,weightType:'int8',version:6};
-export const EXPERIMENTAL_DIMS=[142,150];
+export const EXPERIMENTAL_DIMS=[150];
 
 export function inferContractFromWeights(weights) {
   if (!weights) return {error:'null-weights'};
