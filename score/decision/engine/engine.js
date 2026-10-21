@@ -201,6 +201,7 @@ import { extractFeatures, FEATURE_DIM } from '../../model/features/features.js?v
 import { pushSample, bufferSize, bufferClear } from '../../model/train/trainExport.js?v=41a';
 import { v5Predict } from '../../../shadow/decodeV5.js?v=41a';   /* ★ PR5e.4：样本级 v5 预测记录（decodeV5 自包含无副作用，未加载模型时 v5Predict 返回 null） */
 import { cmd as cloudCmd, status as cloudStatus, onGameEndHook, installCloudIngest, uninstallCloudIngest } from '../../foundation/cloud/cloudIngest.js?v=41a';   /* ★ 数据上报通道（SHA-256 去重 + 增量上传 + 每小时；本地数据保留） */
+import { primeCloudDecision, consumeCloudAction, cloudInferenceCmd, cloudInferenceStats, cloudInferenceHealth, cloudInferenceSelfTest, resetCloudInference, actionIdOf as cloudActionIdOf, legalActionIdsOf } from '../../foundation/cloud/cloudInference.js?v=41a';   /* ★ 云端推理通道（同步决策异步预取 + stateKey 缓存消费；未命中/超时/legacy 自动回退本地） */
 import { getState as modelGetState, onGameEnd as modelOnGameEnd, forceTrain as modelForceTrain } from '../../model/net/modelState.js?v=41a';  /* ★ 真正的 modelState */
 import * as _trainExportModule from '../../model/train/trainExport.js?v=41a';
 import { getWeights, getBias, isReady as weightsReady, predict } from '../../model/weights/weights.js?v=41a';
@@ -4136,12 +4137,38 @@ function bestActionCore() {
         const classicModelEvidence=applyClassicModel(acts,modeSampleMeta(me),a=>extractFeatures(me,a,{
             bestT,bestTs,isEnemy:bestT?_isEnemyMemo(bestT):false,focusTarget:focus?focus.target:null
         },classicFeatureBuffer,alivePlayers));
+		/* ★ 云端推理（v3 混合引擎）：以中性「过牌」动作提取纯局面特征（动作维由云端 KEEP 剔除），
+		 *   fire-and-forget 预取，绝不阻塞同步决策；结果按 _decisionStateKey 缓存。
+		 *   首次调用网络未返回时下方 consume 必然 miss → 本地照常；同一出牌窗口后续 bestAction 调用再接管。 */
+		try {
+			const _cloudFeatBuf=new Int8Array(FEATURE_DIM);
+			const _cloudFeat=extractFeatures(me,{type:'end',id:'end'},{
+				bestT:bestT,bestTs:bestTs,isEnemy:bestT?_isEnemyMemo(bestT):false,focusTarget:focus?focus.target:null
+			},_cloudFeatBuf,alivePlayers);
+			primeCloudDecision(_decisionStateKey,Array.from(_cloudFeat),legalActionIdsOf(acts));
+		} catch(eCloudPrime){ if(window.__DJSC&&window.__DJSC.swallow)window.__DJSC.swallow(eCloudPrime); }
 		acts.sort(compareActionCandidates);
 		const endAction = acts.filter(function (a) { return a.type === "end"; })[0] || makeActionCandidate({ type: "end", id: "end", score: 0, reason: "结束回合" });
 		ensureCandidatePolicy(endAction);
 		let eligibleActs = acts.filter(isCandidateEligible);
 		const topEligible = eligibleActs[0] || endAction;
 		best = (candidatePriorityRank(topEligible) > 0 || topEligible.score > 0) ? topEligible : endAction;
+		/* ★ 云端推理接管：若云端已对该局面给出合法动作（hard_rule / LGBM），提升为 best。
+		 *   未命中（首次/超时/异常/legacy_fallback/弃权）→ best 保持本地结果，fail-open。
+		 *   云端候选本身就在 eligibleActs 中，会继续经过 planner / champion / guard 全流程。 */
+		try {
+			const _cloudHit=consumeCloudAction(_decisionStateKey,legalActionIdsOf(eligibleActs));
+			if(_cloudHit){
+				const _cloudCand=eligibleActs.find(function(a){return a&&cloudActionIdOf(a)===_cloudHit.actionId;})
+					|| acts.find(function(a){return a&&cloudActionIdOf(a)===_cloudHit.actionId;});
+				if(_cloudCand){
+					best=_cloudCand;
+					best._cloud=_cloudHit.source;
+					best._conf=Math.max(typeof best._conf==='number'?best._conf:0.3,Number(_cloudHit.confidence)||0);
+					best.reason=(best.reason||'')+'｜云端'+(_cloudHit.source==='hard_rule'?'硬规则':'模型')+'('+(Number(_cloudHit.confidence)||0).toFixed(2)+')';
+				}
+			}
+		} catch(eCloudConsume){ if(window.__DJSC&&window.__DJSC.swallow)window.__DJSC.swallow(eCloudConsume); }
         const decisionStages=createDecisionStages(classicModelBefore);
         decisionStages.record('classicModel',classicModelBefore,best,classicModelEvidence);
         const plannerBefore=decisionActionSnapshot(best);
@@ -5756,6 +5783,12 @@ export { give, givePair, giveVs, scoreCardUse, scoreEffect, installHooks, uninst
     reg.bind('aiStats', { _real: true, aggregateByPlayer: aggregateByPlayer, buildHtml: aiStatsBuildHtml, stats: function() { return { ok: true, hasAggregate: true }; } });
     reg.bind('allyExempt', { _real: true, check: checkAllyExempt, stats: function() { return { ok: true, hasCheck: true }; } });
     reg.bind('health', { _real: true, check: healthCheck });
+    reg.bind('cloudInference', { _real: true,
+        prime: primeCloudDecision, consume: consumeCloudAction,
+        actionIdOf: cloudActionIdOf, legalActionIdsOf: legalActionIdsOf,
+        stats: cloudInferenceStats, health: cloudInferenceHealth, selfTest: cloudInferenceSelfTest,
+        reset: resetCloudInference, cmd: cloudInferenceCmd,
+        help: function () { return cloudInferenceCmd.help(); } });
     reg.bind('guardRecorder', { _real: true, record: recordGuardEvent, getStats: getGuardStats, reset: resetGuardRecorder });
     reg.bind('localTrainer', { _real: true, train: trainLocalAsync, isTraining: isTraining, lastResult: lastResult });
     reg.bind('multiTurnPlan', { _real: true, plan: multiTurnForecast, stats: function() { return { ok: true }; } });
