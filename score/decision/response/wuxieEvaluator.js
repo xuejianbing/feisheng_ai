@@ -1,6 +1,7 @@
 import { fireUtility, tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import { refinedWuxieEffect,tiesuoWuxieEffect } from './wuxieOptimization.js?v=41a';
 import {cooperativeTrickIntent,trickUseEvidence,humanControlsTrick} from '../state/cooperativeTrickIntent.js?v=41a';
+import {cooperationPolicyEnabled} from '../strategy/cooperationPolicy.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 /*
  * ============================================
@@ -533,7 +534,7 @@ export function evaluateTrickEffect(player, ctx, context) {
  * is unknown. Ordinary enemy attacks do not require a manual-use credential. */
 function _unknownPlayerSelfDamage(player, ctx, context) {
  const source=ctx.source;
- return source&&source!==player&&source===ctx.target&&ctx.effectScope==='target'&&
+ return cooperationPolicyEnabled()&&source&&source!==player&&source===ctx.target&&ctx.effectScope==='target'&&
   SINGLE_DAMAGE_TRICKS.includes(ctx.originalSpellId)&&_rel(player,source,context)>0&&
   humanControlsTrick(source)&&trickUseEvidence(ctx).state==='unknown';
 }

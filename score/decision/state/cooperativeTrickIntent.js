@@ -2,6 +2,7 @@
 import {game,get,_status} from '../../foundation/adapt/host.js?v=41a';
 import {dispositionOf} from '../relations/relations.js?v=41a';
 import {canSupplyTrickResponse,knownTrickDamage} from '../response/responseMaterials.js?v=41a';
+import {cooperationPolicyEnabled} from '../strategy/cooperationPolicy.js?v=41a';
 import {playChoiceWindow} from '../execution/decisionWindow.js?v=41a';
 let roots=new WeakMap(),cards=new WeakMap(),epoch=0;
 export function cooperativeTrickEpoch(){return epoch;}
@@ -25,6 +26,7 @@ function directPhase(window,source){
 }
 export function observeCooperativeTrickUse(root,source,choiceEvent){
  try{
+  if(!cooperationPolicyEnabled())return null;
   if(!root||typeof root!=='object'||root.name!=='useCard'||root.player!==source||!source||!root.card||typeof root.card!=='object')return null;
   const id=get.name(root.card,source);
   if(!['huogong','tiesuo','guohe','shunshou','jiedao','juedou','nanman','wanjian'].includes(id))return null;
@@ -68,6 +70,7 @@ export function trickUseEvidence(ctx){
 }
 export function cooperativeTrickIntent(viewer,ctx,relationOf=dispositionOf){
  try{
+  if(!cooperationPolicyEnabled())return null;
   const evidence=trickUseEvidence(ctx);
   if(evidence.state!=='manual')return null;
   const record=evidence.record;

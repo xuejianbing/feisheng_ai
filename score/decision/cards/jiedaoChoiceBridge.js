@@ -1,6 +1,6 @@
 /* Native sequential selection stays authoritative; only AI scores share the pair evaluator. */
 import {lib,game,get,ui,_status} from '../../foundation/adapt/host.js?v=41a';
-import {bestJiedaoPair,hostJiedaoTargetDecision} from './jiedaoEvaluator.js?v=41a';
+import {bestJiedaoPair,hostJiedaoTargetDecision,jiedaoPolicyEnabled} from './jiedaoEvaluator.js?v=41a';
 import {cooperativeTrickEpoch} from '../state/cooperativeTrickIntent.js?v=41a';
 import {tacticalSettingsSnapshot} from '../strategy/tacticalOptimization.js?v=41a';
 function normalWindow(event,p){
@@ -22,9 +22,9 @@ export function installJiedaoChoiceBridge(){
  let active=true;
  const wrapped=function(...args){
   const p=this,result=original.apply(this,args),epoch=cooperativeTrickEpoch();
-  if(!result||typeof result!=='object')return result;
+  if(!result||typeof result!=='object'||!jiedaoPolicyEnabled())return result;
   const native1=result.ai1,native2=result.ai2;
-  const enabled=()=>active&&epoch===cooperativeTrickEpoch()&&!result.finished&&tacticalSettingsSnapshot().enabled&&
+  const enabled=()=>active&&jiedaoPolicyEnabled()&&epoch===cooperativeTrickEpoch()&&!result.finished&&tacticalSettingsSnapshot().enabled&&
    !(p===game.me&&!_status.auto)&&!p.isOnline2?.()&&normalWindow(result,p);
   result.ai1=function(item,...rest){
    if(enabled()&&typeof item==='object'&&get.name(item,p)==='jiedao'){
