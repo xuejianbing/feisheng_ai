@@ -1,5 +1,6 @@
 import {ai,game,get,lib,ui,_status} from '../../../foundation/adapt/host.js?v=41a';
 import {cfg} from '../../../foundation/config/util.js?v=41a';
+import {versusStrategyEnabled} from '../../../foundation/config/versusSettings.js?v=41a';
 import {readVersusMode} from '../../../foundation/runtime/versusContext.js?v=41a';
 import {readResourceReserve} from './resourceReserveRuntime.js?v=41a';
 import {cooperativeTrickEpoch} from '../../state/cooperativeTrickIntent.js?v=41a';
@@ -41,7 +42,7 @@ function phaseParent(event,player,skill=null) {
 
 export function materialReserveContext(player,event=_status.event) {
     if(!player||event?.player!==player||event.finished||_status.currentPhase!==player||
-        !readVersusMode().is2v2||!cfg('tacticalOptimization',true))return null;
+        !readVersusMode().is2v2||!versusStrategyEnabled('versusReserve'))return null;
     if(event.name==='chooseToUse') {
         const skill=event.skill,info=lib.skill?.[skill];
         if(event.type!=='phase'||event.forced||!activeSkill(info)||info.forced||!info.filterCard||
@@ -50,7 +51,9 @@ export function materialReserveContext(player,event=_status.event) {
         if(typeof info.viewAs==='function')return null;
         const view=typeof info.viewAs==='string'?info.viewAs:info.viewAs?.name;
         if(urgentRecovery(player,info))return null;
-        if(!info.viewAs&&info.discard===false&&info.lose===false)return null; // 只选牌/展示不当成消耗。
+        // 纯主动出牌技能若没有 viewAs，只有宿主明确声明会弃牌/失去材料时才计成本。
+        // 未声明的 filterCard 可能只是限定选择范围，不能据此推断材料会被消耗。
+        if(!info.viewAs&&info.discard!==true&&info.lose!==true)return null;
         return {skill,kind:view?'conversion':'active-skill-cost',forced:false};
     }
     if(!['chooseToDiscard','chooseCard','chooseCardTarget'].includes(event.name))return null;
