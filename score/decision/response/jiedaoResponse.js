@@ -7,6 +7,7 @@ import {cooperativeTrickIntent,cooperativeTrickEpoch} from '../state/cooperative
 import {beginChoiceAudit} from '../../perception/journal/choiceAudit.js?v=41a';
 
 import {responseMaterialOptions} from './responseMaterials.js?v=41a';
+import {jiedaoPolicyEnabled} from '../cards/jiedaoEvaluator.js?v=41a';
 import {jiedaoTransferValue} from '../cards/jiedaoBranches.js?v=41a';
 let evaluating=false;
 const clamp=n=>Math.max(-24,Math.min(24,n));
@@ -57,6 +58,7 @@ export function evaluateJiedaoResponse(holder,event=_status.event,material=null)
  if(evaluating)return unresolved('reentrant-effect');
  evaluating=true;
  try{
+  if(!jiedaoPolicyEnabled())return unresolved('cooperation-policy-out-of-scope');
   if(cfg('responseAI',true)===false)return unresolved('response-off');
   const ctx=resolveJiedaoResponse(holder,event);
   if(!ctx)return unresolved('ambiguous-jiedao-window');
@@ -100,7 +102,7 @@ export function installJiedaoResponseBridge(){
  const controlled=p=>p===game.me&&!_status.auto||p.isOnline2?.();
  const wrapped=function(...args){
   const p=this,parent=_status.event,result=original.apply(this,args);
-  if(!active||controlled(p)||!result||typeof result!=='object'||!resolveJiedaoResponse(p,parent))return result;
+  if(!active||!jiedaoPolicyEnabled()||controlled(p)||!result||typeof result!=='object'||!resolveJiedaoResponse(p,parent))return result;
   const native1=result.ai1,native2=result.ai2,epoch=cooperativeTrickEpoch();
   const window=()=>{
    if(result.name!=='chooseToUse'||result.player!==p)return null;
@@ -125,7 +127,7 @@ export function installJiedaoResponseBridge(){
  const basic=ai?.basic,nativeChooseCard=basic?.chooseCard;
  const chooseMaterial=typeof nativeChooseCard==='function'?function(check,...args){
   const event=_status.event,p=event?.player;
-  if(!active||!p||controlled(p)||!event.skill||!resolveJiedaoResponse(p,event))return nativeChooseCard.call(this,check,...args);
+  if(!active||!jiedaoPolicyEnabled()||!p||controlled(p)||!event.skill||!resolveJiedaoResponse(p,event))return nativeChooseCard.call(this,check,...args);
   const score=function(item,...rest){
    const d=active&&!controlled(p)?evaluateJiedaoResponse(p,event,item):null;
    return d?.resolved?(d.action==='sha'?Math.min(8,Math.max(.1,d.delta)):-1):typeof check==='function'?check.call(this,item,...rest):0;

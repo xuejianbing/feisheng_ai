@@ -4,6 +4,9 @@ import {lib,game,get,ui} from '../../foundation/adapt/host.js?v=41a';
 import {dispositionOf} from '../relations/relations.js?v=41a';
 import {identityHostEffect} from '../../perception/observer/identityDiagnostics.js?v=41a';
 import {jiedaoTransferValue,boundedJiedaoValue} from './jiedaoBranches.js?v=41a';
+import {cooperationPolicyEnabled} from '../strategy/cooperationPolicy.js?v=41a';
+import {tacticalEnabled} from '../strategy/tacticalOptimization.js?v=41a';
+export function jiedaoPolicyEnabled(){return cooperationPolicyEnabled()&&!!tacticalEnabled('enabled');}
 let evaluating=false;
 export function hasWeapon(p){
  try{return (p?.getCards('e')||[]).some(c=>get.subtypes(c)?.includes('equip1'));}catch(_){return false;}
@@ -15,6 +18,7 @@ export function supportedJiedaoShape(){
 }
 export function evaluateJiedaoPair(me,holder,victim,card={name:'jiedao'}){
  const no=(reason,resolved=true)=>({resolved,use:false,score:0,holder,victim,reason});
+ if(!jiedaoPolicyEnabled())return no('cooperation-policy-out-of-scope',false);
  if(!supportedJiedaoShape())return no('unsupported-host-shape',false);
  if(evaluating)return no('reentrant-effect',false);
  evaluating=true;
@@ -51,6 +55,7 @@ export function enumerateJiedaoPairs(me,{holder=null,card={name:'jiedao'}}={}){
  return pairs.sort((a,b)=>b.score-a.score);
 }
 export function bestJiedaoPair(me,options={}){
+ if(!jiedaoPolicyEnabled())return {resolved:false,use:false,score:0,reason:'cooperation-policy-out-of-scope'};
  if(evaluating||!supportedJiedaoShape())return {resolved:false,use:false,score:0,reason:'unsupported-host-shape'};
  const pairs=enumerateJiedaoPairs(me,options);
  return pairs.length?{...pairs[0],pairs:pairs.slice(0,5).map(p=>({holder:p.holder.playerid,victim:p.victim.playerid,score:p.score}))}:
@@ -58,7 +63,7 @@ export function bestJiedaoPair(me,options={}){
 }
 // The selected holder constrains the second stage. Never choose a fresh holder for it.
 export function hostJiedaoTargetDecision(me,target,card,selected=ui.selected?.targets||[]){
- if(!supportedJiedaoShape())return null;
+ if(!jiedaoPolicyEnabled()||!supportedJiedaoShape())return null;
  const holder=selected[0];
  const r=holder?evaluateJiedaoPair(me,holder,target,card):bestJiedaoPair(me,{holder:target,card});
  return r.resolved?{allowed:!!r.use,score:r.score,holder:r.holder,victim:r.victim}:null;

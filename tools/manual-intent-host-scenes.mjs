@@ -48,8 +48,9 @@ export async function runManualIntentScenes(page){
   };
   manualHarness.start=()=>{
    const hostile=manualHarness.spec.hostile,p=hostile?lord:me;
-   manualHarness.run('phaseUse',p,async()=>{
-    if(hostile)await p.chooseToUse({type:'phase',forced:true,filterCard:c=>get.name(c)==='huogong',filterTarget:(c,p,t)=>t===me});
+   manualHarness.run(manualHarness.spec.forcedSelf?'forcedSkillUse':'phaseUse',p,async()=>{
+    if(manualHarness.spec.forcedSelf)await p.useCard(p.getCards('h','huogong')[0],[p]);
+    else if(hostile)await p.chooseToUse({type:'phase',forced:true,filterCard:c=>get.name(c)==='huogong',filterTarget:(c,p,t)=>t===me});
     else await p.chooseToUse({type:'phase'});
    }).then(()=>{manualHarness.done=true;}).catch(error=>{manualHarness.error=error.stack||String(error);});
   };
@@ -65,12 +66,13 @@ export async function runManualIntentScenes(page){
   {id:'manual-enemy-duel-counter',card:'juedou',hand:['juedou'],targets:['lord'],lordHand:['wuxie'],counter:true},
   {id:'manual-nanman',card:'nanman',hand:['nanman'],targets:[],defense:'sha'},
   {id:'manual-wanjian',card:'wanjian',hand:['wanjian'],targets:[],defense:'shan'},
+  {id:'forced-self-fire-control',hand:['huogong','sha'],forcedSelf:true},
   {id:'hostile-fire-control',hand:['sha'],lordHand:['huogong','sha'],hostile:true},
  ];
  const confirm=async()=>{const ok=page.locator('.control').getByText('确定',{exact:true});if(await ok.isVisible())await ok.click();};
  for(const spec of specs){
   await page.evaluate(spec=>manualHarness.setup(spec),spec);await page.evaluate(()=>manualHarness.start());
-  if(!spec.hostile){
+  if(!spec.hostile&&!spec.forcedSelf){
    await page.waitForFunction(()=>realHost._status.event?.name==='chooseToUse'&&realHost._status.paused,{},{timeout:15000});
    await page.locator(`[data-manual-card="${spec.card}"].selectable`).click();
    for(const role of spec.targets)await page.locator(`[data-manual-role="${role}"].selectable`).click();
@@ -106,7 +108,7 @@ export async function runManualIntentScenes(page){
   if(spec.counter){
    assert.deepEqual(wx.map(e=>e.actor),['lord','ally']);assert.equal(scene.hp.lord,3);assert.equal(scene.allyWuxie,0);
    assert(decisions.some(t=>t.hostState===-1&&t.use===true));
-  }else if(spec.hostile){
+  }else if(spec.hostile||spec.forcedSelf){
    assert.equal(scene.hp.me,4);assert.equal(scene.allyWuxie,0);assert.deepEqual(wx.map(e=>e.actor),['ally']);
    assert(decisions.some(t=>t.use===true&&!t.playerIntentRespected));
   }else{
@@ -122,5 +124,5 @@ export async function runManualIntentScenes(page){
   }
   scenes.push(scene);
  }
- return {hostVersion:await page.evaluate(()=>realHost.lib.version),setup:'正常斗地主初始化后安排公开身份、手牌及装备，清理武将技能；原生Player/GameEvent、牌内容与AI评分不由测试替换；9个人工点击场景及1个指定敌方进攻对照',settings:{wuxie_self:false,tacticalDiagnostics:true,localAuto:false},scenes};
+ return {hostVersion:await page.evaluate(()=>realHost.lib.version),setup:'正常斗地主初始化后安排公开身份、手牌及装备，清理武将技能；原生Player/GameEvent、牌内容与AI评分不由测试替换；9个人工点击场景、1个强制自火攻及1个指定敌方进攻对照',settings:{wuxie_self:false,tacticalDiagnostics:true,localAuto:false},scenes};
 }

@@ -15,6 +15,8 @@ globalThis.__NONAME_STUB=stub;globalThis.window={__DJSC:{}};register('./noname-s
 const {resolveJiedaoResponse,evaluateJiedaoResponse,installJiedaoResponseBridge}=await import('../score/decision/response/jiedaoResponse.js?v=41a');
 const {installResponseAI,uninstallResponseAI}=await import('../score/decision/cardplay/responseAI.js?v=41a');
 const intent=await import('../score/decision/state/cooperativeTrickIntent.js?v=41a');
+const {captureTacticalSettings}=await import('../score/decision/strategy/tacticalOptimization.js?v=41a');
+captureTacticalSettings();
 function scenario(source=human,target=victim){const card={name:'jiedao'},use={name:'useCard',player:source,card,targets:[holder],parent:{name:'chooseToUse',type:'phase',player:source,parent:{name:'phaseUse',player:source}}};const root={name:'jiedao',player:source,target:holder,targets:[holder],addedTarget:target,card,parent:use};const event={name:'chooseToUse',player:holder,parent:root,sourcex:target,respondTo:[source,card],filterCard:()=>true};return {event,root,use};}
 let count=0;const check=(name,fn)=>{fn();count++;console.log('PASS '+name);};
 check('真实addedTarget/sourcex优先，targets[0]持刀者不冒充被杀者',()=>{const {event}=scenario();assert.equal(resolveJiedaoResponse(holder,event).victim,victim);assert.equal(evaluateJiedaoResponse(holder,event).action,'sha');});

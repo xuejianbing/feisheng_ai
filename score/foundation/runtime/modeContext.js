@@ -14,11 +14,18 @@ export function resolveModeContext({mode='unknown',submode='unknown',settings={}
  return {schema:'mode-context-v1',mode,submode,name:DOUDIZHU_NAMES[submode]||submode,group:classic?'doudizhu-classic':special?'doudizhu-special':mode,
   ruleVersion:1,ruleKey,rules,enabled:classic&&enabled===true,collect:classic&&collect===true,modelVersion:'public-runtime',featureVersion:CURRENT_DIM,networkProfile:'public-runtime'};
 }
-export function readModeContext(){
+// Lightweight canonical scope read for policy callbacks; no pile hashing or model lookup.
+export function readModeScope(){
  let mode='unknown';try{mode=get.mode?.()||'unknown';}catch(_){}
+ const connect=!!_status.connectMode;
+ let submode='unknown';
+ try{submode=mode==='doudizhu'?(_status.mode||(connect?lib.configOL?.doudizhu_mode:get.config?.('doudizhu_mode'))||'unknown'):'unknown';}catch(_){}
+ return {mode,submode};
+}
+export function readModeContext(){
+ const {mode,submode}=readModeScope();
  const connect=!!_status.connectMode,settings={};
  for(const key of ['feiyang_version','enhance_nongmin','enhance_dizhu','double_character','double_hp']){try{settings[key]=connect?lib.configOL?.[key]:get.config?.(key);}catch(_){}}
- const submode=mode==='doudizhu'?(_status.mode|| (connect?lib.configOL?.doudizhu_mode:get.config?.('doudizhu_mode'))||'unknown'):'unknown';
  const pile=(lib.card?.list||[]).map(c=>Array.isArray(c)?c.slice(0,5):String(c));
  return resolveModeContext({mode,submode,settings,pile,enabled:cfg('classicDoudizhu',true),collect:cfg('classicDoudizhuCollect',true)});
 }
