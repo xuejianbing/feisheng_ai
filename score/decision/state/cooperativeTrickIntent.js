@@ -6,6 +6,13 @@ import {playChoiceWindow} from '../execution/decisionWindow.js?v=41a';
 let roots=new WeakMap(),cards=new WeakMap(),epoch=0;
 export function cooperativeTrickEpoch(){return epoch;}
 export function resetCooperativeTrickIntents(){epoch++;roots=new WeakMap();cards=new WeakMap();}
+export function humanControlsTrick(source){
+ try{
+  if(!source||source.isAuto||source.isMad?.())return false;
+  if(source===game.me)return typeof source.isMine==='function'?source.isMine():!_status.auto&&!game.notMe;
+  return source.isOnline2?.()===true;
+ }catch(_){return false;}
+}
 function directPhase(window,source){
  const seen=new Set();let event=window;
  while(event&&seen.size<16&&!seen.has(event)){
@@ -22,10 +29,10 @@ export function observeCooperativeTrickUse(root,source,choiceEvent){
   const id=get.name(root.card,source);
   if(!['huogong','tiesuo','guohe','shunshou','jiedao','juedou','nanman','wanjian'].includes(id))return null;
   const window=choiceEvent?.name==='chooseToUse'&&choiceEvent.player===source?playChoiceWindow(choiceEvent,source):null;
-  const human=source===game.me?!_status.auto:source.isOnline2?.()===true;
+  const human=humanControlsTrick(source);
   // 除正式出牌选择外，强制用牌/技能结算等不获得玩家主动配合权限。
   const manual=!!human&&!!window&&directPhase(window,source)&&root.forced!==true;
-  const record={root,source,card:root.card,id,manual,targets:new Set(root.targets||[]),active:true};
+  const record={root,source,card:root.card,id,manual,targets:new Set(root.targets||[]),active:true,epoch};
   roots.set(root,record);cards.set(root.card,record);
   return record;
  }catch(_){return null;}
@@ -48,16 +55,23 @@ function recordFor(ctx){
  }
  return byCard||null;
 }
-export function observedNonManualTrick(ctx){
- const record=recordFor(ctx);
- return !!(record?.active&&!record.root.finished&&record.source===ctx.source&&record.id===ctx.originalSpellId&&!record.manual);
+// Unknown is deliberately distinct from a witnessed non-manual action.
+export function trickUseEvidence(ctx){
+ try{
+  const record=recordFor(ctx);
+  if(!record?.active||record.epoch!==epoch||record.root.finished||record.root.player!==ctx.source||
+   record.source!==ctx.source||record.id!==ctx.originalSpellId)return {state:'unknown'};
+  const targets=ctx.effectScope==='all'?ctx.targets:ctx.target?[ctx.target]:[];
+  if(!targets?.length||targets.some(t=>!record.targets.has(t)))return {state:'unknown'};
+  return {state:record.manual?'manual':'nonmanual',record};
+ }catch(_){return {state:'unknown'};}
 }
 export function cooperativeTrickIntent(viewer,ctx,relationOf=dispositionOf){
  try{
-  const record=recordFor(ctx);
-  if(!record?.active||record.root.finished||!record.manual||record.source!==ctx.source||record.id!==ctx.originalSpellId)return null;
+  const evidence=trickUseEvidence(ctx);
+  if(evidence.state!=='manual')return null;
+  const record=evidence.record;
   const targets=ctx.effectScope==='all'?ctx.targets:ctx.target?[ctx.target]:[];
-  if(!targets?.length||targets.some(t=>!record.targets.has(t)))return null;
   if(viewer===record.source||relationOf(viewer,record.source)<=0)return null;
   // 只使用响应者视角的关系；不能借用人类行动者的私有身份推断友方。
   if(['huogong','guohe','shunshou','juedou'].includes(record.id)&&(targets.length!==1||targets[0]!==viewer&&targets[0]!==record.source&&relationOf(viewer,targets[0])<=0))return null;

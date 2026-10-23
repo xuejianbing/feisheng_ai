@@ -1,6 +1,6 @@
 import { fireUtility, tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import { refinedWuxieEffect,tiesuoWuxieEffect } from './wuxieOptimization.js?v=41a';
-import {cooperativeTrickIntent,observedNonManualTrick} from '../state/cooperativeTrickIntent.js?v=41a';
+import {cooperativeTrickIntent,trickUseEvidence,humanControlsTrick} from '../state/cooperativeTrickIntent.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 /*
  * ============================================
@@ -529,17 +529,13 @@ export function evaluateTrickEffect(player, ctx, context) {
 	}
 }
 
-/* 玩家主动自伤优先于队友 AI 的负收益估计；只减弱干预，不凭意图强出反无懈。
- * 本机托管仍按 AI 处理，联机玩家沿用宿主 isOnline2 判定。只处理当前单目标
- * 自伤，避免把敌方伤害、AOE 波及或判定区状态误认为玩家主动配合。 */
-function _respectPlayerSelfDamage(player, ctx, context) {
-	if(observedNonManualTrick(ctx))return false;
-	const source = ctx.source;
-	if (!source || source === player || source !== ctx.target || ctx.effectScope !== 'target' ||
-		SINGLE_DAMAGE_TRICKS.indexOf(ctx.originalSpellId) < 0 || _rel(player, source, context) <= 0) return false;
-	try {
-		return source === game.me ? !_status.auto : source.isOnline2?.() === true;
-	} catch (_) { return false; }
+/* Only the old self-damage exception needs native fallback when its provenance
+ * is unknown. Ordinary enemy attacks do not require a manual-use credential. */
+function _unknownPlayerSelfDamage(player, ctx, context) {
+ const source=ctx.source;
+ return source&&source!==player&&source===ctx.target&&ctx.effectScope==='target'&&
+  SINGLE_DAMAGE_TRICKS.includes(ctx.originalSpellId)&&_rel(player,source,context)>0&&
+  humanControlsTrick(source)&&trickUseEvidence(ctx).state==='unknown';
 }
 
 /* ================= ③ Wuxie Resource Cost =================
@@ -663,6 +659,12 @@ export function evaluateWuxie(player, event, context) {
 			return r;
 		}
 
+		if(_unknownPlayerSelfDamage(player,ctx,context)){
+			const result={..._emptyResult(),originalSpellId:ctx.originalSpellId,source:ctx.source,target:ctx.target,
+				reason:'player-self-damage-intent-unverified'};
+			_recordDiagnostics(result);
+			return result;
+		}
 		const cooperation=cooperativeTrickIntent(player,ctx,(a,b)=>_rel(a,b,context));
 		const intentOnly=ctx.originalSpellId==='jiedao'&&!!cooperation;
 		const optimized = tacticalEnabled('wuxie') ? (intentOnly?{value:0,scope:ctx.effectScope}:refinedWuxieEffect(player, ctx, context)) : null;
@@ -672,7 +674,7 @@ export function evaluateWuxie(player, event, context) {
 			return result;
 		}
 		const estimatedEffect = optimized && !optimized.legacy ? optimized.value : evaluateTrickEffect(player, ctx, context);
-		const playerIntentRespected = !!cooperation || _respectPlayerSelfDamage(player, ctx, context);
+		const playerIntentRespected = !!cooperation;
 		const effectValue = playerIntentRespected ? Math.max(0, estimatedEffect) : estimatedEffect;
 		const resourceCost = estimateWuxieResourceCost(player, context, ctx);
 		const currentlyNegated = !!ctx.currentlyNegated;
