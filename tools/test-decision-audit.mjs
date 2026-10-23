@@ -30,6 +30,7 @@ const {buildDoudizhuDiagnostics}=await import('../score/perception/journal/doudi
 const tactical=await import('../score/decision/strategy/tacticalOptimization.js?v=41a');
 const {installWuxieOptimization}=await import('../score/decision/response/wuxieOptimization.js?v=41a');
 const {evaluateWuxie}=await import('../score/decision/response/wuxieEvaluator.js?v=41a');
+const intent=await import('../score/decision/state/cooperativeTrickIntent.js?v=41a');
 const mode=await import('../score/foundation/runtime/modeContext.js?v=41a');
 const {getModeStrategy}=await import('../score/decision/strategy/modeStrategy.js?v=41a');
 const delayed=await import('../score/decision/strategy/delayedOptimization.js?v=41a');
@@ -164,11 +165,14 @@ session='s';const responseEvents=[];
 cleanup=choices.installChoiceAudit(e=>{responseEvents.push(e);return 1;},()=>session);
 await check('真实无懈桥接有记录但没有额外估值或调用旧ai1',()=>{
  stub.lib.config['extension_无名AI_tacticalDiagnostics']=true;tactical.captureTacticalSettings();
- const remove=installWuxieOptimization(evaluateWuxie);const root={name:'useCard',card:{name:'huogong'},player:human};
- const req={type:'wuxie',parent:root,state:1,info_map:{card:{name:'huogong'},player:human,target:human},ai1:()=>{throw Error('extra native scoring');}};
+ const remove=installWuxieOptimization(evaluateWuxie);
+ const choice={name:'chooseToUse',type:'phase',player:human,parent:{name:'phaseUse',player:human}};
+ const root={name:'useCard',card:{name:'huogong'},player:human,targets:[human],parent:choice};
+ intent.observeCooperativeTrickUse(root,human,choice);
+ const req={type:'wuxie',parent:root,state:1,info_map:{card:root.card,player:human,target:human},ai1:()=>{throw Error('extra native scoring');}};
  try{const before=damageCalls;ally.chooseToUse(req);assert.equal(req.ai1(hand[0]),0);assert.equal(damageCalls-before,2);
  assert.equal(responseEvents[0].phase,'evaluated');assert.equal(responseEvents[1].phase,'material-scored');assert.equal(responseEvents[1].executionState,'suggested');}
- finally{remove();}
+ finally{remove();intent.finishCooperativeTrickUse(root);}
 });
 await check('responseAI关闭可以记录未运行原因',()=>{
  stub.lib.config['extension_无名AI_responseAI']=false;const remove=installWuxieOptimization(evaluateWuxie);

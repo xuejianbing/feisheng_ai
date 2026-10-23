@@ -8,6 +8,7 @@
  */
 
 import {evaluateBoundJiedaoCandidate} from '../../decision/cards/jiedaoEvaluator.js?v=41a';
+import {cooperationPolicyEnabled} from '../../decision/strategy/cooperationPolicy.js?v=41a';
 import {stripPlan,tacticalSettingsSnapshot} from '../../decision/strategy/tacticalOptimization.js?v=41a';
 import { game,get } from '../../foundation/adapt/host.js?v=41a';
 import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
@@ -187,7 +188,7 @@ export function guardCheck(me, action, context) {
                 /* ---- 红线 4：顺/拆盟友非判定区 ---- */
                 if (STEAL_IDS.indexOf(action.id) >= 0 && _isAlly(me, tgtObj)) {
                     const card=(me.getCards?.('h')||[]).find(c=>get.name(c,me)===action.id)||{name:action.id};
-                    const plan=tacticalSettingsSnapshot().enabled?stripPlan(me,card,tgtObj):undefined;
+                    const plan=cooperationPolicyEnabled()&&tacticalSettingsSnapshot().enabled?stripPlan(me,card,tgtObj):undefined;
                     if(plan)continue;
                     const hasJudgeCards=plan===undefined&&((tgtObj.getCards?.('j')||tgtObj.judges||[]).length>0);
                     if (!hasJudgeCards) {

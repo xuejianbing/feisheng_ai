@@ -17,6 +17,27 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-23 · 斗地主意图凭据与策略范围修复",
+    "date": "2026-10-23",
+    "changes": [
+        {
+            "file": "score/decision/state/cooperativeTrickIntent.js / score/decision/response/wuxieEvaluator.js",
+            "lines": "玩家意图凭据与原生回退",
+            "desc": "主动配合只依据当前有效用牌记录；缺少记录不再仅凭人类控制认定主动自伤，而是交还原生无懈判断。强制自火攻按普通收益处理；正常手动自火攻、配合与反无懈方向保持有效。"
+        },
+        {
+            "file": "score/decision/strategy/cooperationPolicy.js / score/model/net/modelGuard.js",
+            "lines": "新增策略的统一启用范围",
+            "desc": "手动配合、新增友方拆顺收益及借刀组合的评分、实际响应和护栏统一检查经典斗地主范围与原有开关；休闲、开黑、欢乐适用，其他模式保留原有救判定和通用纠错。设置按钮、默认值、保存配置和模型权重不变。"
+        },
+        {
+            "file": "tools/test-cooperation-scope.mjs / tools/manual-intent-host-scenes.mjs / docs/doudizhu/评论边界修复.md",
+            "lines": "回归与真实宿主验证",
+            "desc": "19 组 Node 工具通过（1037 项编号检查及 1 组回执契约）；无名杀 1.11.6 的 6 个固定结算、11 个手动与强制对照场景通过，脚本异常为 0。其他模式为宿主桩回归；真实双客户端联机、移动端和胜率未验收。"
+        }
+    ]
+},
+{
     "phase": "2026-10-21 · 数据上报回执与专项训练诊断",
     "date": "2026-10-21",
     "changes": [
