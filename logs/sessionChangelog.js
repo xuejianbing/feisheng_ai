@@ -17,6 +17,22 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-23 · [weique] 2v2实体攻击选择衔接",
+    "date": "2026-10-23",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus/attackChoiceBridge.js / lethal.js / score/decision/engine/engine.js",
+            "lines": "普通实体杀和决斗的实际选牌、选目标入口",
+            "desc": "[weique][2026-10-23] 实际选牌按当前实体牌评估，选目标按已选实体牌重新核对；仁王盾、藤甲、属性和距离变化不再借用同名另一张牌的机会。保留原生否决，转化技能、强制响应及多目标流程回退。"
+        },
+        {
+            "file": "tools/test-2v2-attack-choice.mjs",
+            "lines": "宿主桩验证",
+            "desc": "新增17项检查并通过全部28组Node回归；未进行真实对局或双客户端联机验证。"
+        }
+    ]
+},
+{
     "phase": "2026-10-23 · [weique] 2v2策略与设置接入（待实战验证）",
     "date": "2026-10-23",
     "changes": [

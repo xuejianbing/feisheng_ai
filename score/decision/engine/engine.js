@@ -170,6 +170,7 @@ import { resourceTimingBonus } from '../resource/resourceTiming.js?v=41a';
 /* ===== v1.8.0 新增 5 个优化模块 ===== */
 import { aoeValue } from '../timing/aoeTiming.js?v=41a';
 import {installAoeDirectionBridge} from '../modes/versus/aoeDirectionBridge.js?v=41a';
+import {installAttackChoiceBridge} from '../modes/versus/attackChoiceBridge.js?v=41a';
 import {installMaterialReserveBridge} from '../modes/versus/materialReserve.js?v=41a';
 import {evaluateVersusAttackForId} from '../modes/versus/lethal.js?v=41a';
 import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
@@ -627,6 +628,7 @@ let matchReplay = null;
 let choiceAuditCleanup = null;
 let aoeDirectionCleanup = null;
 let materialReserveCleanup = null;
+let attackChoiceCleanup = null;
 /* ★ 全局守恒台账（总账 ledger）：
  *   保证「Σ玩家货币 + _ledger = 0」恒成立 —— 任何一笔 give 都等价于总账内的
  *   转移：加分 → _ledger 补亏；扣分 → _ledger 存留。系统注入（奖池）与
@@ -2197,6 +2199,8 @@ function installHooks() {
 	aoeDirectionCleanup=installAoeDirectionBridge();
 	materialReserveCleanup?.();
 	materialReserveCleanup=installMaterialReserveBridge();
+	attackChoiceCleanup?.();
+	attackChoiceCleanup=installAttackChoiceBridge();
 	installed = true;
 	_disposed = false;  /* ★ P1-26：重新安装后允许延迟挂载生效 */
 	try { installBroadcastHooks(); } catch (eB) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eB); }
@@ -2206,6 +2210,7 @@ function installHooks() {
 }
 
 function uninstallHooks() {
+ attackChoiceCleanup?.(); attackChoiceCleanup=null;
  materialReserveCleanup?.(); materialReserveCleanup=null;
  aoeDirectionCleanup?.(); aoeDirectionCleanup=null;
  resetCooperativeTrickIntents();

@@ -54,7 +54,7 @@ export function evaluateVersusAttack(player,card,target) {
         const armor=target.getEquip?.(2),armorId=idOf(armor,target);
         const ignore=target.hasSkillTag?.('unequip2')===true||
             player.hasSkillTag?.('unequip',false,{name:normalized,card,target})===true||normalized==='sha'&&idOf(player.getEquip?.(1),player)==='qinggang';
-        const nature=id==='huosha'?'fire':id==='leisha'?'thunder':card.nature;
+        const nature=id==='huosha'?'fire':id==='leisha'?'thunder':get.nature?.(card,player)??card.nature;
         const natures=Array.isArray(nature)?nature:typeof nature==='string'?nature.split('|').filter(Boolean):[];
         const color=get.color?.(card,player)||card.color;
         const targetHandCount=countHand(target);
