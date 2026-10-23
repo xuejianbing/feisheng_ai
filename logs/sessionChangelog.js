@@ -17,6 +17,27 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-23 · [weique] 2v2策略与设置接入（待实战验证）",
+    "date": "2026-10-23",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus / score/foundation/runtime/versusContext.js",
+            "lines": "规则、队伍与策略接入",
+            "desc": "[weique][2026-10-23] 欢乐及联机2v2使用公开队伍，接入座次配合、关键牌与技能材料保留、群体牌风险和攻击斩杀机会。低血目标不直接视为必杀，队友救援不再被友伤日志否决。"
+        },
+        {
+            "file": "js/config / score/view/dashboard/versusStatus.js",
+            "lines": "玩家选项 → 模式增强 → 2v2",
+            "desc": "三个简洁开关与专项状态查看；关闭总开关使分项变灰并保留原值。基础阵营、合法目标与伤害判断始终生效。"
+        },
+        {
+            "file": "tools/test-2v2-*.mjs / docs/versus/完整整理与验证.md",
+            "lines": "代码检查与限制",
+            "desc": "九组2v2宿主桩共201项及其余18组Node检查通过。未进行真实对局与双客户端联机验证，选将和行动顺序变化检查暂缓，不宣称提高胜率。"
+        }
+    ]
+},
+{
     "phase": "2026-10-21 · 数据上报回执与专项训练诊断",
     "date": "2026-10-21",
     "changes": [

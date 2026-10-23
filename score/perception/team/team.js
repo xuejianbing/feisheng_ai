@@ -16,6 +16,8 @@ import { isEnemyOf, threatOf } from '../../decision/threat/threat.js?v=41a';
 import { attackBy } from '../observer/observer.js?v=41a';
 import { beliefOf, confidenceOf, currentMode } from '../observer/identity.js?v=41a';
 import { dispositionOf as relDisposition } from '../../decision/relations/relations.js?v=41a';   /* ★ 统一敌我系统（attitude 三态+行为推断），与阵营系统分离 */
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
+import {versusSeatTeamPlan} from '../../decision/modes/versus/seatTacticsRuntime.js?v=41a';
 
 /* ★ 本地辅助：判断是否是敌人（用敌我系统 dispositionOf，不再裸用 isSameCamp 兼任敌我）
  *   disposition<0 → 真敌；>=0（友/中性/身份未明）→ 非敌 */
@@ -37,6 +39,7 @@ function nameOfP(p) {
 export function focusTarget(me) {
 	try {
 		if (!me) return null;
+		if (readVersusMode().is2v2) return versusSeatTeamPlan(me).focus;
 		const enemies = [], allies = [];
 		for (const p of (game.players || [])) {
 			if (!p || p === me || p.alive === false) continue;
@@ -64,6 +67,10 @@ export function focusTarget(me) {
 export function protectScore(me, ally) {
 	try {
 		if (!me || !ally || ally === me || ally.alive === false) return 0;
+		if (readVersusMode().is2v2) {
+			const protect=versusSeatTeamPlan(me).protect;
+			return protect?.ally===ally ? protect.score : 0;
+		}
 		if (_isEnemy(me, ally)) return 0;
 
 		const hp = ally.hp || 0, mhp = ally.maxHp || 1;
@@ -164,6 +171,8 @@ export function comboWithAllies(me) {
 const _teamCache = new Map();
 export function teamPlan(me) {
 	try {
+		// 2v2 不复用只按自己血量/手牌/轮次建立的缓存：座次和队友随时可能变化。
+		if (readVersusMode().is2v2) return versusSeatTeamPlan(me);
 		const round = (_status && _status.roundNumber) || 0;
 		const key = (me.name1 || me.name) + '|' + round + '|' + (me.hp || 0) + '|' + (me.countCards ? me.countCards('h') : 0);
 		const hit = _teamCache.get(me);

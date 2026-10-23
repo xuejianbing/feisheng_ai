@@ -293,8 +293,8 @@ export function resolveStrategicIntentCore(ctx) {
 	});
 	if (genericEnemy && Number(genericEnemy.hp) <= 1) return { victory, roleObjective, intent: makeIntent(INTENT.FINISH, {
 		target: genericEnemy.key, confidence: 0.8,
-		urgency: 'critical', priorityTier: 'critical', priorityValue: 82,
-		reasons: ['敌方目标进入斩杀窗口'],
+		urgency: ctx.versus2v2===true?'normal':'critical', priorityTier: ctx.versus2v2===true?'normal':'critical', priorityValue: 82,
+		reasons: [ctx.versus2v2===true?'低血目标仅为攻击机会，需按实际卡牌评估':'敌方目标进入斩杀窗口'],
 	}) };
 	if (genericEnemy) return { victory, roleObjective, intent: makeIntent(INTENT.FOCUS, {
 		target: genericEnemy.key, confidence: 0.7, reasons: ['集中处理当前高价值敌方目标'],

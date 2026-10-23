@@ -66,6 +66,7 @@ import { cfg, safe, nameOf, keyOf } from '../../foundation/config/util.js?v=41a'
 import { resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { splitSkillLog } from './skillLog.js?v=41a';
 import { teamPlan } from '../../perception/team/team.js?v=41a';
+import {applyVersusSeatPreferences} from '../modes/versus/seatTacticsRuntime.js?v=41a';
 import { log } from '../../foundation/diag/logger.js?v=41a';
 import { DIRS } from '../../foundation/storage/storagePaths.js?v=41a';   /* ★ 统一导出路径：避免 'data' 误写到游戏根 */
 import { getDecisionBonus, getDecisionFeedbackSignal, recordTargetOutcome, recordTempoOutcome, recordPlayOutcome, flushDecisionFeedback, markOutcome } from '../feedback/decisionFeedback.js?v=41a';
@@ -168,6 +169,10 @@ import { resetOpponentPrediction, opponentPredictBonus, recordOpponentAction, pr
 import { resourceTimingBonus } from '../resource/resourceTiming.js?v=41a';
 /* ===== v1.8.0 新增 5 个优化模块 ===== */
 import { aoeValue } from '../timing/aoeTiming.js?v=41a';
+import {installAoeDirectionBridge} from '../modes/versus/aoeDirectionBridge.js?v=41a';
+import {installMaterialReserveBridge} from '../modes/versus/materialReserve.js?v=41a';
+import {evaluateVersusAttackForId} from '../modes/versus/lethal.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 import { judgeBonus } from '../timing/judgeTiming.js?v=41a';
 import { multiTurnBonus } from '../strategy/multiTurnOpt.js?v=41a';
 /* ===== v1.0.2 新增 5 个锦囊时机优化模块 ===== */
@@ -620,6 +625,8 @@ const matchArchive = createMatchArchive({ onLateOutcome: match => {
 } });
 let matchReplay = null;
 let choiceAuditCleanup = null;
+let aoeDirectionCleanup = null;
+let materialReserveCleanup = null;
 /* ★ 全局守恒台账（总账 ledger）：
  *   保证「Σ玩家货币 + _ledger = 0」恒成立 —— 任何一笔 give 都等价于总账内的
  *   转移：加分 → _ledger 补亏；扣分 → _ledger 存留。系统注入（奖池）与
@@ -2186,6 +2193,10 @@ function installHooks() {
 	 *   此后每笔 give 走守恒入账（ledger 补亏/存留），最终 Σ玩家 + ledger = 0。 */
 	try { _initLedger(game.players || []); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
+	aoeDirectionCleanup?.();
+	aoeDirectionCleanup=installAoeDirectionBridge();
+	materialReserveCleanup?.();
+	materialReserveCleanup=installMaterialReserveBridge();
 	installed = true;
 	_disposed = false;  /* ★ P1-26：重新安装后允许延迟挂载生效 */
 	try { installBroadcastHooks(); } catch (eB) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eB); }
@@ -2195,6 +2206,8 @@ function installHooks() {
 }
 
 function uninstallHooks() {
+ materialReserveCleanup?.(); materialReserveCleanup=null;
+ aoeDirectionCleanup?.(); aoeDirectionCleanup=null;
  resetCooperativeTrickIntents();
  choiceAuditCleanup?.(); choiceAuditCleanup=null;
 	try {
@@ -2307,6 +2320,7 @@ function _probShanCached(me, tgt) {
 	} catch (e) { return probHasShan(me, tgt); }
 }
 function _attackExpectedValue(me, id, tgt) {
+	if(readVersusMode().is2v2&&tgt&&['sha','huosha','leisha','juedou'].includes(id))return evaluateVersusAttackForId(me,id,tgt)?.evaluation||null;
 	if (!tgt || (id !== 'sha' && id !== 'juedou')) return null;
 	let bagua = false, baguaRate = 0.5, vengeance = false;
 	try { bagua = id === 'sha' && probHasBagua(tgt); if (bagua) baguaRate = baguaSuccessRate(); } catch (_) {}
@@ -2799,6 +2813,7 @@ function applyBasicCardPlayRules(me, acts) {
 			activePlaySkills(me, _status.event, lib, game, get).forEach(function (sid) { if (RJ.indexOf(sid) >= 0) hasRejudge = true; });
 		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		const ctx = {
+			...(readVersusMode().is2v2?{attackStrategy:(id,t)=>evaluateVersusAttackForId(me,id,t?.pp)}:{}),
 			me: Object.assign({ hp: me.hp, maxHp: me.maxHp }, meC, { hasSuit: true }),
 			hasRejudge: hasRejudge,
 			enemyHasFire: false,
@@ -3221,6 +3236,7 @@ function _buildCardDecisionContext(me) {
 		activePlaySkills(me, _status.event, lib, game, get).forEach(function (sid) { if (RJ.indexOf(sid) >= 0) hasRejudge = true; });
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	return {
+		...(readVersusMode().is2v2?{attackStrategy:(id,t)=>evaluateVersusAttackForId(me,id,t?.pp)}:{}),
 		me: Object.assign({ hp: me.hp, maxHp: me.maxHp }, meC, { hasSuit: true }),
 		hasRejudge: hasRejudge,
 		enemyHasFire: false,
@@ -3305,6 +3321,8 @@ function applyBasicTargetRules(me, acts) {
  */
 function pickKillTarget(me, tsMap, cur) {
 	try {
+		// 普通2v2由每张可用攻击牌独立选目标，不用裸血线强切全局目标。
+		if(readVersusMode().is2v2)return cur;
 		const cands = [];
 		for (const p of (game.players || [])) {
 			if (!p || p === me) continue;
@@ -4115,6 +4133,9 @@ function bestActionCore() {
 		], {audit:auditMode.mode==='doudizhu'&&!!tacticalEnabled('diagnostic'),
          fusion:commonSuggestionFusionFor(auditMode)});
         evaluationAudit.record('afterCommonSuggestions',acts);
+		// 有界座次机会偏好，独占结算；方向与合法性护栏继续生效。
+		try { applyVersusSeatPreferences(me, acts); }
+		catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
 		for (const a of acts) { try { applyDirectionUtility(me, a, relActionValue); } catch (_) {} }
 
