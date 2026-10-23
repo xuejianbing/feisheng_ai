@@ -70,5 +70,5 @@ node -e "const M=require('./client_policy_model_v2.js');console.log(M.selfTest()
 
 - 全部为**全量重训**，无增量续训入口；有新数据后直接重跑即可。
 - 训练数据源（`merged_shards/`、`aborted_shards/`）在部署机本地，**不随仓库分发**。
-- 训练指标 JSON 落盘在 `TRAIN_WORK_DIR`，不在仓库内复制（仓库 `model/submodels/metrics/` 存的是本轮快照）。
+- 训练指标 JSON 落盘在 `TRAIN_WORK_DIR`，不在仓库内复制（仓库 `artifacts/submodels/metrics/` 存的是本轮快照）。
 - 离线指标衡量的是历史真人样本上的拟合与泛化能力，**不等于真实胜率提升**，也不代表已接入线上决策路径。
