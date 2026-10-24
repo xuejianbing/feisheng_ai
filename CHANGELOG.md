@@ -1,3 +1,52 @@
+## 待发布 · v4.1.4.0 内测包（2026-10-25）
+贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
+
+本轮是 P0 专项：后端接口裁剪 + 图数据构建 + Attention/GNN 训练 + 知识蒸馏导出 v3 权重。**客户端出牌行为零改动**；本版随包新增 v3 学生权重与三个训练工具脚本，模型未接入引擎决策路径。
+
+### 合并进本版的分支 / PR
+
+| 分支 | 处理 | 说明 |
+| --- | --- | --- |
+| `feat/v4.1.4.0-p0-graph-distill`（PR #11） | 已合并 | 本轮 P0 全量改动：图数据构建器、FT-Transformer/GAT 训练脚本、蒸馏导出脚本、v3 学生权重、开发日志 |
+| `feature/backend-ingest-receipts` | 内容已在 master | 同一 patch 经 PR #7 以 `5033a77` 合入，远端分支本轮清理 |
+| `fix/client-align-142` | **仍未合并（方案已否决）** | 端云协同方案，134→142 维契约变更，远端分支保留不动 |
+
+已合入 `master` 的陈旧远端分支（`beta/v4.1.2.8-beta.2`、`beta/v4.1.2.8-beta.3`、`codex/doudizhu-cooperation-fixes`、`codex/doudizhu-review-boundaries`、`docs/weique-contributions-20261020`、`feat/beta4-internal-client`、`feat/v4.1.3.0-model-weights`、`fix/training-model-hardening-20261019`、`publish/ingest-receipts`）内容均已在 `master`，本轮统一删除远端分支，历史保留在提交记录中。
+
+### 后端接口裁剪（线上 `Cloud_Inference_Server_v3.py`）
+
+- 废除 `POST /api/v1/predict` 与 `POST /api/v1/arbitrate`，改为 **404** `{"error":"endpoint_removed"}`。
+- 仅保留 `GET /health`、`GET /selfcheck`、`GET /api/v1/model/latest`、`GET /api/v1/model/file`；后两者带 **ETag**，客户端带 `If-None-Match` 命中返回 **304 空体**。
+- 鉴权改为**静态 Token**（优先级 `NN_API_TOKEN` 环境变量 > `activation.json.token` > 内置默认常量）+ **离线激活**（`activation.json`，校验全程不联网）。
+- 不再导入 `Hybrid_Router`、不再加载 Critic，推理服务常驻算力下降。
+- 数据上报 8787（`server_sharded.py`）未改动。
+- 裁剪自检脚本 **24 项断言全部通过**（含两个已废端点返 404、ETag/304 生效、无 token 401、错 token 403、未激活 403、8787 仍可用、模型 sha256 与磁盘一致）。
+
+### 图数据构建与训练（`tools/training/`）
+
+- `Graph_Data_Convertor.py`：原始 JSON → PyG 图。全量 **194,338 张图**，**4 节点/图**（己方 / 目标 / 队友 / 敌方）、**节点维度 20**、**16 条有向边/图**、**边属性维度 4**；导出 **1000 个** PyG `Data` 样本。
+- `P0_Train_Attention_GNN.py`：114 维同口径训练 FT-Transformer 与 GAT。Top-1 / Top-5：LGBM **0.6440 / 0.9717**、FT-Transformer **0.6404 / 0.9695**、GAT **0.4366 / 0.8320**。
+- **防泄露设计**：剔除 f32~f47 共 16 维动作泄露维（该段直接编码所出牌种与目标阵营），训练与评估口径一致。实测 130 维全特征可达 Top-1 0.8190 / Top-5 1.0000，属读答案，本轮全部模型均不采用。
+- GAT 落后的原因：4 节点图只能容纳 57 维有效语义，其余特征被丢弃；且这些特征本身是聚合统计量，没有额外的结构化关系可供注意力利用。
+
+### 知识蒸馏与 v3 权重
+
+- Teacher = LGBM + FT-Transformer 概率平均，Top-1 **0.6468 / Top-5 0.9723**；蒸馏为 Student `MLP 114->32->17`（α=0.7、T=1.5、160 epoch），Student Top-1 **0.6228 / Top-5 0.9609**。
+- 导出 `score/model/net/client_policy_model_v3.js`（**51,634 B**，sha256 `9ee78420c5970158427e4c919f166ab9c77bcf29fb40d5f428fcdde7698603d5`，schema `slot17_student_v3`，17 类标签，114 维输入）。
+- Python-JS 对拍 1000 条：**Top-1 一致率 100%**，最大 logits 偏差 **0.000e+00**，最大概率偏差 5.551e-16。
+- 排查过程中定位并修复导出模板 `b64ToF64` 的边界缺陷：末组只剩 2 个有效字符时少写 1 字节，导致 `B1`/`B2` 偏置向量整体错位。仓库既有解码均使用原生 `atob`，不受影响。
+- **引擎未接线**：`engine.js` 对 v3 无引用，本版不改变任何出牌行为；v3 作为可热更的模型资产入库。
+
+### 文档
+
+- `docs/training/开发者日志_P0后端裁剪与图模型蒸馏_20261024.md`：本轮 P0 完整开发日志（后端裁剪、图构建、训练对比、65.04% 基线口径溯源、蒸馏导出与对拍）。
+- `docs/training/开发者日志_v4.1.4.0发布_20261025.md`：本次发布的分支融合、版本变更、测试与打包校验记录。
+
+### 验证
+
+- 仓库 24 个 Node 测试脚本：**23 PASS / 2 FAIL**。2 项失败为 `identity-real-host-smoke.mjs`、`trick-real-host-smoke.mjs`，原因是本机环境未安装 `playwright`（真实宿主浏览器冒烟测试），与本版改动无关；本版未修改任何既有运行时文件。
+- 打包前置校验通过：`info.json.version` 与 `js/config/version.js` 均为 `4.1.4.0`，版本号格式合规。
+
 ## 待发布 · v4.1.3.0 内测包（2026-10-24）
 贡献标识：[weique]　涉及模块：`score/decision/`、`score/foundation/cloud/`、`score/model/net/`、`score/view/dashboard/`、`tools/`
 
