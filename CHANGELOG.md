@@ -1,7 +1,7 @@
-## 待发布 · v4.1.2.8-beta.4 内测包（2026-10-24）
-贡献标识：[weique]　涉及模块：`score/decision/`、`score/foundation/cloud/`、`score/view/dashboard/`、`tools/`
+## 待发布 · v4.1.3.0 内测包（2026-10-24）
+贡献标识：[weique]　涉及模块：`score/decision/`、`score/foundation/cloud/`、`score/model/net/`、`score/view/dashboard/`、`tools/`
 
-本轮把三批改动合入 `master` 并产出内测客户端整包。**客户端内置权重未改动，不含新权重**；服务端训练产物不进入安装包。
+本轮把三批改动合入 `master` 并产出内测客户端整包。客户端原有 int8 MLP 内置权重（`model/v5_mixup_*.json`）未改动；**新增内置 17 类槽位策略模型 v2**（纯 JS，无运行时依赖），默认影子模式只记录不改决策；服务端训练产物（`.pkl` 等）不进入安装包。
 
 ### 合并进本版的分支
 
@@ -21,16 +21,23 @@
 
 - **斗地主配合决策边界**：主动意图须有凭据才放宽，移除仅凭人类控制认定主动自伤的兜底；手动配合、共享友方拆顺收益、借刀组合及护栏权限统一限制在已启用经典斗地主的休闲／开黑／欢乐玩法，范围外保留旧有跨模式兵乐救援与原生评分。
 - **数据上报回执**：客户端区分样本已归档、进入合并池、重复及缺少结果标签；专项训练面板展示最近一局的采集漏斗与运行期拒绝原因。
-- **版本号**：`info.json` 与 `js/config/version.js` 同步为 `4.1.2.8-beta.4`，`BUILD_DATE` 更新为 2026-10-24（打包脚本强制校验两者一致）。
+**模型权重入库（新增）**
+
+- `score/model/net/client_policy_model_v2.js`（7,038,938 B，sha256 前 16 位 `852bd0cd9cd11461`）：17 类槽位策略模型，schema `slot17_human_v2`，114 维输入，Top-1 0.6440 / Top-5 0.9717。与 `artifacts/submodels/` 下同名归档文件内容一致（同一份 sha），两处改动需同步。
+- `score/model/net/policyModelV2.js`：策略模型适配器，动态 `import()` 懒加载避免启动期解析 7 MB 文件阻塞主线程；默认 `mode='shadow'`，只记录模型 Top1 与引擎最终选择的一致性，**不改候选分**；`active` 模式需显式配置且要求影子数据连续达标才允许启用。
+- `score/decision/strategy/ruleGate.js` + `comboRulesData.js`：本地组合规则门（2 条 hard_force + 4 条 soft_boost，含样本量与经验概率证据），规则命中与否只作用于扩展端本地决策，**不发起任何云端请求**。
+- **维度适配**：`policyModelV2.js` 原以 `!==130` 判定特征长度，而仓库 `features.js` 现为 134 维（`f[130..133]` 是 fix7 追加的目标身份 one-hot，`f0-f129` 语义与 130 维一致），该判定会使影子链路恒不产出记录。现按仓库 `shadowCore.js` 既有口径改为 `>=130` / `<130`，并在 `toModelFeatures` 增加 `featureKeep` 索引边界校验。
+- **引擎未接线**：`engine.js` 对 `ruleGate` / `hardForce` / `shadowEvaluate` / `policyModelV2` 均无引用，本次发布不改变任何出牌行为，相关模块处于「已就位、待接线」状态。
+- **版本号**：`info.json` 与 `js/config/version.js` 同步为 `4.1.3.0`，`BUILD_DATE` 更新为 2026-10-24（打包脚本强制校验两者一致）。
 
 ### 仓库内容整理
 
-- 服务端训练产物从 `model/submodels/` 迁至 `artifacts/submodels/`：`model/` 是客户端运行时目录、会被 `manual-package.yml` 打进安装包，而 `.pkl` 权重、前端 JS 推理产物与对拍快照**扩展端零引用**，留在原处会给每个安装包增加约 14.6 MB 冗余。`artifacts/` 不在打包白名单内。
+- 服务端训练产物（`.pkl` 与对拍快照）从 `model/submodels/` 迁至 `artifacts/submodels/`：`model/` 会被 `manual-package.yml` 打进安装包，而这些产物**扩展端零引用**，留在原处会给每个安装包增加约 7 MB 冗余。`artifacts/` 不在打包白名单内。注：客户端运行时所需的前端 JS 推理产物另存于 `score/model/net/client_policy_model_v2.js`（随包发布），与 `artifacts/` 下归档件同 sha。
 - 新增 `.gitignore` 规则忽略 Python 字节码缓存。
 
 ### 验证
 
-- 仓库 19 个 Node 测试脚本全部通过：`test-regressions` 94/94、`test-weights` 637/637、`test-cooperation-scope` 16/16、`test-identity` 44/44、`test-trick-cooperation` 25/25、`test-ai-boundaries` 12/12，其余脚本退出码均为 0。
+- 仓库 20 个 Node 测试脚本全部通过：`test-regressions` 94/94、`test-weights` 637/637、`test-cooperation-scope` 16/16、`test-identity` 44/44、`test-trick-cooperation` 25/25、`test-ai-boundaries` 12/12、`test-policy-model-v2` 33/33，其余脚本退出码均为 0。新增 `test-policy-model-v2.mjs` 覆盖规则数据契约、hard_force 命中、权重自检与概率归一、130/134 维影子记录可产出、129 维被拒绝，以及影子模式不改分。
 - 合并前先在 `master` 基线上跑通同一组 19 个脚本，确认合入分支未引入回归。
 - 打包前置校验（`info.json.version` 与 `js/config/version.js` 的 `VERSION` 一致、版本号格式合规）通过。
 
