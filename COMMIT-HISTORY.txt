@@ -1,0 +1,544 @@
+466317e3fde4e211c63be4f30d8f70d2a1c92587 661ad0c5eac915b758ed25659df38bd43a6c8585
+2026-10-25T17:48:44+08:00 | ziyoo
+docs(review): record verified local master integration for QA
+
+661ad0c5eac915b758ed25659df38bd43a6c8585 d3dbad61049f0ca49159da919362b96e7ecaf20c 3edbc6e3bba3a11ec1c47c9f7b2d78e71aba948a
+2026-10-25T17:47:27+08:00 | ziyoo
+merge: integrate verified client stability work for local QA
+
+3edbc6e3bba3a11ec1c47c9f7b2d78e71aba948a 12e437e94330a812b4cd41bd1021ea7a7203543e
+2026-10-25T12:45:53+08:00 | ziyoo
+docs(stability): finalize verified D1-D4 review report and native quota evidence
+
+12e437e94330a812b4cd41bd1021ea7a7203543e 97f7219c8797bd6153369ffcc5a300faa52d0fce
+2026-10-25T12:45:11+08:00 | ziyoo
+fix(training): document qualified references and controlled synthetic isolation
+
+97f7219c8797bd6153369ffcc5a300faa52d0fce 7ef749f4aa3a5d62d9672d6484e2e459edef5e7d
+2026-10-25T12:37:07+08:00 | ziyoo
+fix(auto-feature): tolerate malformed retained history without granting tuning
+
+7ef749f4aa3a5d62d9672d6484e2e459edef5e7d c8824a275ce4f33eda94dfd7d545c6134e10add4
+2026-10-25T12:21:35+08:00 | ziyoo
+fix(diagnostics): use current host contracts and preserve real module ownership
+
+c8824a275ce4f33eda94dfd7d545c6134e10add4 3a2d588faf78523e9017fad1cdf49cf1dc4ce856
+2026-10-25T12:12:20+08:00 | ziyoo
+fix(auto-feature): bind diagnostics to executed observed transactions and close tuning
+
+3a2d588faf78523e9017fad1cdf49cf1dc4ce856 6ee99a058c80578d9477d9d61603b3cf4939f4e5
+2026-10-25T12:05:33+08:00 | ziyoo
+fix(storage): bound sample persistence transactions and verify 80k recovery
+
+d3dbad61049f0ca49159da919362b96e7ecaf20c b5eec27ae8c5d6256588dadf7bb940ac358d4d6d
+2026-10-25T05:39:36+08:00 | 雪剑兵兵
+docs(changelog): [weique][2026-10-25] 补记v4.1.4.0发布终态与踩坑
+
+b5eec27ae8c5d6256588dadf7bb940ac358d4d6d e90494cb2613a0f8f0c29fbc3b317b6d8325c127 dcc5b3721ee210f7b5a2a73000f3529f32ca022b
+2026-10-25T05:34:08+08:00 | 硅基飞升
+Merge pull request #11 from xuejianbing/feat/v4.1.4.0-p0-graph-distill
+
+dcc5b3721ee210f7b5a2a73000f3529f32ca022b e90494cb2613a0f8f0c29fbc3b317b6d8325c127
+2026-10-25T05:33:38+08:00 | 雪剑兵兵
+release(v4.1.4.0): [weique][2026-10-25] P0图模型蒸馏与后端裁剪收口发版
+
+6ee99a058c80578d9477d9d61603b3cf4939f4e5 73a3d0072ffbe925ffea278c439d6032dd8fc4eb
+2026-10-24T23:47:14+08:00 | ziyoo
+fix(model): refresh shadow session when saved candidate is replaced
+
+73a3d0072ffbe925ffea278c439d6032dd8fc4eb 9b5e50a15af8f046718fdd4b9e4af5ddf1baa4cb
+2026-10-24T19:08:21+08:00 | ziyoo
+fix(cloud): bind authenticated sources to durable uploads
+
+e90494cb2613a0f8f0c29fbc3b317b6d8325c127 7818419adb49ab645e742bbd3c8494e44f53a118
+2026-10-24T11:39:29+08:00 | 雪剑兵兵
+docs(changelog): [weique][2026-10-24] 精确化FT第二轮训练轮次记录
+
+7818419adb49ab645e742bbd3c8494e44f53a118 434752dfbeb3b05aa92659a6fe9ef8fb1f7190f0
+2026-10-24T11:37:55+08:00 | 雪剑兵兵
+docs(changelog): [weique][2026-10-24] 记录P0后端裁剪与图模型蒸馏开发日志
+
+434752dfbeb3b05aa92659a6fe9ef8fb1f7190f0 1f35999a468f66120d2099aff4a926043b52ae9e
+2026-10-24T11:37:54+08:00 | 雪剑兵兵
+feat(model): [weique][2026-10-24] 图数据构建器与Attention/GNN训练蒸馏脚本及v3学生权重
+
+1f35999a468f66120d2099aff4a926043b52ae9e 67fad2a34f569ee06e2b4cdeb0ec452d336c1442 49c8337e6a5a6f6197db2f297af9530a9996cc0c
+2026-10-24T08:05:09+08:00 | 硅基飞升
+Merge pull request #10 from xuejianbing/feat/v4.1.3.0-model-weights
+
+49c8337e6a5a6f6197db2f297af9530a9996cc0c 18d5fef3fa6e08fa16adfb998aa9fe3e46f1e482
+2026-10-24T08:03:52+08:00 | 雪剑兵兵
+chore(release): [weique][2026-10-24] 版本号升至4.1.3.0并补齐发布文档
+
+18d5fef3fa6e08fa16adfb998aa9fe3e46f1e482 67fad2a34f569ee06e2b4cdeb0ec452d336c1442
+2026-10-24T08:03:44+08:00 | 雪剑兵兵
+feat(model): [weique][2026-10-24] 内置17类槽位策略模型v2与本地组合规则门
+
+67fad2a34f569ee06e2b4cdeb0ec452d336c1442 c986263cf087a437eaaed53bb2ad66a409bf7b99 d0aa22d62c26347e2795678310267747a42670d1
+2026-10-24T07:46:03+08:00 | 硅基飞升
+Merge pull request #9 from xuejianbing/feat/beta4-internal-client
+
+d0aa22d62c26347e2795678310267747a42670d1 90eb3195b4c74ae5a4a82d928b4905b34624f4a7
+2026-10-24T07:43:56+08:00 | 雪剑兵兵
+chore(release): [weique][2026-10-24] 版本号升至4.1.2.8-beta.4并补齐发布文档
+
+90eb3195b4c74ae5a4a82d928b4905b34624f4a7 a60d490e8d92452299e70e9583e2a9abaaa6b31e
+2026-10-24T07:43:49+08:00 | 雪剑兵兵
+refactor(model): [weique][2026-10-24] 服务端训练产物迁出客户端打包目录
+
+a60d490e8d92452299e70e9583e2a9abaaa6b31e c986263cf087a437eaaed53bb2ad66a409bf7b99 7a36c557ebbd0c51c1a22d6aaacda75e47161394
+2026-10-24T07:40:33+08:00 | 雪剑兵兵
+Merge branch 'codex/doudizhu-review-boundaries' into feat/beta4-internal-client
+
+c986263cf087a437eaaed53bb2ad66a409bf7b99 1b0951bdccda251f798362066802721d905f9dbf
+2026-10-24T07:16:37+08:00 | 雪剑兵兵
+docs(changelog): [weique][2026-10-24] 记录子模型重训与8787接收端持久化改造
+
+1b0951bdccda251f798362066802721d905f9dbf f6f220611b687b511ee799943036e079af228f7b
+2026-10-24T07:16:13+08:00 | 雪剑兵兵
+feat(backend): [weique][2026-10-24] 8787分片接收端去重索引与请求回执迁移SQLite持久化
+
+f6f220611b687b511ee799943036e079af228f7b 372cc9bf12b191dcdbe6369bb0c558e68ab862fe
+2026-10-24T07:15:37+08:00 | 雪剑兵兵
+feat(model): [weique][2026-10-24] 子模型全量重训、前端JS导出与训练脚本入库
+
+7a36c557ebbd0c51c1a22d6aaacda75e47161394 d8712a2b9520b84e7913ec906be4d2ea387484e8
+2026-10-23T13:19:02+01:00 | WeiQiaocode
+fix(doudizhu): scope cooperation policies without disabling legacy tactics
+
+d8712a2b9520b84e7913ec906be4d2ea387484e8 372cc9bf12b191dcdbe6369bb0c558e68ab862fe
+2026-10-23T13:10:09+01:00 | WeiQiaocode
+fix(wuxie): require observed provenance for player self-damage intent
+
+9b5e50a15af8f046718fdd4b9e4af5ddf1baa4cb a3c39cf7fe758789c73b8af436c7fcb19db7d0f9
+2026-10-23T18:39:48+08:00 | ziyoo
+fix(training): bind evaluated candidate content and reject conflicting wait states
+
+a3c39cf7fe758789c73b8af436c7fcb19db7d0f9 aa238e582029c4c3f756d952ac2ec25ef8719927
+2026-10-23T17:30:35+08:00 | ziyoo
+fix(training): close manifest proof and activation race gaps
+
+aa238e582029c4c3f756d952ac2ec25ef8719927 5a9c769da2a7bc44f0f0e1a553647bf1d50f4bd0
+2026-10-23T13:09:39+08:00 | ziyoo
+fix(training): gate datasets by execution lineage and manifest
+
+5a9c769da2a7bc44f0f0e1a553647bf1d50f4bd0 a2c25edeaac873c977993ddd16e06fc3d5dee840
+2026-10-23T11:25:14+08:00 | ziyoo
+fix(panel): scope brain lifecycle and reject ambiguous outcome summaries
+
+a2c25edeaac873c977993ddd16e06fc3d5dee840 05863a16f4332f9850d2fcba6f69a6db3ebb4211
+2026-10-23T10:56:53+08:00 | ziyoo
+fix(panel): recover listener failures and clarify reward statistics
+
+05863a16f4332f9850d2fcba6f69a6db3ebb4211 8b0e5d664d72b1ab17a14730ba43d1ddb0a42e78
+2026-10-23T00:41:12+08:00 | ziyoo
+fix(runtime): unify panel services and preserve owned interfaces
+
+8b0e5d664d72b1ab17a14730ba43d1ddb0a42e78 a3001cf84e1bfde392c0f0d3e97a5d0b63309993
+2026-10-23T00:20:25+08:00 | ziyoo
+fix(ingest): verify durable confirmation revisions and isolate legacy records
+
+a3001cf84e1bfde392c0f0d3e97a5d0b63309993 750d91201d2533382bed42be7b49cabb1a0360ea
+2026-10-22T23:58:56+08:00 | ziyoo
+fix(ingest): retain unsynced exports and bound archive confirmations
+
+750d91201d2533382bed42be7b49cabb1a0360ea a6f86426a5274af843e663aab521cc1b9e4db2d4
+2026-10-22T23:31:33+08:00 | ziyoo
+fix(ingest): persist revision checkpoints and protect training samples
+
+a6f86426a5274af843e663aab521cc1b9e4db2d4 f5ff1668395735a5b3977675bc4954aa3e37b5df
+2026-10-22T21:34:08+08:00 | ziyoo
+fix(host): guard failed choice staging and response materials
+
+f5ff1668395735a5b3977675bc4954aa3e37b5df 976d7eba4ace7a10f4931037a8aa3882a3dd6a56
+2026-10-22T20:21:47+08:00 | ziyoo
+fix(host): bind AI policies to native choice events
+
+976d7eba4ace7a10f4931037a8aa3882a3dd6a56 372cc9bf12b191dcdbe6369bb0c558e68ab862fe
+2026-10-22T18:50:18+08:00 | ziyoo
+fix(model): repair specialist lifecycle and legacy sample compatibility
+
+372cc9bf12b191dcdbe6369bb0c558e68ab862fe 395f0907e5cc66503bc4100d5d1dbb9190e075b1 69731bae2073fc75ee8302077742437ec3a2fcec
+2026-10-21T06:10:54+08:00 | 硅基飞升
+Merge pull request #7 from xuejianbing/publish/ingest-receipts
+
+69731bae2073fc75ee8302077742437ec3a2fcec 5033a778f4cf6ec9ceb7fe1a11a34ea77fdae8ab
+2026-10-21T06:08:36+08:00 | 雪剑兵兵
+Document ingest receipts and backend training roadmap
+
+5033a778f4cf6ec9ceb7fe1a11a34ea77fdae8ab 395f0907e5cc66503bc4100d5d1dbb9190e075b1
+2026-10-20T15:53:32+08:00 | 雪剑兵兵
+Add frontend ingest receipts and training diagnostics
+
+395f0907e5cc66503bc4100d5d1dbb9190e075b1 dbac1bb1e3b39355a72c43fe32028eb1543be6c0
+2026-10-21T06:00:20+08:00 | 硅基飞升
+docs: announce PR #6 gameplay update on homepage
+
+dbac1bb1e3b39355a72c43fe32028eb1543be6c0 ece8fc5674d0ce886fa22ae93ea0f4213b56ffdf 35a4fbe479765f62555252a9c42b3dea856cdb81
+2026-10-21T05:45:26+08:00 | 硅基飞升
+Merge pull request #6 from xuejianbing/codex/doudizhu-cooperation-fixes
+
+ece8fc5674d0ce886fa22ae93ea0f4213b56ffdf 8f1cc09d3f02d0eaebe2d86712e9f8c8f1577cf8 f2159a9e8468a9f3b3b88c31bb94147e750af833
+2026-10-20T23:13:47+08:00 | ziyoo
+Merge pull request #5 from xuejianbing/docs/weique-contributions-20261020
+
+35a4fbe479765f62555252a9c42b3dea856cdb81 a6e819e2049036ba0970f7a33821a6f87a3b9d89
+2026-10-20T15:53:59+01:00 | WeiQiaocode
+docs(doudizhu): clarify release notes and in-game update log
+
+a6e819e2049036ba0970f7a33821a6f87a3b9d89 8f1cc09d3f02d0eaebe2d86712e9f8c8f1577cf8
+2026-10-20T15:50:46+01:00 | WeiQiaocode
+fix(doudizhu): unify cooperative trick decisions and respect player intent
+
+f2159a9e8468a9f3b3b88c31bb94147e750af833 8f1cc09d3f02d0eaebe2d86712e9f8c8f1577cf8
+2026-10-20T10:45:34+01:00 | WeiQiaocode
+docs(contributions): [weique][2026-10-20] 规范贡献署名并补录 v4.0.20
+
+8f1cc09d3f02d0eaebe2d86712e9f8c8f1577cf8 b153d9a84fdc69403e8fb18914a96202f11127d1 c2c68662076222aeb5d47842a729654500fee46b
+2026-10-20T15:12:45+08:00 | 雪剑兵兵
+Merge remote-tracking branch 'origin/beta/v4.1.2.8-beta.3' into integrate/main-package
+
+b153d9a84fdc69403e8fb18914a96202f11127d1 a8eab6e519247ff8e34c4dfcc08ec8789a515727 aa02ba7ff77b2a77a05032c5b03217b53985fd0a
+2026-10-20T15:11:49+08:00 | 雪剑兵兵
+Merge pull request #4 from zziyoo/codex/identity-foundation
+
+c2c68662076222aeb5d47842a729654500fee46b a8eab6e519247ff8e34c4dfcc08ec8789a515727
+2026-10-20T06:33:38Z | 硅基飞升
+Update README.md
+
+a8eab6e519247ff8e34c4dfcc08ec8789a515727 72b3b0e0f22d651dc9f5aae2ef90e6f9cc0564be
+2026-10-20T13:39:42+08:00 | 雪剑兵兵
+Fix zero classic learning samples for 134-dim data
+
+72b3b0e0f22d651dc9f5aae2ef90e6f9cc0564be 9f3a73536ad386ce7d1a2a33f7204e37db3d53f2
+2026-10-20T13:24:32+08:00 | 雪剑兵兵
+Align feature-dimension docs with model contract
+
+9f3a73536ad386ce7d1a2a33f7204e37db3d53f2 2e7a5ec917d2ba4187cf2743d96ede88290f3f9f
+2026-10-20T13:22:07+08:00 | 雪剑兵兵
+Fix beta decision latency and archive writes
+
+2e7a5ec917d2ba4187cf2743d96ede88290f3f9f 25d9c8597f10f89a97220f9cb359daedd5d7dab8
+2026-10-20T12:41:04+08:00 | 雪剑兵兵
+Keep shadow evaluation on with one inference
+
+25d9c8597f10f89a97220f9cb359daedd5d7dab8 b1a17caba70b3cd6a638cb3834405b7f829a1e49
+2026-10-20T12:00:14+08:00 | 雪剑兵兵
+Disable candidate shadow inference by default
+
+b1a17caba70b3cd6a638cb3834405b7f829a1e49 fd74e4016032a34d6b0fe81fbd9d7db34578853e
+2026-10-20T11:53:00+08:00 | 雪剑兵兵
+Reduce candidate shadow scan work per action
+
+fd74e4016032a34d6b0fe81fbd9d7db34578853e 3511dbe65c8ffa65c65bb62b1b1709c7e418f0c5
+2026-10-20T11:45:41+08:00 | 雪剑兵兵
+Prepare v4.1.2.8 beta.2 internal test
+
+3511dbe65c8ffa65c65bb62b1b1709c7e418f0c5 e3dafbf3f3e042b02e05400a087c8f048f959256
+2026-10-19T23:16:00+08:00 | 硅基飞升
+Update CHANGELOG.md
+
+e3dafbf3f3e042b02e05400a087c8f048f959256 dd89410473403d8385f87a877c6c08204f858f3a
+2026-10-19T22:46:49+08:00 | 硅基飞升
+Update modelContract.js
+
+dd89410473403d8385f87a877c6c08204f858f3a 3430973121db0210dc3bd339300f18f5cd090091
+2026-10-19T22:46:36+08:00 | 硅基飞升
+Update modeDataset.js
+
+3430973121db0210dc3bd339300f18f5cd090091 6444eac418d5c81b07039fa57b47dd749147c0ae
+2026-10-19T22:46:23+08:00 | 硅基飞升
+Update tdValidator.js
+
+6444eac418d5c81b07039fa57b47dd749147c0ae 30cbbaead7a9ca9ae909e794c2a41e1839136a5c
+2026-10-19T19:48:49+08:00 | 硅基飞升
+Update CHANGELOG.md
+
+30cbbaead7a9ca9ae909e794c2a41e1839136a5c 7d6ae7957b7de6394bd2ec7a9ce212844de7f572
+2026-10-19T19:47:04+08:00 | 硅基飞升
+Update modeDataset.js
+
+7d6ae7957b7de6394bd2ec7a9ce212844de7f572 f5a3767b62621921de59afb5194d8d2ba3c888e1
+2026-10-19T19:46:32+08:00 | 硅基飞升
+Add training and model hardening documentation
+
+f5a3767b62621921de59afb5194d8d2ba3c888e1 6994e1fd4418e21713704ed702ec0c1cc5656cfe
+2026-10-19T19:46:18+08:00 | 硅基飞升
+Implement unit tests for auditing and validation
+
+6994e1fd4418e21713704ed702ec0c1cc5656cfe 8d132d88a40fb056a212804cc7f98f54b45b8956
+2026-10-19T19:46:05+08:00 | 硅基飞升
+Create model_contract.py
+
+8d132d88a40fb056a212804cc7f98f54b45b8956 8f76fc676e0032634720a78cfbca2b81ce4ca605
+2026-10-19T19:45:50+08:00 | 硅基飞升
+Create td_audit.py
+
+8f76fc676e0032634720a78cfbca2b81ce4ca605 21120899be79171c319f9e622db8245e09f4e70e
+2026-10-19T19:45:35+08:00 | 硅基飞升
+Create jsonl_audit.py
+
+21120899be79171c319f9e622db8245e09f4e70e bc4b80a8d8b18d39655751f1fd06b1bea8b0218d
+2026-10-19T19:45:22+08:00 | 硅基飞升
+Create index.js
+
+bc4b80a8d8b18d39655751f1fd06b1bea8b0218d aa915e9aa7f69283abba1a978eec7752253356e1
+2026-10-19T19:45:08+08:00 | 硅基飞升
+Implement model contract and validation logic
+
+aa915e9aa7f69283abba1a978eec7752253356e1 370f92e463f535c3227169dff6e517b2d057b4f2
+2026-10-19T19:44:56+08:00 | 硅基飞升
+Implement TD transition validation and batch processing
+
+370f92e463f535c3227169dff6e517b2d057b4f2 76c4b15b8c8a3d1208607702100d3d4d17b577d3
+2026-10-19T19:44:12+08:00 | 硅基飞升
+Create sampleEligibility.js
+
+76c4b15b8c8a3d1208607702100d3d4d17b577d3 13783eec78f524399ae9078e6a2a14cfedf41b4b
+2026-10-19T19:43:19+08:00 | 硅基飞升
+Add dimensionAdapter.js for sample adaptation
+
+aa02ba7ff77b2a77a05032c5b03217b53985fd0a 13783eec78f524399ae9078e6a2a14cfedf41b4b
+2026-10-18T22:44:02+08:00 | ziyoo
+fix(identity): 完成身份认知修复并归档资料
+
+13783eec78f524399ae9078e6a2a14cfedf41b4b 77c607ef777d77b62e2548b8754313c16a3016d7 ceef378ca2031944315dd0097172cbff32097aa2
+2026-10-17T00:21:48+08:00 | ziyoo
+Merge pull request #3 from zziyoo/feature/manual-full-package-20261017
+
+ceef378ca2031944315dd0097172cbff32097aa2 77c607ef777d77b62e2548b8754313c16a3016d7
+2026-10-17T00:17:51+08:00 | ziyoo
+ci: add manual full extension package workflow
+
+77c607ef777d77b62e2548b8754313c16a3016d7 bf06964fded8f77f57d46a16fa0b820d62bf9e33
+2026-10-17T00:10:12+08:00 | ziyoo
+完工
+
+bf06964fded8f77f57d46a16fa0b820d62bf9e33 3cd40fb6523c4dc1794c23b78f5a570e5f80e168
+2026-10-16T23:20:30+08:00 | ziyoo
+修复：扫描官方记录区分 JSON null/空串，并校验 sha256 摘要完整性
+
+3cd40fb6523c4dc1794c23b78f5a570e5f80e168 19002dd180be89c98ca5755789340eaa8e1c128f
+2026-10-16T23:09:39+08:00 | ziyoo
+修复：配置写入确认 / 迁移不覆盖玩家设置 / 扫描严格读官方记录 / shadow 退出刷盘去重
+
+19002dd180be89c98ca5755789340eaa8e1c128f ea6cd3d54b3ba27ce01aec2243dd4af1afc19dcb
+2026-10-16T22:25:12+08:00 | ziyoo
+修复：权重落盘扫描/配置迁移/归档清理/样本统计/上传锁/shadow 落盘 六项问题
+
+ea6cd3d54b3ba27ce01aec2243dd4af1afc19dcb 26dd7f6e8fd476b7766db056a909f8aaec4d4da5
+2026-10-16T21:21:35+08:00 | ziyoo
+更新版本号至v4.1.2.7
+
+26dd7f6e8fd476b7766db056a909f8aaec4d4da5 3c65d6d6def6b561c8c92cf767d91413b876c185 4c7102a3ff3cb82dbe13146631ca87aa46824e67
+2026-10-16T18:30:19+08:00 | ziyoo
+Merge pull request #2 from zziyoo/ui
+
+3c65d6d6def6b561c8c92cf767d91413b876c185 0e8934335fbcc7e98a72611ba325096a200cb35d 78c141f95058e0660680615760d819c785b98057
+2026-10-16T18:30:09+08:00 | ziyoo
+Merge pull request #1 from zziyoo/master
+
+4c7102a3ff3cb82dbe13146631ca87aa46824e67 7afe2cdc26343bd545d80317103b8ba6a4f31801 0e8934335fbcc7e98a72611ba325096a200cb35d
+2026-10-16T18:11:04+08:00 | ziyoo
+Merge branch 'master' into ui
+
+78c141f95058e0660680615760d819c785b98057 c4be0b2aec10dbda0e6f3eea06cbdee99a1d97de 0e8934335fbcc7e98a72611ba325096a200cb35d
+2026-10-16T18:10:25+08:00 | ziyoo
+Merge branch 'master' into master
+
+0e8934335fbcc7e98a72611ba325096a200cb35d c91269d0fd5f8fc6d7a30f8653f923a4e4d04fa1
+2026-10-16T16:34:43+08:00 | 雪剑兵兵
+发布: v4.1.2.7 客户端包 + README更新
+
+c91269d0fd5f8fc6d7a30f8653f923a4e4d04fa1 450e6949de907c863366e9f5b15b03b96c94b49a
+2026-10-16T16:30:01+08:00 | 雪剑兵兵
+发布: v4.1.2.6 客户端包 + README详细开发者日志
+
+450e6949de907c863366e9f5b15b03b96c94b49a 39573da6df7bd06dbcb6aecd8cffa0338a8b70a6
+2026-10-16T12:07:29+08:00 | feisheng
+发布: v4.1.2.3 客户端包
+
+39573da6df7bd06dbcb6aecd8cffa0338a8b70a6 ed7bed4350c7f2b8bc574343ece17ee6e56e3a2e
+2026-10-15T15:23:39+08:00 | ziyoo
+补丁：事务日志结构校验（审查 P2：合法 JSON ≠ 合法日志，仅"键不存在"才是 none）
+
+ed7bed4350c7f2b8bc574343ece17ee6e56e3a2e dab486b82523ebc423e3f53dc3b01810e671eee6
+2026-10-15T15:09:12+08:00 | ziyoo
+补丁：事务日志严格读取进入宿主适配层（审查 P1：读失败/损坏不再冒充"无事务"）
+
+dab486b82523ebc423e3f53dc3b01810e671eee6 4b20f73599426c074ee92dfe96d5a13e89e466d9
+2026-10-15T14:46:10+08:00 | ziyoo
+补丁：启动恢复纳入统一事务锁 + 日志删除读回异常不再视为清理成功（审查 P1/P2）
+
+4b20f73599426c074ee92dfe96d5a13e89e466d9 b3f5b432c101d41d1f923649e3a6554db3959e1c
+2026-10-15T14:26:56+08:00 | ziyoo
+批次B：重新授权基线更新 + 回滚状态如实合成 + 记录删除读回核验（P1-1/P1-2/P1-3）
+
+b3f5b432c101d41d1f923649e3a6554db3959e1c 0712bf30844b0db9da16f3ac897a792ef846a533
+2026-10-15T14:20:52+08:00 | ziyoo
+批次A：崩溃恢复改为实际状态核对 + 事务日志写入失败即中止（P0-1/P0-2）
+
+0712bf30844b0db9da16f3ac897a792ef846a533 94c1489a9bc6b329af29c5d58e84ee1e6f78e2d6
+2026-10-15T13:51:06+08:00 | ziyoo
+批次B：恢复后官方记录一致性核验与待生效授权强制校验（P1/P2）
+
+94c1489a9bc6b329af29c5d58e84ee1e6f78e2d6 db7780b5cf8d6ca2db0d35448550110fe3cc048e
+2026-10-15T13:41:32+08:00 | ziyoo
+批次A：修复安装事务一致性与重新授权基线（P0）
+
+db7780b5cf8d6ca2db0d35448550110fe3cc048e 948db999928786b60db94ecd366fa6ae2720ad81
+2026-10-15T13:12:03+08:00 | ziyoo
+第三轮：对局门禁、授权复核、回滚一致性与流式限额修复
+
+948db999928786b60db94ecd366fa6ae2720ad81 4b130dbc7d806c8ec20d8ebcab508bdd2130f850
+2026-10-15T12:41:14+08:00 | ziyoo
+docs：新增在线权重更新安全性修复与验收报告（P0/P1/P2 逐项结论、Commit、测试、兼容性与待验证项）
+
+4b130dbc7d806c8ec20d8ebcab508bdd2130f850 5d978de544f34b39c9579ca6ff1508309a2ae573
+2026-10-15T12:39:52+08:00 | ziyoo
+批次C：P2 边界完善、架构语义校验与最终回归
+
+5d978de544f34b39c9579ca6ff1508309a2ae573 723c0f56ea50ad7552ed138600f52bb86e661135
+2026-10-15T12:35:52+08:00 | ziyoo
+批次B：修复在线权重更新五项 P1 稳定性问题
+
+723c0f56ea50ad7552ed138600f52bb86e661135 c01ff8839d1595c660aaaf061a04e27abc5ac689
+2026-10-15T12:30:42+08:00 | ziyoo
+批次A：修复在线权重更新三项 P0 安全问题
+
+c01ff8839d1595c660aaaf061a04e27abc5ac689 a448e6afbef90c57bc4b02c379121646d52b4d6c
+2026-10-15T11:39:09+08:00 | ziyoo
+阶段六：补充自动化测试并完成验收（88 项断言全部通过）
+
+a448e6afbef90c57bc4b02c379121646d52b4d6c ad1a5d61397da65a3e7a9911dd5f19359c0e8754
+2026-10-15T11:36:21+08:00 | ziyoo
+阶段五：整包发布流程兼容性核验（只做核验与文档，未改动打包行为）
+
+ad1a5d61397da65a3e7a9911dd5f19359c0e8754 8b23ef4d7179d83d0f8d4f503abd07f962ec1887
+2026-10-15T11:33:47+08:00 | ziyoo
+阶段四：前端权重下载 / 校验 / 安全应用与回滚，隔离存储保护本地训练成果
+
+8b23ef4d7179d83d0f8d4f503abd07f962ec1887 cd6db678d405a1f6d178844b8c8ae4df45ca6389
+2026-10-15T11:22:49+08:00 | ziyoo
+阶段三：模型权重包契约、全量校验与工作台侧导出工具
+
+cd6db678d405a1f6d178844b8c8ae4df45ca6389 b61a1ff9bf9dbd4feadd71ae59530772a244ed61
+2026-10-15T11:17:30+08:00 | ziyoo
+拆分在线更新为独立的模型权重更新模块（阶段二）
+
+7afe2cdc26343bd545d80317103b8ba6a4f31801 b61a1ff9bf9dbd4feadd71ae59530772a244ed61
+2026-10-15T20:46:48+08:00 | ziyoo
+搬运在线权重更新模块最终源码（含第五轮事务一致性修复与弹窗布局修复）
+
+c4be0b2aec10dbda0e6f3eea06cbdee99a1d97de a8209875e67d2166946a8408a1eda5d4797f3747
+2026-10-15T20:15:47+08:00 | ziyoo
+修复：手机横屏下在线更新弹窗塌缩成横向窄框（本体全局 CSS 干扰 + body 缩放）
+
+b61a1ff9bf9dbd4feadd71ae59530772a244ed61 f3eec6c2e4d6f22e9558f863e6e0d938899867e3
+2026-10-15T18:54:14+08:00 | 硅基飞升
+Add files via upload
+
+f3eec6c2e4d6f22e9558f863e6e0d938899867e3 b9ebb31187bbef87f7c2ecab560dfb2ebdd96148
+2026-10-15T16:23:19+08:00 | feisheng
+PR7d: 恢复原主页，仅更新版本历史表格
+
+b9ebb31187bbef87f7c2ecab560dfb2ebdd96148 9f3d0335b3a3e1709bdfed72058c5ba53f9631b8
+2026-10-15T16:19:44+08:00 | feisheng
+PR7d: 数据血缘系统 + 134维特征版本 + r0原始reward记录
+
+a8209875e67d2166946a8408a1eda5d4797f3747 1c6b636108b930451923e07f425a20739f296afa
+2026-10-15T15:23:39+08:00 | ziyoo
+补丁：事务日志结构校验（审查 P2：合法 JSON ≠ 合法日志，仅"键不存在"才是 none）
+
+1c6b636108b930451923e07f425a20739f296afa 77c3fff82d25ee64964a30a3375e9c8d3c8a7817
+2026-10-15T15:09:12+08:00 | ziyoo
+补丁：事务日志严格读取进入宿主适配层（审查 P1：读失败/损坏不再冒充"无事务"）
+
+77c3fff82d25ee64964a30a3375e9c8d3c8a7817 15d716cf22409f6bf0ebb201af5c15d08881a2f9
+2026-10-15T14:46:10+08:00 | ziyoo
+补丁：启动恢复纳入统一事务锁 + 日志删除读回异常不再视为清理成功（审查 P1/P2）
+
+15d716cf22409f6bf0ebb201af5c15d08881a2f9 7474859c825c55b612e3ea8fedabc348626f9acc
+2026-10-15T14:26:56+08:00 | ziyoo
+批次B：重新授权基线更新 + 回滚状态如实合成 + 记录删除读回核验（P1-1/P1-2/P1-3）
+
+7474859c825c55b612e3ea8fedabc348626f9acc 63f56dec094dd77e78e7c1ca1233b22b3447e514
+2026-10-15T14:20:52+08:00 | ziyoo
+批次A：崩溃恢复改为实际状态核对 + 事务日志写入失败即中止（P0-1/P0-2）
+
+63f56dec094dd77e78e7c1ca1233b22b3447e514 b2229d9930370405fef8bedfcb0eaa72602ae7ca
+2026-10-15T13:51:06+08:00 | ziyoo
+批次B：恢复后官方记录一致性核验与待生效授权强制校验（P1/P2）
+
+b2229d9930370405fef8bedfcb0eaa72602ae7ca 5f5fedaaa641eb2906ba2cdf4e44dcbf7edb2e91
+2026-10-15T13:41:32+08:00 | ziyoo
+批次A：修复安装事务一致性与重新授权基线（P0）
+
+5f5fedaaa641eb2906ba2cdf4e44dcbf7edb2e91 bad63d7b47b9a090b807fc3f1307d59c38c49b4e
+2026-10-15T13:12:03+08:00 | ziyoo
+第三轮：对局门禁、授权复核、回滚一致性与流式限额修复
+
+bad63d7b47b9a090b807fc3f1307d59c38c49b4e b52602b54e5050acb76a50ce043bf80ec9b3e115
+2026-10-15T12:41:14+08:00 | ziyoo
+docs：新增在线权重更新安全性修复与验收报告（P0/P1/P2 逐项结论、Commit、测试、兼容性与待验证项）
+
+b52602b54e5050acb76a50ce043bf80ec9b3e115 7f5da0541d25b20c8a21d938eedd96651ee42a6a
+2026-10-15T12:39:52+08:00 | ziyoo
+批次C：P2 边界完善、架构语义校验与最终回归
+
+7f5da0541d25b20c8a21d938eedd96651ee42a6a c192fdc76fd3a5e9299dc002ece004039a146578
+2026-10-15T12:35:52+08:00 | ziyoo
+批次B：修复在线权重更新五项 P1 稳定性问题
+
+c192fdc76fd3a5e9299dc002ece004039a146578 23a727956fbc863316bffda8dc2237af3d6deb92
+2026-10-15T12:30:42+08:00 | ziyoo
+批次A：修复在线权重更新三项 P0 安全问题
+
+23a727956fbc863316bffda8dc2237af3d6deb92 c9394a140e474d8ab2f6f6e3ccd15c3d4d02ed21
+2026-10-15T11:39:09+08:00 | ziyoo
+阶段六：补充自动化测试并完成验收（88 项断言全部通过）
+
+c9394a140e474d8ab2f6f6e3ccd15c3d4d02ed21 0d5a265073f21f55c1b9c1a0b328b0e51478a880
+2026-10-15T11:36:21+08:00 | ziyoo
+阶段五：整包发布流程兼容性核验（只做核验与文档，未改动打包行为）
+
+0d5a265073f21f55c1b9c1a0b328b0e51478a880 b12ea826423acce7d2d0e0d423c5701dd20d0ffb
+2026-10-15T11:33:47+08:00 | ziyoo
+阶段四：前端权重下载 / 校验 / 安全应用与回滚，隔离存储保护本地训练成果
+
+b12ea826423acce7d2d0e0d423c5701dd20d0ffb f74b5ab62a515a43f6d4e174fdcf26599fc203d8
+2026-10-15T11:22:49+08:00 | ziyoo
+阶段三：模型权重包契约、全量校验与工作台侧导出工具
+
+f74b5ab62a515a43f6d4e174fdcf26599fc203d8 9f3d0335b3a3e1709bdfed72058c5ba53f9631b8
+2026-10-15T11:17:30+08:00 | ziyoo
+拆分在线更新为独立的模型权重更新模块（阶段二）
+
+9f3d0335b3a3e1709bdfed72058c5ba53f9631b8 8746f128a5b675d9c0f6476fd8befdbf26807bb7
+2026-10-15T09:29:37+08:00 | 932374865
+删除乱码文件名的临时文件
+
+8746f128a5b675d9c0f6476fd8befdbf26807bb7 dd99281c9532f748221357a317c575794970112d
+2026-10-15T08:45:43+08:00 | 932374865
+README主页优化：增加版本更新历史表格，调试记录移至DEVELOPER_NOTES.md
+
+dd99281c9532f748221357a317c575794970112d 1dcc4bd1e7cc01262761a1b1e27336ee3c075b11
+2026-10-15T08:32:04+08:00 | 932374865
+用官方v4.1版本替换
+
+1dcc4bd1e7cc01262761a1b1e27336ee3c075b11 3053e44b3f28b46220b364fb7898efe74b936a85
+2026-10-15T07:59:08+08:00 | 932374865
+feat: 技能拆解上传6字段版（编程专家定案）
+
+3053e44b3f28b46220b364fb7898efe74b936a85 5d5cd8a96fe5373fdf6279b4e96ef584d088d82e
+2026-10-15T07:31:00+08:00 | 932374865
+feat: 技能拆解汇总上传（精简版）
+
+5d5cd8a96fe5373fdf6279b4e96ef584d088d82e 49400d1762b9817b1f730be49916ddaecf9e95e5
+2026-10-14T23:17:17+08:00 | 932374865
+v4.1.0 飞雀V2 决策积分引擎 - 开源正式版
+
+49400d1762b9817b1f730be49916ddaecf9e95e5 
+2026-10-14T23:14:39+08:00 | 932374865
+v4.0.24 飞雀V1 决策积分引擎 - 初始提交
+

@@ -1,93 +1,37 @@
-## 待发布 · v4.1.5.2 阵营字段与身份场采样（2026-10-25）
-贡献标识：[weique]　涉及模块：`score/model/train/trainExport.js`、`js/config/configSchema.js`
+## 4.4.0 大版本（2026-10-25）
+贡献标识：[weique]　基线：QA 线 `4.1.4.0`（本地 master `466317e`）+ 134 维重训权重（v2 配方）
 
-### 背景
+### 本版内容
 
-用户指出：标签里只有「胜/负」，没有「阵营胜负」。核库确认：
-- `m.identity` 在池子里几乎全为 null（斗地主为主），身份场样本仅 3,510 条；
-- `m.gameOutcome/outcomeTarget` 是**采样者个人**胜负，不是阵营；
-- `actionOutcome.deltas` 有逐玩家 camp（-1/1），但没有「采样者阵营 / 获胜阵营」字段；
-- **身份场样本此前被 `identityModelCompatibility` 硬暂停采集**（`sampleAllowed=false`）。
+- **客户端基线**：并入 QA 线 46 个文件的改动（客户端稳定性、数据来源认证、训练血缘、自动特征证据、候选生命周期等），这些改动已通过 QA 包自动化验收（10/10）。
+- **模型**：合入 134 维主网重训权重（v2 配方：教师 512/256 → 蒸馏学生 128/64 + QAT；类权重指数 0.5、负样本加权 1.0、top1 选模）。
+- **训练数据**：merged_shards + ai_shards 全量已结算 304,973 条，会话级留出验证（1,561 场 / 23,913 条）。
 
-### 本版改动
+### 模型指标（会话级留出）
 
-- 新增阵营推导：身份场 `zhu/zhong→lord`、`fan→rebel`、`nei→nei`；其他模式 `landlord/farmer`；
-- 样本新增 `m.camp`（采样者阵营）、`m.winCamp`（获胜阵营，终局按各玩家 win 标记推导）、`m.campWon`（本阵营是否获胜）；
-- 新增配置 `identitySampling`（默认关）：打开后**只放行身份场训练样本**，身份场推理仍暂停（`allowed=false` 不变），用于积累身份场/阵营数据；
-- 版本号 4.1.5.2。
-
-### 明确未做
-
-- 未解除身份场推理暂停（语义兼容仍待验证）；
-- 未改训练脚本使用 campWon（下一轮接入 label policy）；
-- 未回填旧样本（历史池无 camp 字段）。
-## 待发布 · v4.1.5.1 重训权重包（2026-10-25）
-贡献标识：[weique]　涉及模块：`score/model/weights/defaultWeights.js`、`info.json`、`js/config/version.js`
-
-在 v4.1.5.0 接线基础上，用**全量已结算样本池**（merged_shards + ai_shards 共 30.4 万条，覆盖身份场/斗地主/国战等 12 种模式）重训 134 维主网默认权重。
-
-### 训练配方（v2 变体，扫描 3 组后胜出）
-
-- 教师 512/256 → 蒸馏学生 128/64 + QAT（沿用 S8 配方）
-- 类权重指数 0.5、负样本加权 1.0、**按 top1 选模**（v1 的 corr/bal 优先与 v3 的混合选模均未过 top1 门）
-- 130 维旧样本补零至 134；验证按 sessionId 整场留出（1,561 场 / 23,913 条）
-
-### 指标（会话级留出验证集）
-
-| 指标 | 在架权重 | 新权重 |
+| 指标 | 旧权重（4.1.4.0） | 新权重（4.4.0） |
 | --- | --- | --- |
-| top1 准确率 | 0.5500 | **0.6171**（+0.067） |
-| 均衡召回 bal | 0.2756 | **0.3678**（+0.092） |
-| 价值相关 corr | 0.2181 | **0.4137**（+0.196） |
+| top1 | 0.5500 | **0.6171** |
+| bal | 0.2756 | **0.3678** |
+| corr | 0.2181 | **0.4137** |
 | MSE | 0.0442 | 0.0383 |
 
-质量门（corr≥基线+0.005 / acc≥基线-0.015 / bal≥基线-0.03）三项全过。
+### QA 自动化验收（QA 包 v4.1.4.0）
 
-### 产物
+10 项全部通过：版本一致性、360 个 JS 语法、120 项配置解析、模型文件可解析、包完整性（无 tools/tests/docs、无本机路径）、关键模块 Node 桩加载。
 
-- `defaultWeights.js`（v=7 / dv=5 / dims=[134,128,64,6]，trained=1,657,410）
-- 热更 bundle：`main-actor-critic-w7d5-134-v2-*.json`（releaseSeq 1，待发布）
-- 测试包：`wuming_ai_v4.1.5.1.zip`
+### 明确未包含（保留在 master 4.1.5.x 线）
 
-### 明确未做
+- 策略模型 v3 影子接线（policyModelV3.js + engine 钩子）
+- 策略模型热更通道（policy_manifest.json / policy_v3.json）
+- 阵营字段（camp/winCamp/campWon）与身份场采样开关
 
-- 未改动任何前端逻辑（仅权重与版本号）；
-- 未把新权重发布到线上 manifest（先经测试者验证）；
-- 未吸收 LLM 复判信号（7B 绝对打分试点未通过：corr −0.09，见开发者日志）。
-## 待发布 · v4.1.5.0 策略模型接线包（2026-10-25）
-贡献标识：[weique]　涉及模块：`score/model/net/policyModelV3.js`（新增）、`score/decision/engine/engine.js`、`score/foundation/cloud/cloudIngest.js`、`extension.js`、`tools/test-policy-model-v3.mjs`（新增）、`backend/sharded/server_sharded.py`
+以上功能待其独立验收后并入 4.4.x。
 
-本轮是「模型和权重接线」第一步：把 v3 蒸馏学生（slot17_student_v3，51KB）以**影子模式**接入引擎决策路径与数据上报链路，**不改变候选分与出牌行为**。
+### 安装与回滚
 
-### 接线内容
-
-- 新增 `score/model/net/policyModelV3.js` 适配层：懒加载 v3 权重（UMD `self.CLIENT_POLICY_V3`），提供 predict / shadow / apply / drain / stats / selfTest，自注册 `window.__DJSC.policyModelV3`。
-- 引擎接线（`engine.js` bestActionCore telemetry 阶段）：每次决策提交后调用 `policyModelV3.shadow(eligibleActs, best, ...)`，记录模型 top1/top3 与引擎最终槽位的一致性；`cfg('policyModelV3Shadow', true)` 可关，模型未加载完自动跳过（skipped++，不阻塞决策）。
-- 上报接线（`cloudIngest.js`）：新增 `shadowPolicy` 信封字段；数据源 `djsc_shadow_v3_pending`（上限 1500，单条 ~200B），decisionId 游标去重（FIFO 2000），随首批上传，全部成功后推进游标，失败自动重传。
-- 服务端（`backend/sharded/server_sharded.py`）：信封白名单新增 `shadowPolicy`，与 `shadowV5` 同口径按 decisionId 幂等去重后落盘。
-- 维度兼容：v3 只吃 f0-f129，130/134/142 维新客户端样本均可产出影子记录；<130 维拒绝。
-
-### 验证
-
-- 新增 `tools/test-policy-model-v3.mjs`：25 项断言全过（权重自检 / 17 类 / 维度适配 130-134-142 / 影子不改分 / 队列 drain-confirm / 自检统计）。
-- 回归：`test-policy-model-v2`（33 PASS）、`test-ingest-contract`（PASS）、`test-regressions`（94 PASS）全部通过；改动文件 `node --check` 全通过。
-- 未验证：真机安卓 WebView 懒加载时延、真实对局中的影子一致率（需内测包实测，面板 `policyModelV3.stats()` 可见）。
-
-### 模型热更通道（同轮补，服务端零改动）
-
-- 服务端复用既有 `/update/` 受限静态路由（仅 .zip/.json、防穿越、no-store），新增文件：
-  `update/model/manifest.json`（`djsc-policy-model-update-v1`）+ `update/model/policy_v3.json`（`{meta}` 纯数据，46,821 B）。
-- 新增 `js/update/policyModelUpdate.js`：拉清单 → 版本区间门（requiresExtension）→ releaseSeq 单调 → 下载 → size/SHA-256/meta 形状三重校验 → 写缓存；失败静默保留内置权重；开关 `cfg('policyModelHotUpdate', true)`。
-- `policyModelV3.js` 改为**缓存优先**：热更缓存校验通过则用纯数据重建模型（本地解码 + 前向，不执行远端脚本），否则回退随包内置 UMD 权重；`stats().source` 标识 'cache' / 'builtin'。
-- 新增 `tools/export-policy-model-json.mjs`：从内置 v3 权重导出 `policy_v3.json` 与 `manifest.json`（releaseSeq 自增、打印 SHA-256）。
-- 新增 `tools/test-policy-model-update.mjs`：22 项断言（清单状态机 / meta 校验 / 重建对拍 maxΔ<1e-12 / 下载缓存 / 坏 SHA 拒绝且不覆盖）。
-- 线上实测：`http://127.0.0.1:8787/update/model/manifest.json` 200；公网 `https://data.feiqiaoai.uno/update/model/manifest.json` 200 + CORS `*`；下载 SHA-256 与 size 与清单一致。
-
-### 明确未做
-
-- **未接 active 模式**：v3 软加分需 `cfg('policyModelV3Mode')==='active'` 且影子连续达标，本版默认 shadow。
-- **未动 v2 接线**：policyModelV2 仍为独立模块（未接引擎），后续按影子数据决定是否接 v2 对照。
-- **未做 v3 热更包的自动晋级**：热更只下发权重数据，仍受 shadow 默认门控。
+- 解压覆盖到 `extension/无名AI/`；版本号显示 4.4.0。
+- 回滚：装回 4.1.5.1/4.1.5.2 包（或 QA 包）。
 ## 待发布 · v4.1.4.0 内测包（2026-10-25）
 贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
 

@@ -257,8 +257,9 @@ export function createExecutionGatewayCore(deps) {
 		try {
 			const tx = decision && decision.__djscTransaction;
 			if (!tx) return null;
+			const previous = peekTransaction(player);
 			const staged = stageTransaction(player, tx, { window: getDecisionWindow(player, false) });
-			if (staged) inc(kind || (tx.expected && tx.expected.type) || 'unknown', 'staged');
+			if (staged && (!previous || previous.id !== staged.id)) inc(kind || (tx.expected && tx.expected.type) || 'unknown', 'staged');
 			return staged;
 		} catch (_) { return null; }
 	}

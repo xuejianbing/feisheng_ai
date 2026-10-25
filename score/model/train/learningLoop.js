@@ -11,7 +11,8 @@
  * 打完一局后，自动调整权重
  */
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
-import { WEIGHTS, BIAS } from '../weights/weights.js?v=41a';
+import { WEIGHTS, BIAS, isReady as weightsReady, getLoadStatus } from '../weights/weights.js?v=41a';
+import { cfg } from '../../foundation/config/util.js?v=41a';
 import { recordGame } from './learningOptimizer.js?v=41a';  // ★ 接线：课程学习随真实对局推进
 import { safeGet as _lsGet, safeSet as _lsSet } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 
@@ -97,7 +98,7 @@ export function learningPanelData() {
 		/* ★ 检查WEIGHTS是否真的存在 */
 		let weightReady = false;
 		try {
-			weightReady = !!(typeof WEIGHTS !== 'undefined' && WEIGHTS && WEIGHTS.length > 0);
+			weightReady = weightsReady();
 		} catch (e) {
 			weightReady = false;
 		}
@@ -108,6 +109,8 @@ export function learningPanelData() {
 			losses: _learnData.losses || 0,
 			winRate: _learnData.games > 0 ? Math.round((_learnData.wins / _learnData.games) * 100) / 100 : 0,
 			weightReady: weightReady,
+			modelState: !cfg('useTrainedModel',true) ? 'disabled' : getLoadStatus().state,
+			modelError: getLoadStatus().error,
 		};
 	} catch (e) {
 		return { games: 0, wins: 0, losses: 0, winRate: 0, weightReady: false };

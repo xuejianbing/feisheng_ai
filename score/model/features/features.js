@@ -9,7 +9,7 @@
 
 /* ★ 语义层：卡牌分类不再硬编码，统一由「游戏档案」注入（换游戏只改 gameProfile.js） */
 import { BUCKET, bucketIds } from '../../foundation/adapt/terms.js?v=41a';
-import '../../foundation/adapt/gameProfile.js';
+import '../../foundation/adapt/gameProfile.js?v=41a';
 import { dispositionOf } from '../../decision/relations/relations.js?v=41a';
 import {identityMode} from '../../perception/observer/identityFacts.js?v=41a';
 import {identityView} from '../../perception/observer/identity.js?v=41a';

@@ -20,6 +20,8 @@ import { decideDiscard } from '../basic/discardBrain.js?v=41a';
 import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
 import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 
+import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choiceStat, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
+
 const ORIG_KEY = '__djsc_orig_chooseToDiscard';
 const SENTINEL = '__djsc_overridden_discard';
 
@@ -157,7 +159,7 @@ function _buildCheck(player) {
 			} catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
 
 			return -v * mul;
-		} catch (e) { return 0; }
+		} catch (e) { return null; }
 	};
 }
 
@@ -171,35 +173,33 @@ export function installDiscardOverride() {
 		if (typeof orig !== 'function') return;
 		proto[ORIG_KEY] = orig;
 
-		proto.chooseToDiscard = function (...args) {
-			const player = this;
-			const ev = _status.event;
-            if(tacticalEnabled("fire") && ev?.name === "huogong") return orig.apply(this,args);
-
-			if (!_shouldOverride(player, ev)) {
-				return orig.apply(this, args);
-			}
-
-			const originalCheck = ev.ai && ev.ai.check;
-			const host = invokeHost({
-				kind: 'discard',
-				player: player,
-				orig: orig,
-				thisArg: this,
-				args: args,
-				prepare: function () {
-					try { ev[SENTINEL] = true; } catch (_) {}
-					if (!ev.ai) ev.ai = {};
-					ev.ai.check = _buildCheck(player);
-					return function () {
-						try { if (ev.ai) ev.ai.check = originalCheck; } catch (_) {}
-					};
-				},
-				cleanupOnSuccess: false,
-				failureReason: function (e) { return '原生 chooseToDiscard 异常：' + e.message; },
-			});
-			return host.result;
-		};
+        proto.chooseToDiscard = function (...args) {
+            const player = this, parent = _status.event;
+            if (choicePlayerBlocked(player) || tacticalEnabled('fire') && parent?.name === 'huogong') return orig.apply(this, args);
+            const host = invokeHost({ kind: 'discard', player, orig, thisArg: this, args,
+                failureReason: e => '原生 chooseToDiscard 异常：' + e.message });
+            if (!host.ok) return host.result;
+            const next = host.result;
+            bindChoiceLifecycle(next, 'discard', function (ev, trace, registerCleanup) {
+                if (choicePlayerBlocked(player) || !_shouldOverride(player, ev)) return;
+                const originalAI = ev.ai, check = _buildCheck(player);
+                let restoreAI = () => {};
+                const restore = () => { restoreAI(); delete ev[SENTINEL]; };
+                registerCleanup(restore);
+                ev[SENTINEL] = true;
+                restoreAI = patchChoiceField(ev, 'ai', function () {
+                    const score = check.apply(this, arguments);
+                    if (typeof score === 'number' && Number.isFinite(score)) return score;
+                    return typeof originalAI === 'function' ? originalAI.apply(this, arguments) : 0;
+                });
+                return restore;
+            }, function (ev, trace) {
+                completeChoiceTrace(ev, trace);
+                if (trace.selected) choiceStat('discard', 'selected');
+                if (trace.executed) choiceStat('discard', 'executed');
+            });
+            return next;
+        };
 
 		log.info('override', 'chooseToDiscard 接管层已安装');
 	} catch (e) {

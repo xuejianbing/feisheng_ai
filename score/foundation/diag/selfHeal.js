@@ -135,7 +135,7 @@ export async function selfHeal() {
             if (!check.bad) continue;
 
             try {
-                const mod = await import(contract.file);
+                const mod = await import(contract.file+'?v=41a');
                 D[key] = contract.rebuild(mod);
                 const verified = _checkOne(key, contract, D);
                 if (verified.bad) throw new Error(verified.reason);

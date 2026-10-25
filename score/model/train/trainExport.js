@@ -1,42 +1,8 @@
+import {settleDecisionContext} from '../features/autoFeature.js?v=41a';
 import {beginModeContext,modeSampleMeta} from '../../foundation/runtime/modeContext.js?v=41a';
 import {identityModelCompatibility} from '../features/identityCompatibility.js?v=41a';
 import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=41a';
-
-/* ===== 阵营（camp）推导（4.1.5.2）=====
- * 身份场：zhu/zhong → lord（主公方），fan → rebel（反贼方），nei → nei（内奸）
- * 其他模式（斗地主等）：landlord / farmer
- * 目的：标签从「个人胜/负」升级为「阵营胜负」（winCamp / campWon），供后端分层训练。 */
-function _campOf(p) {
-    try {
-        const id = (p && p.identity) || '';
-        if (id === 'zhu' || id === 'zhong' || id === 'mingzhong') return 'lord';
-        if (id === 'fan') return 'rebel';
-        if (id === 'nei') return 'nei';
-        if (id === 'dizhu' || id === 'landlord') return 'landlord';
-        if (id === 'farmer' || id === 'nongmin') return 'farmer';
-        if (p && p.isZhu === true) return 'landlord';
-        return null;
-    } catch (e) { return null; }
-}
-/* 终局获胜阵营：优先看宿主各玩家的 win 标记，兜底用采样者自身胜负 */
-function _winCampOf(me, won) {
-    try {
-        const camp = _campOf(me);
-        const ps = (typeof game !== 'undefined' && game && Array.isArray(game.players)) ? game.players : [];
-        const seen = {};
-        for (let i = 0; i < ps.length; i++) {
-            const p = ps[i];
-            if (!p || p.win !== true) continue;
-            const c = _campOf(p);
-            if (c) seen[c] = 1;
-        }
-        const camps = Object.keys(seen);
-        if (camps.length) return camps.indexOf(camp) >= 0 ? camp : camps[0];
-        if (typeof won === 'boolean' && camp) return won ? camp : null;
-        return null;
-    } catch (e) { return null; }
-}
 /*
  * ============================================
  * // 作者: 飞升原创
@@ -52,11 +18,13 @@ import { createTrainingDBConnection } from './trainingDBConnection.js?v=41a';
 import { game } from '../../foundation/adapt/host.js?v=41a';
 import { writeTrainingSnapshot } from './trainingExportFile.js?v=41a';
 import { createSamplePersistence } from './samplePersistence.js?v=41a';
+import { sampleDigest, isCloudArchived } from './cloudSampleState.js?v=41a';
 import { log } from '../../foundation/diag/logger.js?v=41a';  /* ★ 自动导出/清理日志走统一日志分级 */
 import { cfg } from '../../foundation/config/util.js?v=41a';    /* ★ 读取配置（满额一条龙需要群号等） */
 import { dirOf, downloadText, fileOf } from '../../foundation/storage/storagePaths.js?v=41a';  /* ★ 统一导出路径（手机端兜底下载） */
 import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
 import { FEATURE_DIM } from '../features/features.js?v=41a';  /* ★ 4.0.24 根因修复：维度单一来源改从 features.js 导入（130→134，fix7 目标身份四维）。旧硬编码 130 与 features.js 134 失配，导致 trainRecordSample 入口全拒、样本线 15:18 起全灭 */
+import { adaptToCurrentDim } from '../features/dimensionAdapter.js?v=41a';
 
 /* ================= 训练数据缓冲（1万样本自动导出版） ================= */
 
@@ -65,7 +33,6 @@ const REWARD_BOUND = 147;   /* ★ 奖励上界：决策引擎会给"必胜/击�
                              * 而 _scoreToLabel(6档) 与 TD 归一化(÷147) 均按 -127..127 设计。
                              * 入库/导出前统一切到该量纲，避免极端值主导标签与价值目标。 */
 const STORAGE_KEY = 'djsc_training_samples_v1';
-const STORAGE_SAFE_COUNT = 2500;  /* ★ localStorage 兜底安全上限：防 quota 爆满（≈1.5MB） */
 
 /* ★ IndexedDB 封装（替换 localStorage，支持3万+样本）。
  * 优化：所有读写共用单例连接，避免高频训练记样本时反复 indexedDB.open。 */
@@ -130,13 +97,13 @@ function loadFromStorage() {
         if (Array.isArray(arr) && arr.length) {
             const san = _sanitizeBuffer(arr);
             BUFFER = san.list.concat(BUFFER);
+            _loadFromStorageFallback();
             _keyIndex.clear();
-            if (san.repaired) saveToStorage();
+            if (san.repaired||san.dimAdaptedCount) saveToStorage();
             /* 内存索引在下次 push 时按需重建 */
             console.log('[trainExport] ✅ 从 IndexedDB 加载了 ' + BUFFER.length + ' 条历史样本' +
-                ((san.repaired || san.dropped) ? '（数据隔离：修复 reward ' + san.repaired + ' 条，丢弃污染 ' + san.dropped + ' 条）' : ''));
-            /* 释放旧的超大 localStorage 键，腾出存储配额 */
-            try { _lsRemove(STORAGE_KEY); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+                ((san.repaired || san.dropped||san.dimAdaptedCount) ? '（数据隔离：修复 reward ' + san.repaired + ' 条，适配历史维度 '+san.dimAdaptedCount+' 条，丢弃污染 ' + san.dropped + ' 条）' : ''));
+            // Keep the fallback: the DB may be older after a failed transaction.
         } else {
             _loadFromStorageFallback();
         }
@@ -149,15 +116,23 @@ function _loadFromStorageFallback() {
         if (raw) {
             const arr = JSON.parse(raw);
             if (Array.isArray(arr)) {
-                /* 兜底仅保留安全数量，防止 localStorage 溢出（先清洗再裁剪，旧版污染样本不占额度） */
+                /* Restore all compatible legacy records; capacity controls collection, not recovery. */
                 const san = _sanitizeBuffer(arr);
-                const restored = san.list.slice(0, STORAGE_SAFE_COUNT);
-                restored.forEach(sample => samplePersistence.dirty(sample));
-                BUFFER = restored.concat(BUFFER);
+                const restored = san.list;
+                const byKey = new Map(BUFFER.map(sample => [samplePersistence.fallbackValue(sample)._storageKey, sample]));
+                for (const sample of restored) {
+                    const key = sample._storageKey;
+                    const prior = key === undefined ? null : byKey.get(key);
+                    if (prior && (sample._dataRevision || 0) <= (prior._dataRevision || 0)) continue;
+                    samplePersistence.dirty(sample);
+                    if (prior) BUFFER[BUFFER.indexOf(prior)] = sample;
+                    else BUFFER.push(sample);
+                    if (key !== undefined) byKey.set(key,sample);
+                }
                 saveToStorage();
                 _keyIndex.clear();
                 console.log('[trainExport] ✅ 从本地加载了 ' + BUFFER.length + ' 条历史样本（回退模式）' +
-                    ((san.repaired || san.dropped) ? '（数据隔离：修复 reward ' + san.repaired + ' 条，丢弃污染 ' + san.dropped + ' 条）' : ''));
+                    ((san.repaired || san.dropped||san.dimAdaptedCount) ? '（数据隔离：修复 reward ' + san.repaired + ' 条，适配历史维度 '+san.dimAdaptedCount+' 条，丢弃污染 ' + san.dropped + ' 条）' : ''));
             }
         }
     } catch (e) {
@@ -220,31 +195,29 @@ function trainingSaveStatus() {
     const state = saveRetry.status();
     const labels = { idle: '等待保存', saving: '正在保存', saved: '已保存', pending: '仍有更新待保存', retrying: '等待自动重试', paused: '连续失败，自动重试已暂停', clearing: '正在清空训练样本' };
     return { ...state, label: labels[state.phase], pending: BUFFER.filter(sample => !sample._persisted).length,
-        connected: !!getDB() };
+        fallback: {..._fallbackStatus}, connected: !!getDB() };
 }
 
-/* ★ 兜底存储：仅存安全数量到本地存储，且失败时裁剪重试，绝不抛错
+/* 完整兜底：原子写入并读回；配额失败保留已有备份和内存，绝不裁剪
  * ★ P2-31：中央存储 safeSet 不抛异常而以 false 表达失败，故按返回值判定重试，
  *   不能再依赖 catch（旧直调 localStorage 时靠 QuotaExceededError 进裁剪分支）。 */
-let _lastLsSig = { n: -1, t: 0 };
+let _fallbackStatus = {complete:false,count:0,error:''};
 function _persistToLocalStorageFallback() {
     if (_clearTask) return;
     const timing = runtimePerformance.start('training.backup');
     try {
-        /* ★ 卡顿修复：兜底 stringify 全量 2500 条（数 MB）很贵，IndexedDB 不可用的设备
-         *   也不必每秒重写——60s 内且样本数变化 <100 条时跳过（清空场景差值巨大不受影响） */
-        const _nowLs = Date.now();
-        if (_lastLsSig.n >= 0 && _nowLs - _lastLsSig.t < 60000 &&
-            Math.abs(BUFFER.length - _lastLsSig.n) < 100) return;
-        let data = (BUFFER.length > STORAGE_SAFE_COUNT ? BUFFER.slice(-STORAGE_SAFE_COUNT) : BUFFER).map(sample => samplePersistence.fallbackValue(sample));
-        if (_lsSet(STORAGE_KEY, JSON.stringify(data))) { _lastLsSig = { n: BUFFER.length, t: _nowLs }; return; }
-        /* 配额仍满 → 进一步裁剪一半后重试一次 */
-        const half = Math.floor(data.length / 2);
-        if (half > 0 && _lsSet(STORAGE_KEY, JSON.stringify(data.slice(-half)))) return;
-        /* 仍失败 → 放弃该键（避免半截大对象长期占配额），等下轮 IndexedDB/裁剪 */
-        _lsRemove(STORAGE_KEY);
+        // Atomic full backup only. Never replace a good backup with a truncated suffix.
+        const data = BUFFER.map(sample => samplePersistence.fallbackValue(sample));
+        const raw = JSON.stringify(data);
+        if (_lsSet(STORAGE_KEY, raw) && _lsGet(STORAGE_KEY) === raw) {
+            _fallbackStatus = {complete:true,count:data.length,error:''};
+            return true;
+        }
+        _fallbackStatus = {complete:false,count:0,error:'完整备份写入失败，旧备份与内存保留'};
+        return false;
     } catch (e) {
         console.warn('[trainExport] 保存样本失败：', e);
+        _fallbackStatus = {complete:false,count:0,error:'完整备份异常，旧副本保留'};
     } finally { runtimePerformance.end(timing); }
 }
 
@@ -257,8 +230,8 @@ const REWARD_REPAIR_TOL = 1;
 function _sanitizeSample(s) {
     if (!s || typeof s !== 'object') return { sample: null };
     const f = s.f || s.features;
-    if (!Array.isArray(f) || f.length !== FEATURE_DIM) return { sample: null, wrongDim: true };
-    for (let i = 0; i < FEATURE_DIM; i++) if (!Number.isFinite(f[i])) return { sample: null, nonFinite: true };
+    const adapted = adaptToCurrentDim({...s,f});
+    if(adapted.error)return {sample:null,...(adapted.error==='invalid-features'?{nonFinite:true}:{wrongDim:true})};
     const ms = s.m && s.m.score;
     let r = (typeof s.r === 'number') ? s.r : ((typeof s.reward === 'number') ? s.reward : NaN);
     let repaired = false;
@@ -267,25 +240,30 @@ function _sanitizeSample(s) {
         if (!Number.isFinite(r) || Math.abs(r - rFixed) > REWARD_REPAIR_TOL) { r = rFixed; repaired = true; samplePersistence.dirty(s); }
     }
     if (!Number.isFinite(r)) return { sample: null, nonFinite: true };
-    s.f = f;
+    s.f = Array.from(adapted.sample.f);
+    if(adapted.sample._dimAdapted===true){
+        s._dimAdapted=true;s._originalDim=adapted.sample._originalDim;
+        s._missingFeatureIndices=adapted.sample._missingFeatureIndices?.slice()||[130,131,132,133];
+    }
+    if(adapted.adapted)samplePersistence.dirty(s);
     s.r = _clampR(Math.round(r), -REWARD_BOUND, REWARD_BOUND);
-    return { sample: s, repaired: repaired };
+    return { sample: s, repaired: repaired, adapted:adapted.adapted };
 }
 
 function _sanitizeBuffer(arr) {
     const list = [];
-    let repaired = 0, dropped = 0, dimMismatch = 0;
+    let repaired = 0, dropped = 0, dimMismatch = 0, dimAdaptedCount=0;
     for (let i = 0; i < arr.length; i++) {
         const r = _sanitizeSample(arr[i]);
         if (!r.sample) { dropped++; continue; }
-        /* ★ 4.0.24：丢弃与当前 FEATURE_DIM 不符的存量样本（旧 130 维已在服务器合并池有备份，
-           留在缓冲只会与 134 维新样本混维，训练端无法对齐） */
+        /* 入库统一为正式维度；历史130维已由显式适配保留缺失身份标记。 */
         if (r.sample.f && Array.isArray(r.sample.f) && r.sample.f.length !== FEATURE_DIM) { dimMismatch++; continue; }
         if (r.repaired) repaired++;
+        if(r.adapted)dimAdaptedCount++;
         list.push(r.sample);
     }
     if (dimMismatch) console.log('[trainExport] 丢弃旧维度样本 ' + dimMismatch + ' 条（当前 FEATURE_DIM=' + FEATURE_DIM + '）');
-    return { list: list, repaired: repaired, dropped: dropped, dimMismatch: dimMismatch };
+    return { list: list, repaired: repaired, dropped: dropped, dimMismatch: dimMismatch, dimAdaptedCount };
 }
 
 /* 导入只恢复白名单训练字段，不能相信文件携带的数据库主键/已保存标记。 */
@@ -302,7 +280,8 @@ function _normalizeImportedSample(raw) {
     const fbAsync = valid(raw.fbAsync, false, x => typeof x === 'boolean');
     if ([target, conf, count, ts, fbAsync].some(x => x === undefined) || (fbAsync && target === null)) return { sample: null, invalidLabels: true };
     return { ...sanitized, sample: { f: source.f.slice(), r: source.r, m: source.m,
-        value_target: target, fbAsync, conf, count, ts, _persisted: false } };
+        value_target: target, fbAsync, conf, count, ts, _persisted: false,
+        ...(source._dimAdapted===true?{_dimAdapted:true,_originalDim:source._originalDim,_missingFeatureIndices:source._missingFeatureIndices.slice()}:{}) } };
 }
 
 function _importMergeKey(sample) {
@@ -348,11 +327,10 @@ function _inferScene(meta) {
     return 'general';
 }
 
-export function pushSample(features, reward, meta) {
+export function pushSample(features, reward, meta) { return !!_pushSample(features, reward, meta); }
+function _pushSample(features, reward, meta) {
     const compatibility = identityModelCompatibility();
-    const _isIdentityMode = meta?.modeContext?.mode === 'identity';
-    /* ★ 4.1.5.2：身份场推理仍暂停；cfg('identitySampling') 打开后只放行训练样本（带 camp/winCamp） */
-    if (_isIdentityMode ? !cfg('identitySampling', false) : !compatibility.sampleAllowed) {
+    if (!compatibility.sampleAllowed || meta?.modeContext?.mode === 'identity') {
         _diagBump(_sampleDiag.rejected,(meta?.action || 'unknown') + ':identity-feature-schema-migration');
         return false;
     }
@@ -377,29 +355,18 @@ export function pushSample(features, reward, meta) {
     const existing = _keyIndex.get(key);
     if (existing !== undefined) {
         existing.count = (existing.count || 1) + 1;  // 计数+1
-        existing.ts = Date.now();                     // 更新时间
+        // Preserve capture timestamp; content fingerprint identifies revisions.
         samplePersistence.dirty(existing);                  /* ★ 增量持久化：更新过就要重新落库 */
         saveToStorage();
-        return true;
+        return existing;
     }
     
     if (BUFFER.length >= MAX_SAMPLES) {
-        /* ★ 4.0.24：满时驱逐最旧 15% 给新样本腾位。旧逻辑纯暂停（_pausedSamples++ 后 return false），
-           若自动导出的 retire 因 IndexedDB 不可用永远失败，缓冲永远满 → 样本线永久死亡且不可见。
-           最旧样本最早过上传水印，驱逐几乎无上传损失。 */
-        try {
-            const dropN = Math.max(1, Math.floor(BUFFER.length * 0.15));
-            BUFFER.sort((a, b) => (a.ts || 0) - (b.ts || 0));
-            const dropped = BUFFER.splice(0, dropN);
-            if (dropped.length) {
-                const dropSet = new Set(dropped);
-                for (const [k, s] of _keyIndex) if (dropSet.has(s)) _keyIndex.delete(k);
-                _lastExportStatus = '缓冲已满，已驱逐最旧 ' + dropped.length + ' 条（未导出部分随上传水印保障）';
-                log.warn('train', _lastExportStatus);
-            }
-        } catch (eEv) {}
         _pausedSamples++;
+        _lastExportStatus = '容量不足：保留全部旧样本，暂停新增；等待可靠存储或核验导出';
+        saveToStorage();
         if (!_autoExportTask && Date.now() >= _nextAutoExportAt) void autoExportFullBuffer();
+        return false;
     }
 
     const sample = {
@@ -424,7 +391,7 @@ export function pushSample(features, reward, meta) {
     _keyIndex.set(key, sample);
     /* ★ 自动保存到本地 */
     saveToStorage();
-    return true;
+    return sample;
 }
 
 /* ★ 满额一条龙：导出完成后告知用户，并支持一键复制群号
@@ -512,39 +479,45 @@ function clearTrainingSamples(resetCounters = false) {
 export function bufferClear() { return clearTrainingSamples(false); }
 export function resetAll() { return clearTrainingSamples(true); }
 export function getSamples() { return BUFFER; }
+export async function trainingSamplesReady() { await _startupLoad; }
+export async function persistCloudConfirmations(entries) {
+    const changes=[];
+    for (const {sample,fp} of entries) {
+        const value={fp,digest:sampleDigest(sample)};
+        changes.push({sample,key:'_cloudAck',previous:sample._cloudAck,value});
+        sample._cloudAck=value;
+        samplePersistence.dirty(sample);
+    }
+    return persistMetadataChanges(changes);
+}
+export async function persistLegacyReview(samples) {
+    const changes=samples.map(sample=>({sample,key:'_cloudLegacyReview',previous:sample._cloudLegacyReview,value:true}));
+    for (const change of changes) { change.sample[change.key]=change.value;samplePersistence.dirty(change.sample); }
+    return persistMetadataChanges(changes);
+}
+async function persistMetadataChanges(changes) {
+    const captures=changes.map(({sample})=>samplePersistence.capture(sample));
+    // run() may join an older transaction. Its ok only proves that older snapshot.
+    // Check the exact captured revisions; never trust a cached fallback status.
+    const unchanged=()=>captures.every(entry=>samplePersistence.unchanged(entry));
+    try {
+        await trainRetrySave();
+        if (unchanged() && changes.every(({sample})=>sample._persisted)) return true;
+        if (unchanged() && _persistToLocalStorageFallback() === true && unchanged()) return true;
+    } catch (_) { /* Unexpected save exceptions also retain the pending upload. */ }
+    for (const {sample,key,previous,value} of changes) {
+        if (sample[key] === value) { sample[key]=previous;samplePersistence.dirty(sample); }
+    }
+    return false;
+}
+// Stable local primary key, including legacy records without transaction identity.
+export function getSampleStorageKey(sample) { return samplePersistence.fallbackValue(sample)._storageKey; }
 export function isFull() { return BUFFER.length >= MAX_SAMPLES; }
 
-/* ★ 自动清洗：最新7000条 + 随机3000条 = 总共10000条 */
+/* Compatibility entry point: unverified random cleanup is disabled. */
 export function cleanLowValue() {
-    if (_clearTask) return 0;
-    try {
-        if (BUFFER.length < MAX_SAMPLES * 0.8) return 0;  /* 样本不够多，不清洗 */
-        
-        /* ★ 按时间排序（最新的在后面） */
-        BUFFER.sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
-        
-        const RECENT_COUNT = 7000;   /* 保留最新的7000条 */
-        const RANDOM_COUNT = 3000;   /* 从历史里随机选3000条 */
-        
-        /* 分割成：历史样本 + 最新样本 */
-        const recentSamples = BUFFER.slice(-RECENT_COUNT);  /* 最新的7000条 */
-        const oldSamples = BUFFER.slice(0, -RECENT_COUNT);   /* 剩下的历史样本 */
-        
-        /* 从历史样本里随机选3000条 */
-        oldSamples.sort(() => Math.random() - 0.5);  /* 打乱 */
-        const randomSamples = oldSamples.slice(0, RANDOM_COUNT);
-        
-        /* 合并：最新7000 + 随机3000 */
-        BUFFER = recentSamples.concat(randomSamples);
-        _keyIndex.clear();   /* BUFFER 被整体替换，索引重建 */
-        
-        saveToStorage();
-        
-        const oldLen = recentSamples.length + oldSamples.length;
-        const cleaned = oldLen - BUFFER.length;
-        try { log.info('train', '自动清洗完成：最新7000条全保留，历史样本随机选3000条，共删除 ' + cleaned + ' 条，剩余 ' + BUFFER.length + ' 条'); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-        return cleaned;
-    } catch (e) { return 0; }
+    // Threshold/random cleanup has no proof of a recoverable copy. Only verified export retirement may remove records.
+    return 0;
 }
 
 export function exportAsJson() {
@@ -677,7 +650,7 @@ function autoExportFullBuffer() {
             await initDB();
             if (generation !== _trainingGeneration || _clearTask) return { ...result, cancelled: true };
             if (!_dbReady || !getDB()) throw new Error('数据库不可用，暂不清理已导出样本');
-            const retired = await samplePersistence.retire(getDB(), snapshot.entries, () => BUFFER, sample => generation === _trainingGeneration && !_clearTask && settledSample(sample), removed => {
+            const retired = await samplePersistence.retire(getDB(), snapshot.entries, () => BUFFER, sample => generation === _trainingGeneration && !_clearTask && settledSample(sample) && isCloudArchived(sample), removed => {
                 if (generation !== _trainingGeneration || _clearTask) return;
                 BUFFER = BUFFER.filter(sample => !removed.has(sample));
                 for (const [key, sample] of _keyIndex) if (removed.has(sample)) _keyIndex.delete(key);
@@ -793,7 +766,7 @@ export function trainRecordSample(me, best, sit, score, features, execution = {}
 
         if (_gameStart && !_gameStart.playerRef && game.me === me) { _gameStart.playerRef = me; _gameStart.player = me.name || me.name1 || '?'; }
         if (_gameStart?.playerRef === me && execution.actorId) _gameStart.actorId = execution.actorId;
-        const recorded = pushSample(f, 0, {
+        const recorded = _pushSample(f, 0, {
             player: me.name || me.name1 || '?',
             action: best.type || 'unknown',
             recast: best.recast===true,
@@ -804,7 +777,6 @@ export function trainRecordSample(me, best, sit, score, features, execution = {}
             rewardSchema: 'action-outcome-v1', rewardStatus: 'pending', transactionId: execution.transactionId || null,
             actorId: execution.actorId || null, target: execution.target || null,
             identity: me.identity || null,   /* ★ fix7: 采样者身份明文（zhu/zhong/fan/nei），后端可按身份分层训练评估 */
-            camp: _campOf(me),   /* ★ 4.1.5.2：采样者阵营（lord/rebel/nei/landlord/farmer），供阵营胜负标签 */
             tgtIdentity: publicIdentityRole(best && typeof best.target === 'object' ? best.target : null),
             modeContext: modeSampleMeta(me),
             v5: execution.v5 || null,   /* ★ PR5e.4：v5 双种子集成对最终动作的评分 {ens,s42,s456}，样本级 shadow 对比随 m 上传 */
@@ -815,7 +787,7 @@ export function trainRecordSample(me, best, sit, score, features, execution = {}
             violationTarget: violationInfo ? violationInfo.target : null,
         });
         if (recorded) _diagBump(_sampleDiag.accepted, best && best.type);
-        return recorded ? { sessionId: _gameStart && _gameStart.id || null } : null;
+        return recorded ? { sessionId: _gameStart && _gameStart.id || null, sample: recorded } : null;
     } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 }
 
@@ -824,7 +796,6 @@ export function trainSettleGame(me, won) {
         const start = _gameStart;
         if (!start) return;
         const verdict = typeof won === 'boolean' ? won ? 'win' : 'lose' : 'unknown';
-        const winCamp = _winCampOf(me, won);   /* ★ 4.1.5.2：获胜阵营（动态阵营胜负） */
         let updated = 0;
         for (const s of BUFFER) {
             if (!s.m || s.m.sessionId !== start.id || s.m.executionState !== 'committed') continue;
@@ -833,8 +804,6 @@ export function trainSettleGame(me, won) {
             // 终局标签属于整局，绝不覆盖动作value_target或把静态r当即时奖励倒推。
             s.m.gameOutcome = verdict;
             s.m.outcomeTarget = typeof won === 'boolean' ? won ? 1 : -1 : null;
-            s.m.winCamp = winCamp;
-            s.m.campWon = (winCamp && s.m.camp) ? (winCamp === s.m.camp) : null;   /* ★ 4.1.5.2：本阵营是否获胜 */
             samplePersistence.dirty(s); updated++;
         }
         if (updated) saveToStorage();
@@ -875,7 +844,9 @@ export function trainFeedbackSample(feedback) {
             s.m.observedReward = feedback.reward;
             s.m.actionOutcome = { attribution: feedback.attribution, scope: feedback.scope || 'immediate-event', futureStatus: feedback.futureStatus || 'unobserved', normalization: 12, deltas: feedback.deltas || [], choices: feedback.choices || [] };
         }
-        samplePersistence.dirty(s); saveToStorage(); return 1;
+        samplePersistence.dirty(s); saveToStorage();
+        try { settleDecisionContext(feedback, s); } catch (_) {}
+        return 1;
     } catch (_) { return 0; }
 }
 
@@ -907,7 +878,9 @@ export function trainApplyCostCredits(group) {
    Object.assign(s.m,{rewardStatus:'observed',outcomeReason:null,observedReward:a.reward,negative:a.reward<0,creditAllocation,actionOutcome:result});
    samplePersistence.dirty(s);feedback.push(result);
   }
-  saveToStorage();return {applied:selected.length,feedback};
+  saveToStorage();
+  for(let i=0;i<feedback.length;i++){try{settleDecisionContext(feedback[i],selected[i]);}catch(_){}}
+  return {applied:selected.length,feedback};
  }catch(_){return {applied:0,reason:'credit-error'};}
 }
 
@@ -1101,7 +1074,7 @@ export function importFromJson(jsonStr) {
             return { ok: false, err: '格式错误：找不到样本数组（请确认是导出的训练文件）' };
         }
 
-        let added = 0, merged = 0, skipped = 0, repaired = 0;
+        let added = 0, merged = 0, skipped = 0, repaired = 0, adaptedCount=0;
         /* ★ P1-19：导入强校验——维度必须等于 FEATURE_DIM(134)，且每项都是有限数。
          * 否则旧 48/96 维样本或含 NaN/字符串的样本会被静默零填充成伪 134 维样本污染训练。
          * ★ 数据隔离：统一过 _sanitizeSample——旧版 reward 损坏样本（reward 与 meta.score 脱节）
@@ -1124,13 +1097,14 @@ export function importFromJson(jsonStr) {
                 continue;
             }
             if (san.repaired) repaired++;
+            if(san.adapted)adaptedCount++;
             const sample = san.sample, key = _importMergeKey(sample);
             const existing = existingSamples.get(key);
             if (existing) {
                 const count = (existing.count || 1) + sample.count;
                 if (!Number.isSafeInteger(count)) { skipped++; continue; }
                 existing.count = count;
-                existing.ts = Math.max(existing.ts || 0, sample.ts);
+                // Preserve the existing capture timestamp on import merge.
                 samplePersistence.dirty(existing);
                 merged++;
                 continue;
@@ -1150,6 +1124,7 @@ export function importFromJson(jsonStr) {
             skippedNonFinite: skippedNonFinite,
             skippedInvalidLabels: skippedInvalidLabels,
             repairedReward: repaired,   /* ★ 数据隔离：以 meta.score 为准修复的旧版损坏 reward 条数 */
+            adaptedCount,
             total: BUFFER.length,
         };
     } catch (e) {

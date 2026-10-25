@@ -32,7 +32,7 @@ export const CONFIG_SECTIONS = [
 	},
 	{
 		scope: 'developer', id: 'dev_model', title: 'D2 · 模型与学习', accent: 'blue',
-		entries: ['useTrainedModel', 'identitySampling', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'championBoost', 'openSharedPanel', 'decisionFeedback', 'skillFeedback', 'styleFeedback', 'crossGameMemory', 'playerMemory', 'openMemoryPanel'],
+		entries: ['useTrainedModel', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'championBoost', 'openSharedPanel', 'decisionFeedback', 'skillFeedback', 'styleFeedback', 'crossGameMemory', 'playerMemory', 'openMemoryPanel'],
 	},
 	{
 		scope: 'developer', id: 'dev_guard', title: 'D3 · 护栏与安全', accent: 'blue',
@@ -51,7 +51,6 @@ export const CONFIG_SECTIONS = [
 ];
 
 export const CONFIG_ITEMS = {
- identitySampling:{compact:true,type:'bool',default:false,label:'身份场样本采集',description:'身份场暂不推理，但采集对局样本用于训练（含阵营胜负字段）。下一局生效。'},
  tacticalOptimization:{compact:true,type:'bool',default:true,label:'启用打法优化覆盖',description:'实验功能，下一局生效；关闭后保持原判断。'},
  tacticalFire:{compact:true,type:'bool',default:true,label:'火攻与铁索联动优化',description:'统一火攻、自伤传导和无懈的收益方向；弃牌同时检查成本。下一局生效。'},
  tacticalTiesuo:{compact:true,type:'bool',default:true,label:'铁索使用与重铸优化',description:'适时提前重铸，摸牌后重新安排出牌；保留斩杀与已开始的酒杀。下一局生效。'},

@@ -29,8 +29,6 @@ const __VERSION__ = "v" + VERSION;
 import { modeModelsReady } from './score/model/weights/modeModelStore.js?v=41a';
 import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
 import { installModelUpdate, uninstallModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
-import { installPolicyModelUpdate } from './js/update/policyModelUpdate.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 热更检查（纯数据 JSON，失败静默） */
-import './score/model/net/policyModelV3.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 接线（自注册 window.__DJSC.policyModelV3，影子评估默认开） */
 window.__DJSC = window.__DJSC || {};
 // Inspectable readiness promise for browser/host release checks.
 window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
@@ -42,7 +40,6 @@ window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
 
 // ===== 模型权重在线更新（整包下载 / 解压安装已移除，实现见 js/update/）=====
 installModelUpdate();
-installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */
 // ===== 模型权重在线更新结束 =====
 
 /* ===== 目标合理性校验（前置校验，不拦截，仅日志） =====
@@ -156,8 +153,7 @@ extensionPackage.content = async function (config, pack) {
 /* ★ 卸载时清理决策积分引擎 + 还原 useCard 猴补丁（P1-25） */
 const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
-	try { uninstallModelUpdate();
-installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */ } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
+	try { uninstallModelUpdate(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
 	try { uninstallScoreEngine(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★P2 修复：卸载前把 shadow 防抖窗口内未落盘的日志同步写掉（模块已加载时同一微任务内完成），并停掉退出兜底监听 */
 	try {
@@ -199,7 +195,9 @@ import('./score/model/train/trainExport.js?v=41a').then(function (m) {
 });
 
 /* 合法性校验函数（直接内联，不依赖 allyExempt.js） */
-window.__DJSC.checkAllyExempt = function (me, target, cardName) {
+// The real module can be mounted by the static engine import before this fallback.
+// Preserve that implementation; the fallback is only for an absent module.
+if (typeof window.__DJSC.checkAllyExempt !== 'function') window.__DJSC.checkAllyExempt = function (me, target, cardName) {
     try {
         if (!me || !target) return false;
 

@@ -58,7 +58,7 @@ import { miniPredict, cardIdOf, MINI_W } from '../../model/net/mini-model.js?v=4
 import { miniFeatures } from '../skills/skills.js?v=41a';
 import { MEM, memLoad, memSave, memReset, memRecordAtk, memRecordHit, memKeyOf } from '../../perception/memory/mem.js?v=41a';
 import { observeAttack, observeAid, observeCardUse, resetObs, getObs, fireAttackExpectedHit } from '../../perception/observer/observer.js?v=41a';
-import './scoreSelfMod.js';  // ★ 积分自修改器：AI 直接修改规则积分
+import './scoreSelfMod.js?v=41a';  // ★ 积分自修改器：AI 直接修改规则积分
 import { deckConsume, deckReset, cardRemaining, deckAutoDetect, deckSyncFromUI } from '../../perception/memory/deckMemory.js?v=41a';
 import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=41a';
 import { identityOf as _identityOf, identityOfFor as _identityOfFor, beliefOf, beliefOfFor as _beliefOfFor, updateBelief, confidenceOf, confidenceOfFor as _confidenceOfFor, hardIdentityOf as _hardIdentityOf, isLikelyEnemy, isLikelyAlly, resetBelief, explainIdentity, identityBiasOf } from '../../perception/observer/identity.js?v=41a';
@@ -267,6 +267,8 @@ import { createActionOutcomeObserver } from '../analysis/actionOutcome.js?v=41a'
 import { createDelayedOutcomeTracker } from '../analysis/delayedOutcome.js?v=41a';
 import { createPublicProvenanceTracker } from '../analysis/publicProvenance.js?v=41a';
 import { postCheckStats, postCheckReset } from '../analysis/postCheck.js?v=41a';
+import { summarizeOutcomeRecords } from '../analysis/outcomeStats.js?v=41a';
+export function actionOutcomeStats() { return summarizeOutcomeRecords(DECISION_LOG); }
 import { criticBest as deepThinkCritic, thinkingStats as deepThinkStats } from '../../cognition/deepThink.js?v=41a';  /* ★ 模型思考层：深度思考 */
 import { getCardStrategy, cardUseValue, cardRespondValue, getCardType, getCardRisk, cardStrategyStats, resetCardStrategy } from '../cardplay/cardStrategy.js?v=41a';
 import { recordDecisionContext, settleDecisionContext, getAutoFeatureWeight, autoFeatureStats, topAutoFeatures, resetAutoFeatures } from '../../model/features/autoFeature.js?v=41a';
@@ -557,6 +559,7 @@ reg.mount('predict', predict);
 reg.mount('cfg', cfg);
 reg.mount('confidence', safeModelPredict);
 reg.bind('deepThink', { critic: deepThinkCritic, stats: deepThinkStats });  /* ★ 模型思考层：深度思考对外接口 */
+reg.mount('actionOutcomeStats', actionOutcomeStats);
 reg.mount('trainBufferSize', bufferSize);
 reg.mount('trainBufferClear', bufferClear);
 reg.mount('trainLocalAsync', trainLocalAsync);
@@ -1622,6 +1625,30 @@ export function manualMarkStats() {
 	return { bad: _manualMarked.bad, good: _manualMarked.good, lastKey: _manualMarked.lastKey };
 }
 
+/* The host's Player.respond accepts several argument shapes. The completed
+ * native event's cards field is the authoritative list of physical materials;
+ * event.card may be a virtual view-as card and args[0] may be a cards array. */
+export function consumeRespondMaterials(event, consume = deckConsume) {
+	try {
+		const player = event && event.player;
+		if (!event || event.name !== 'respond' || !player || !player.getHistory ||
+			!player.getHistory('respond')?.includes(event) || typeof consume !== 'function') return 0;
+		const materials = Array.isArray(event.cards) ? event.cards : [];
+		const seen = new Set();
+		let count = 0;
+		for (const card of materials) {
+			if (!card || seen.has(card) || get.itemtype?.(card) !== 'card') continue;
+			seen.add(card);
+			consume(card);
+			count++;
+		}
+		return count;
+	} catch (error) {
+		if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(error);
+		return 0;
+	}
+}
+
 function installHooks() {
 	if (installed) return;
 	const proto = lib.element && lib.element.Player && lib.element.Player.prototype;
@@ -1709,16 +1736,20 @@ function installHooks() {
                 try { delayedOutcomes.complete(delayedBefore, next, outcomeCommitted, outcomeResult); } catch (_) {}
                 try { publicSources.completeUse(publicBefore,next,outcomeCommitted,outcomeResult); } catch (_) {}
             }
+
+
+
+			/* A returned GameEvent is not execution: it may be cancelled before
+             * content runs. Confirm only once native content records useCard. */
+            let nativeUseConfirmed = false;
+            const confirmNativeUse = function () {
 			try {
 				gameTelemetry.action(me);
-				addPlayerLog('useCard', { card: Array.isArray(args[0]) ? args[0].map(c => c && c.name || '?') : args[0] && args[0].name || '?',
-					target: Array.from(args).slice(1).flat().filter(x => x && x.playerid).map(x => x.playerid) }, me);
+				addPlayerLog('useCard', { card: get.name(next.card, me) || '?',
+					target: (next.targets || []).map(targetKey).filter(Boolean) }, me);
 			} catch (e) {}
-
-
-			/* ★ Decision Transaction Commit：useCard 被宿主真正调用成功后才确认 card/equip。 */
 			try {
-				const _actualId = (get && typeof get.name === 'function') ? get.name(args[0], me) : (args[0] && args[0].name);
+				const _actualId = (get && typeof get.name === 'function') ? get.name(next.card, me) : next.card?.name;
 				const _actualTarget = [];
 				function _collectActualTarget(v) {
 					if (!v) return;
@@ -1737,9 +1768,10 @@ function installHooks() {
 						if (k && _actualTarget.indexOf(k) < 0) _actualTarget.push(k);
 					} catch (e) {}
 				}
-				for (let ai = 1; ai < args.length; ai++) _collectActualTarget(args[ai]);
+				// Native modifiers may redirect targets after construction.
+				for (const target of next.targets || []) _collectActualTarget(target);
 				const _pendingTx = peekDecisionTransaction(me);
-				if (!demonstrationTicket && _pendingTx && (_pendingTx.expected.type === 'card' || _pendingTx.expected.type === 'equip')) {
+				if (!demonstrationTicket && _pendingTx && _pendingTx === outcomeTx && (_pendingTx.expected.type === 'card' || _pendingTx.expected.type === 'equip')) {
 					const committed = commitExecution(me, {
 						type: 'card',
 						id: _actualId || '',
@@ -1760,6 +1792,12 @@ function installHooks() {
                     }
 				}
 			} catch (eTx) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eTx); }
+            };
+            if (next && typeof next.pushHandler === 'function') next.pushHandler(function (event, option) {
+                if (nativeUseConfirmed || option?.state !== 'end' || !me.getHistory?.('useCard')?.includes(event)) return;
+                nativeUseConfirmed = true;
+                confirmNativeUse();
+            });
 
             if(demonstrationTicket){
                 try{
@@ -1778,10 +1816,10 @@ function installHooks() {
 			if (next && typeof next.then === "function") {
 				Promise.resolve(next).then(function () {
                     finishOutcome();
-					try { scoreCardUse(me, args[0], args[1]); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+					try { if (nativeUseConfirmed) scoreCardUse(me, args[0], args[1]); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 				}).catch(function () { finishOutcome(); });
 			} else {
-				try { scoreCardUse(me, args[0], args[1]); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+				try { if (nativeUseConfirmed) scoreCardUse(me, args[0], args[1]); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			}
 			return next;
 		};
@@ -1967,8 +2005,14 @@ function installHooks() {
 			const me = this, args = arguments;
 			const host = invokeObservedHost({ orig: oRespond, thisArg: this, args: Array.from(args), decisionPoint: 'respond' });
 			if (!host.ok) return host.result;
-			try { gameTelemetry.action(me); addPlayerLog('respond', { card: Array.isArray(args[0]) ? args[0].map(c => c && c.name || '?') : args[0] && args[0].name || '?' }, me); } catch (e) {}
-			try { deckConsume(args[0]); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+            const next = host.result;
+            let confirmed = false;
+            if (next && typeof next.pushHandler === 'function') next.pushHandler(function (event, option) {
+                if (confirmed || option?.state !== 'end' || !me.getHistory?.('respond')?.includes(event)) return;
+                confirmed = true;
+                try { gameTelemetry.action(me); addPlayerLog('respond', { card: get.name(event.card, me) || '?' }, me); } catch (_) {}
+				try { consumeRespondMaterials(event); } catch (_) {}
+            });
 			return host.result;
 		};
 	}
@@ -4569,13 +4613,6 @@ function bestActionCore() {
 		} catch (eRep) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eRep); }
 		
 		});
-		_deferEffect('auto-feature', function () {
-/* ★ 自动特征发现：把本步决策的场景组合喂给 autoFeature（此前只有挂载无调用，总样本恒 0）。 */
-		try {
-			recordDecisionContext(_autofeatCtx(me, best, bestT));
-		} catch (eAF) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eAF); }
-		
-		});
 		const forecastTip = "｜预测：" + forecast.advice + "（压力 " + incoming.total + " 风险 " + Math.round(incoming.selfRisk * 100) + "%）";
 		const mtTip = mt ? ("｜趋势：" + mt.overall) : "";
 		const trendTip = "｜趋势权重：" + (trend === "worsening" ? "进攻↑守↓" : trend === "improving" ? "守↑攻↓" : "均衡");
@@ -4778,7 +4815,8 @@ function bestActionCore() {
 				for (let t = 0; t < times; t++) {
 					const sample = trainRecordSample(me, best, sit, best.score, featToUse, {
                         transactionId: transaction.id, actorId: targetKey(me), target: actual.target || null, v5: _v5meta });
-                    if (sample) { transaction.trainingSessionId = sample.sessionId; transaction.trainingActionType = best.type; transaction.trainingActorId = targetKey(me); }
+                    if (sample) { transaction.trainingSessionId = sample.sessionId; transaction.trainingActionType = best.type; transaction.trainingActorId = targetKey(me);
+                        recordDecisionContext(_autofeatCtx(me, best, bestT), transaction, sample.sample); }
 				}
 
 				/* ★ 4.1.2.6：技能漏斗终局回传——本回合技能候选入池数与技能是否胜出，随 skillDiag 上报 */
@@ -4809,20 +4847,6 @@ function bestActionCore() {
 		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
 		_markPhase('telemetry');
-
-		/* ★ 4.1.5.0：策略模型 v3 影子评估接线（默认 shadow：只记录模型 top1/一致率，不改候选分）。
-		 *   模型由 score/model/net/policyModelV3.js 懒加载并挂 window.__DJSC.policyModelV3；
-		 *   未加载完成时 adapter 内部自动跳过（skipped++），不阻塞决策。
-		 *   开关：cfg('policyModelV3Shadow', true)；active 软加分需 cfg('policyModelV3Mode')==='active' 且影子连续达标。 */
-		try {
-			if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.policyModelV3
-				&& typeof window.__DJSC.policyModelV3.shadow === 'function'
-				&& cfg('policyModelV3Shadow', true)) {
-				const _pmMode = (function () { try { return (typeof game !== 'undefined' && game.mode) || ''; } catch (eM) { return ''; } })();
-				const _pmRound = (function () { try { return (typeof _status !== 'undefined' && _status.turn) ? (_status.turn.id || 0) : 0; } catch (eR) { return 0; } })();
-				window.__DJSC.policyModelV3.shadow(eligibleActs, best, null, { mode: _pmMode, round: _pmRound });
-			}
-		} catch (ePm3) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(ePm3); }
 
 		/* ★ 测试观测：Evaluate 阶段只计算耗时；左侧日志/回放只在 Commit 后落地。 */
 		let _decisionMs = Math.max(0, performance.now() - _perfT0);
@@ -5121,16 +5145,6 @@ function settle() {
 				});
 			}
 		} catch (eR) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eR); }
-		/* ★ 自动特征发现：本局胜利回填收益（让重要特征权重能被学习出来，面板才有非零维度）。 */
-		try {
-			const _meAF = game.me;
-			if (_meAF && _won && _autofeatCtx) {
-				const _ctxAF = _autofeatCtx(_meAF, { type: 'end', id: 'settle' }, null);
-				if (_ctxAF && typeof settleDecisionContext === 'function') {
-					settleDecisionContext(_ctxAF, 1, true);
-				}
-			}
-		} catch (eAFS) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eAFS); }
 		/* ★ 软指标学习：把本局结果喂给 softMetrics（此前只有挂载无调用，总学习次数恒 0）。 */
 		try {
 			if (_hasResult && typeof learnFromGame === 'function') {
