@@ -1,0 +1,60 @@
+{
+  "checks": [
+    {
+      "name": "A01 info.json 可解析且含 version",
+      "ok": true,
+      "detail": "4.1.4.0"
+    },
+    {
+      "name": "A01 version.js VERSION == info.json",
+      "ok": true,
+      "detail": "4.1.4.0"
+    },
+    {
+      "name": "A01 QA-BUILD 版本一致",
+      "ok": true,
+      "detail": "4.1.4.0"
+    },
+    {
+      "name": "A01 全量 JS 语法检查 (360 个)",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "A02 CONFIG_ITEMS 可解析（120 项）",
+      "ok": true,
+      "detail": "120"
+    },
+    {
+      "name": "A05 模型文件可解析 v5_mixup_s42.json",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "A05 模型文件可解析 v5_mixup_s456.json",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "C05 包内无 tools/tests/docs",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "C05 客户端代码无本机绝对路径",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "A01 关键模块可加载(GET 4/4)",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "pass": 10,
+  "fail": 0,
+  "summary": {
+    "pass": 10,
+    "fail": 0
+  }
+}
