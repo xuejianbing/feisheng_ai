@@ -1,0 +1,10 @@
+import {register} from 'node:module';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+const root=process.argv[2].replaceAll('\\','/')+'/';
+globalThis.window={__DJSC:{}};globalThis.localStorage={getItem:()=>null,setItem(){},removeItem(){}};
+globalThis.__NONAME_STUB={lib:{config:{}},game:{players:[],dead:[]},get:{mode:()=> 'doudizhu'},_status:{}};
+register(pathToFileURL(root+'tools/noname-stub-loader.mjs'));
+const {qualifyTrainingSample:q}=await import(pathToFileURL(root+'score/model/train/trainingDataset.js').href+'?v=41a');
+const rows=JSON.parse(readFileSync(process.argv[3],'utf8'));
+console.log(JSON.stringify(rows.map(r=>{const v=q(r.sample,r.options||{});return {eligible:v.eligible,state:v.state,code:v.code};})));
