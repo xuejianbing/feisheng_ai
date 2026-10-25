@@ -30,7 +30,7 @@ import { VERSION as EXT_VERSION } from '../../js/config/version.js?v=41a';
 
 export const POLICY_PROTOCOL = 'djsc-policy-model-update-v1';
 export const POLICY_MODEL_ID = 'slot17_student_v3';
-export const POLICY_MANIFEST_URL = 'https://data.feiqiaoai.uno/update/model/manifest.json';
+export const POLICY_MANIFEST_URL = 'https://data.feiqiaoai.uno/update/model/policy_manifest.json';
 export const POLICY_STORE_KEY = 'djsc_policy_model_v3';
 
 const SHA_RE = /^[0-9a-f]{64}$/;

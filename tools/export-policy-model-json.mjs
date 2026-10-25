@@ -61,7 +61,7 @@ writeFileSync(modelPath, text, 'utf8');
 /* ---- 清单：releaseSeq 单调递增；已有 manifest 时 +1 ---- */
 let prevSeq = 0;
 try {
-    const prev = JSON.parse(readFileSync(join(outDir, 'manifest.json'), 'utf8'));
+    const prev = JSON.parse(readFileSync(join(outDir, 'policy_manifest.json'), 'utf8'));
     if (prev && prev.latest && Number.isFinite(prev.latest.releaseSeq)) prevSeq = prev.latest.releaseSeq;
 } catch (_) { /* 首次发布 */ }
 const seq = prevSeq + 1;
@@ -82,8 +82,8 @@ const manifest = {
         hidden: meta.hidden,
     },
 };
-writeFileSync(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+writeFileSync(join(outDir, 'policy_manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
 console.log('OK  ' + modelPath + '  (' + bytes.length + ' B, sha256 ' + sha.slice(0, 16) + '…, releaseSeq ' + seq + ')');
-console.log('OK  ' + join(outDir, 'manifest.json'));
+console.log('OK  ' + join(outDir, 'policy_manifest.json'));
 console.log('自检：classes=' + meta.classes.length + ' featureDim=' + meta.featureDim + ' hidden=' + meta.hidden + ' threshold=' + meta.threshold);
