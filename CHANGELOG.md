@@ -1,3 +1,27 @@
+## 待发布 · v4.1.5.0 策略模型接线包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/net/policyModelV3.js`（新增）、`score/decision/engine/engine.js`、`score/foundation/cloud/cloudIngest.js`、`extension.js`、`tools/test-policy-model-v3.mjs`（新增）、`backend/sharded/server_sharded.py`
+
+本轮是「模型和权重接线」第一步：把 v3 蒸馏学生（slot17_student_v3，51KB）以**影子模式**接入引擎决策路径与数据上报链路，**不改变候选分与出牌行为**。
+
+### 接线内容
+
+- 新增 `score/model/net/policyModelV3.js` 适配层：懒加载 v3 权重（UMD `self.CLIENT_POLICY_V3`），提供 predict / shadow / apply / drain / stats / selfTest，自注册 `window.__DJSC.policyModelV3`。
+- 引擎接线（`engine.js` bestActionCore telemetry 阶段）：每次决策提交后调用 `policyModelV3.shadow(eligibleActs, best, ...)`，记录模型 top1/top3 与引擎最终槽位的一致性；`cfg('policyModelV3Shadow', true)` 可关，模型未加载完自动跳过（skipped++，不阻塞决策）。
+- 上报接线（`cloudIngest.js`）：新增 `shadowPolicy` 信封字段；数据源 `djsc_shadow_v3_pending`（上限 1500，单条 ~200B），decisionId 游标去重（FIFO 2000），随首批上传，全部成功后推进游标，失败自动重传。
+- 服务端（`backend/sharded/server_sharded.py`）：信封白名单新增 `shadowPolicy`，与 `shadowV5` 同口径按 decisionId 幂等去重后落盘。
+- 维度兼容：v3 只吃 f0-f129，130/134/142 维新客户端样本均可产出影子记录；<130 维拒绝。
+
+### 验证
+
+- 新增 `tools/test-policy-model-v3.mjs`：25 项断言全过（权重自检 / 17 类 / 维度适配 130-134-142 / 影子不改分 / 队列 drain-confirm / 自检统计）。
+- 回归：`test-policy-model-v2`（33 PASS）、`test-ingest-contract`（PASS）、`test-regressions`（94 PASS）全部通过；改动文件 `node --check` 全通过。
+- 未验证：真机安卓 WebView 懒加载时延、真实对局中的影子一致率（需内测包实测，面板 `policyModelV3.stats()` 可见）。
+
+### 明确未做
+
+- **未接 active 模式**：v3 软加分需 `cfg('policyModelV3Mode')==='active'` 且影子连续达标，本版默认 shadow。
+- **未动 v2 接线**：policyModelV2 仍为独立模块（未接引擎），后续按影子数据决定是否接 v2 对照。
+- **未做权重热更包**：v3 随扩展版本发布，`/update/model/manifest.json` 通道接入留待下一轮（P0 日志 4.6 方案）。
 ## 待发布 · v4.1.4.0 内测包（2026-10-25）
 贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
 

@@ -29,6 +29,7 @@ const __VERSION__ = "v" + VERSION;
 import { modeModelsReady } from './score/model/weights/modeModelStore.js?v=41a';
 import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
 import { installModelUpdate, uninstallModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
+import './score/model/net/policyModelV3.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 接线（自注册 window.__DJSC.policyModelV3，影子评估默认开） */
 window.__DJSC = window.__DJSC || {};
 // Inspectable readiness promise for browser/host release checks.
 window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {

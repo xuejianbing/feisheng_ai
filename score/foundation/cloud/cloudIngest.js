@@ -209,6 +209,46 @@ function commitShadowV5(ids) {
         }
     } catch (e) { try { console.warn('[cloud] shadow 游标提交异常：', e && e.message || e); } catch (eW3) {} }
 }
+/* ---------------- 策略模型 v3 影子摘要上传（★ 4.1.5.0）----------------
+ * 数据源：score/model/net/policyModelV3.js 写入的 localStorage['djsc_shadow_v3_pending']（上限 1500 条）。
+ * 只传决策级摘要（含 decisionId/模型 top1-top3/引擎最终槽位/是否一致，单条 ~200B），
+ * decisionId 集合去重（FIFO 2000），上报成功才提交游标，失败自动重传；服务端按 envelope.shadowPolicy 字段入库。 */
+const POLICY_RAW_KEY = 'djsc_shadow_v3_pending';
+const POLICY_UP_KEY = 'djsc_shadow_v3_up';
+const POLICY_BATCH = 200, POLICY_SENT_MAX = 2000;
+function loadPolicySent() {
+    try { const o = JSON.parse(safeGet(POLICY_UP_KEY, null)); if (o && Array.isArray(o.sent)) return o.sent; } catch (e) {}
+    return [];
+}
+function collectPolicyShadow() {
+    const items = [];
+    try {
+        const sent = loadPolicySent();
+        const sentSet = {};
+        for (let i = 0; i < sent.length; i++) sentSet[sent[i]] = 1;
+        const raw = safeGet(POLICY_RAW_KEY, null);
+        const arr = raw ? JSON.parse(raw) : null;
+        if (!Array.isArray(arr)) return { items: items, ids: [] };
+        for (let i = 0; i < arr.length && items.length < POLICY_BATCH; i++) {
+            const r = arr[i];
+            if (!r || !r.decisionId || sentSet[r.decisionId]) continue;
+            items.push(r);   /* v3 记录本身已精简（~200B），原样上传 */
+        }
+    } catch (e) { try { console.warn('[cloud] policy shadow 收集失败（本次批次无 shadowPolicy）：', e && e.message || e); } catch (eW) {} }
+    return { items: items, ids: items.map(function (x) { return x.decisionId; }) };
+}
+function commitPolicyShadow(ids) {
+    if (!ids || !ids.length) return;
+    try {
+        const sent = loadPolicySent().concat(ids);
+        if (sent.length > POLICY_SENT_MAX) sent.splice(0, sent.length - POLICY_SENT_MAX);
+        safeSet(POLICY_UP_KEY, JSON.stringify({ sent: sent }));
+        const back = (function () { try { const o = JSON.parse(safeGet(POLICY_UP_KEY, null)); return o && Array.isArray(o.sent) ? o.sent : null; } catch (eR) { return null; } })();
+        if (!back || back[back.length - 1] !== sent[sent.length - 1]) {
+            try { console.warn('[cloud] policy shadow 游标写回不一致，下轮重传（服务端按 decisionId 幂等去重）'); } catch (eW2) {}
+        }
+    } catch (e) { try { console.warn('[cloud] policy shadow 游标提交异常：', e && e.message || e); } catch (eW3) {} }
+}
 function collectPanelStats() {
     try {
         const s = exportStats();
@@ -353,7 +393,7 @@ function hourOf(ts) {
     const p = n => (n < 10 ? '0' + n : '' + n);
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours());
 }
-function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5, skbdPayload) {
+function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5, skbdPayload, policyShadow) {
     const env = { v: 2, hour: hourOf(Date.now()) };
     if (samples && samples.length) env.samples = samples;
     if (chainsPayload) env.comboChains = chainsPayload;
@@ -368,6 +408,7 @@ function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5, skbdPay
     const cfg = collectConfig();
     if (cfg) env.config = cfg;
     if (shadowV5 && shadowV5.length) env.shadowV5 = shadowV5;   /* ★PR4：v5 shadow 决策对比摘要 */
+    if (policyShadow && policyShadow.length) env.shadowPolicy = policyShadow;   /* ★ 4.1.5.0：策略模型 v3 影子摘要 */
     return env;
 }
 function postJSON(bodyObj) {
@@ -407,9 +448,10 @@ function _uploadRun(cur, force) {
     const pick = pickNewSamples(samples, cur.watermark, cur.keyFp && cur.keyFp.samples);
     const snap = diffSnapshot(cur);
     const shadowBatch = collectShadowV5();   /* ★PR4：v5 shadow 待传摘要 */
+    const policyBatch = collectPolicyShadow();   /* ★ 4.1.5.0：策略模型 v3 影子待传摘要 */
     _skbdPending = null;
     const skbdPend = collectSkillBreakdownPending();   /* ★PR7 */
-    const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0 || (skbdPend && skbdPend.players.length > 0);   /* ★PR7 */
+    const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0 || policyBatch.items.length > 0 || (skbdPend && skbdPend.players.length > 0);   /* ★PR7 */
     if (!hasWork && !force) {
         return Promise.resolve({ skipped: 'no-new-data', pendingSamples: bufferSize() });
     }
@@ -425,7 +467,8 @@ function _uploadRun(cur, force) {
         const env = buildEnvelope(list, idx === batches.length - 1 ? snap.chainsPayload : null,
             idx === batches.length - 1 ? snap.storagePayload : null,
             (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null,
-            (idx === 0) ? skbdPend : null);   /* ★PR7：首批携带 */   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
+            (idx === 0) ? skbdPend : null,
+            (idx === 0 && policyBatch.items.length) ? policyBatch.items : null);   /* ★PR7：首批携带 */   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */   /* ★ 4.1.5.0：policy shadow 首批携带 */
         return postJSON(env).then(response => {
             receiptSummary = addIngestReceipt(receiptSummary, response);
             if (list) sentSamples += list.length;
@@ -457,9 +500,10 @@ function _uploadRun(cur, force) {
         cur.uploadedTotal = (cur.uploadedTotal || 0) + sentSamples;   /* ★1015：累计已上传样本数（随游标持久化，供面板显示） */
         saveCursor(cur);
         commitShadowV5(shadowBatch.ids);
+        commitPolicyShadow(policyBatch.ids);   /* ★ 4.1.5.0：v3 影子游标只在全部成功后推进 */
         commitSkillBreakdown(skbdPend);   /* ★PR7：成功才推进去重集合 */   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
         const receiptText = describeIngestReceipt(receiptSummary);
-        const detail = sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '');
+        const detail = sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '') + (policyBatch.items.length ? ' + policy' + policyBatch.items.length : '');
         _lastResult = { at: Date.now(), ok: true, detail: detail + (receiptText ? '；' + receiptText : ''), serverReceipt: receiptSummary, receiptText };
         try { log.info('cloud', '上报成功：' + _lastResult.detail); } catch (e) {}
         return { ok: true, sentSamples, snapshotChanged: snap.changed, serverReceipt: receiptSummary, receiptText };

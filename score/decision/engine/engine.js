@@ -4810,6 +4810,20 @@ function bestActionCore() {
 
 		_markPhase('telemetry');
 
+		/* ★ 4.1.5.0：策略模型 v3 影子评估接线（默认 shadow：只记录模型 top1/一致率，不改候选分）。
+		 *   模型由 score/model/net/policyModelV3.js 懒加载并挂 window.__DJSC.policyModelV3；
+		 *   未加载完成时 adapter 内部自动跳过（skipped++），不阻塞决策。
+		 *   开关：cfg('policyModelV3Shadow', true)；active 软加分需 cfg('policyModelV3Mode')==='active' 且影子连续达标。 */
+		try {
+			if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.policyModelV3
+				&& typeof window.__DJSC.policyModelV3.shadow === 'function'
+				&& cfg('policyModelV3Shadow', true)) {
+				const _pmMode = (function () { try { return (typeof game !== 'undefined' && game.mode) || ''; } catch (eM) { return ''; } })();
+				const _pmRound = (function () { try { return (typeof _status !== 'undefined' && _status.turn) ? (_status.turn.id || 0) : 0; } catch (eR) { return 0; } })();
+				window.__DJSC.policyModelV3.shadow(eligibleActs, best, null, { mode: _pmMode, round: _pmRound });
+			}
+		} catch (ePm3) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(ePm3); }
+
 		/* ★ 测试观测：Evaluate 阶段只计算耗时；左侧日志/回放只在 Commit 后落地。 */
 		let _decisionMs = Math.max(0, performance.now() - _perfT0);
 		let _phaseMs = _phaseSnapshot();
