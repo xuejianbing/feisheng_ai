@@ -1,3 +1,26 @@
+## 待发布 · v4.1.5.2 阵营字段与身份场采样（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/train/trainExport.js`、`js/config/configSchema.js`
+
+### 背景
+
+用户指出：标签里只有「胜/负」，没有「阵营胜负」。核库确认：
+- `m.identity` 在池子里几乎全为 null（斗地主为主），身份场样本仅 3,510 条；
+- `m.gameOutcome/outcomeTarget` 是**采样者个人**胜负，不是阵营；
+- `actionOutcome.deltas` 有逐玩家 camp（-1/1），但没有「采样者阵营 / 获胜阵营」字段；
+- **身份场样本此前被 `identityModelCompatibility` 硬暂停采集**（`sampleAllowed=false`）。
+
+### 本版改动
+
+- 新增阵营推导：身份场 `zhu/zhong→lord`、`fan→rebel`、`nei→nei`；其他模式 `landlord/farmer`；
+- 样本新增 `m.camp`（采样者阵营）、`m.winCamp`（获胜阵营，终局按各玩家 win 标记推导）、`m.campWon`（本阵营是否获胜）；
+- 新增配置 `identitySampling`（默认关）：打开后**只放行身份场训练样本**，身份场推理仍暂停（`allowed=false` 不变），用于积累身份场/阵营数据；
+- 版本号 4.1.5.2。
+
+### 明确未做
+
+- 未解除身份场推理暂停（语义兼容仍待验证）；
+- 未改训练脚本使用 campWon（下一轮接入 label policy）；
+- 未回填旧样本（历史池无 camp 字段）。
 ## 待发布 · v4.1.5.1 重训权重包（2026-10-25）
 贡献标识：[weique]　涉及模块：`score/model/weights/defaultWeights.js`、`info.json`、`js/config/version.js`
 

@@ -2,6 +2,41 @@ import {beginModeContext,modeSampleMeta} from '../../foundation/runtime/modeCont
 import {identityModelCompatibility} from '../features/identityCompatibility.js?v=41a';
 import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import { runtimePerformance } from '../../foundation/diag/performanceCore.js?v=41a';
+
+/* ===== 阵营（camp）推导（4.1.5.2）=====
+ * 身份场：zhu/zhong → lord（主公方），fan → rebel（反贼方），nei → nei（内奸）
+ * 其他模式（斗地主等）：landlord / farmer
+ * 目的：标签从「个人胜/负」升级为「阵营胜负」（winCamp / campWon），供后端分层训练。 */
+function _campOf(p) {
+    try {
+        const id = (p && p.identity) || '';
+        if (id === 'zhu' || id === 'zhong' || id === 'mingzhong') return 'lord';
+        if (id === 'fan') return 'rebel';
+        if (id === 'nei') return 'nei';
+        if (id === 'dizhu' || id === 'landlord') return 'landlord';
+        if (id === 'farmer' || id === 'nongmin') return 'farmer';
+        if (p && p.isZhu === true) return 'landlord';
+        return null;
+    } catch (e) { return null; }
+}
+/* 终局获胜阵营：优先看宿主各玩家的 win 标记，兜底用采样者自身胜负 */
+function _winCampOf(me, won) {
+    try {
+        const camp = _campOf(me);
+        const ps = (typeof game !== 'undefined' && game && Array.isArray(game.players)) ? game.players : [];
+        const seen = {};
+        for (let i = 0; i < ps.length; i++) {
+            const p = ps[i];
+            if (!p || p.win !== true) continue;
+            const c = _campOf(p);
+            if (c) seen[c] = 1;
+        }
+        const camps = Object.keys(seen);
+        if (camps.length) return camps.indexOf(camp) >= 0 ? camp : camps[0];
+        if (typeof won === 'boolean' && camp) return won ? camp : null;
+        return null;
+    } catch (e) { return null; }
+}
 /*
  * ============================================
  * // 作者: 飞升原创
@@ -315,7 +350,9 @@ function _inferScene(meta) {
 
 export function pushSample(features, reward, meta) {
     const compatibility = identityModelCompatibility();
-    if (!compatibility.sampleAllowed || meta?.modeContext?.mode === 'identity') {
+    const _isIdentityMode = meta?.modeContext?.mode === 'identity';
+    /* ★ 4.1.5.2：身份场推理仍暂停；cfg('identitySampling') 打开后只放行训练样本（带 camp/winCamp） */
+    if (_isIdentityMode ? !cfg('identitySampling', false) : !compatibility.sampleAllowed) {
         _diagBump(_sampleDiag.rejected,(meta?.action || 'unknown') + ':identity-feature-schema-migration');
         return false;
     }
@@ -767,6 +804,7 @@ export function trainRecordSample(me, best, sit, score, features, execution = {}
             rewardSchema: 'action-outcome-v1', rewardStatus: 'pending', transactionId: execution.transactionId || null,
             actorId: execution.actorId || null, target: execution.target || null,
             identity: me.identity || null,   /* ★ fix7: 采样者身份明文（zhu/zhong/fan/nei），后端可按身份分层训练评估 */
+            camp: _campOf(me),   /* ★ 4.1.5.2：采样者阵营（lord/rebel/nei/landlord/farmer），供阵营胜负标签 */
             tgtIdentity: publicIdentityRole(best && typeof best.target === 'object' ? best.target : null),
             modeContext: modeSampleMeta(me),
             v5: execution.v5 || null,   /* ★ PR5e.4：v5 双种子集成对最终动作的评分 {ens,s42,s456}，样本级 shadow 对比随 m 上传 */
@@ -786,6 +824,7 @@ export function trainSettleGame(me, won) {
         const start = _gameStart;
         if (!start) return;
         const verdict = typeof won === 'boolean' ? won ? 'win' : 'lose' : 'unknown';
+        const winCamp = _winCampOf(me, won);   /* ★ 4.1.5.2：获胜阵营（动态阵营胜负） */
         let updated = 0;
         for (const s of BUFFER) {
             if (!s.m || s.m.sessionId !== start.id || s.m.executionState !== 'committed') continue;
@@ -794,6 +833,8 @@ export function trainSettleGame(me, won) {
             // 终局标签属于整局，绝不覆盖动作value_target或把静态r当即时奖励倒推。
             s.m.gameOutcome = verdict;
             s.m.outcomeTarget = typeof won === 'boolean' ? won ? 1 : -1 : null;
+            s.m.winCamp = winCamp;
+            s.m.campWon = (winCamp && s.m.camp) ? (winCamp === s.m.camp) : null;   /* ★ 4.1.5.2：本阵营是否获胜 */
             samplePersistence.dirty(s); updated++;
         }
         if (updated) saveToStorage();
