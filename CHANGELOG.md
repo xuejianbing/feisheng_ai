@@ -1,3 +1,36 @@
+## 待发布 · v4.1.5.1 重训权重包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/weights/defaultWeights.js`、`info.json`、`js/config/version.js`
+
+在 v4.1.5.0 接线基础上，用**全量已结算样本池**（merged_shards + ai_shards 共 30.4 万条，覆盖身份场/斗地主/国战等 12 种模式）重训 134 维主网默认权重。
+
+### 训练配方（v2 变体，扫描 3 组后胜出）
+
+- 教师 512/256 → 蒸馏学生 128/64 + QAT（沿用 S8 配方）
+- 类权重指数 0.5、负样本加权 1.0、**按 top1 选模**（v1 的 corr/bal 优先与 v3 的混合选模均未过 top1 门）
+- 130 维旧样本补零至 134；验证按 sessionId 整场留出（1,561 场 / 23,913 条）
+
+### 指标（会话级留出验证集）
+
+| 指标 | 在架权重 | 新权重 |
+| --- | --- | --- |
+| top1 准确率 | 0.5500 | **0.6171**（+0.067） |
+| 均衡召回 bal | 0.2756 | **0.3678**（+0.092） |
+| 价值相关 corr | 0.2181 | **0.4137**（+0.196） |
+| MSE | 0.0442 | 0.0383 |
+
+质量门（corr≥基线+0.005 / acc≥基线-0.015 / bal≥基线-0.03）三项全过。
+
+### 产物
+
+- `defaultWeights.js`（v=7 / dv=5 / dims=[134,128,64,6]，trained=1,657,410）
+- 热更 bundle：`main-actor-critic-w7d5-134-v2-*.json`（releaseSeq 1，待发布）
+- 测试包：`wuming_ai_v4.1.5.1.zip`
+
+### 明确未做
+
+- 未改动任何前端逻辑（仅权重与版本号）；
+- 未把新权重发布到线上 manifest（先经测试者验证）；
+- 未吸收 LLM 复判信号（7B 绝对打分试点未通过：corr −0.09，见开发者日志）。
 ## 待发布 · v4.1.5.0 策略模型接线包（2026-10-25）
 贡献标识：[weique]　涉及模块：`score/model/net/policyModelV3.js`（新增）、`score/decision/engine/engine.js`、`score/foundation/cloud/cloudIngest.js`、`extension.js`、`tools/test-policy-model-v3.mjs`（新增）、`backend/sharded/server_sharded.py`
 
