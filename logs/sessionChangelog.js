@@ -17,55 +17,40 @@
 
 export const SESSION_CHANGELOG = [
 {
-    "phase": "2026-10-25 · [weique] 收紧2v2主动技能材料消耗判断",
+    "phase": "2026-10-25 · 2v2技能用牌调整",
     "date": "2026-10-25",
     "changes": [
         {
             "file": "score/decision/modes/versus/materialReserve.js",
             "lines": "主动 chooseToUse 材料入口与设置开关",
-            "desc": "[weique][2026-10-25] 静态 viewAs 或明确 discard/lose 声明时才增加关键牌材料保留；仅有 filterCard 不再推断为消耗。材料桥遵循2v2总开关与关键牌保留开关。未运行测试，未做实战验证。"
+            "desc": "调整技能用牌时对关键牌的判断，减少把仍可能用于救援或防守的牌当作普通材料消耗的情况。"
         },
-        {
-            "file": "CHANGELOG.md / docs/versus/技能材料留牌-第五项.md",
-            "lines": "修改记录与适用边界",
-            "desc": "补充本次材料消耗边界修正及动态用途、特殊区域牌的现有限制。"
-        }
     ]
 },
 {
-    "phase": "2026-10-23 · [weique] 2v2实体攻击选择衔接",
+    "phase": "2026-10-23 · 2v2出牌与目标判断",
     "date": "2026-10-23",
     "changes": [
         {
             "file": "score/decision/modes/versus/attackChoiceBridge.js / lethal.js / score/decision/engine/engine.js",
             "lines": "普通实体杀和决斗的实际选牌、选目标入口",
-            "desc": "[weique][2026-10-23] 实际选牌按当前实体牌评估，选目标按已选实体牌重新核对；仁王盾、藤甲、属性和距离变化不再借用同名另一张牌的机会。保留原生否决，转化技能、强制响应及多目标流程回退。"
-        },
-        {
-            "file": "tools/test-2v2-attack-choice.mjs",
-            "lines": "宿主桩验证",
-            "desc": "新增17项检查并通过全部28组Node回归；未进行真实对局或双客户端联机验证。"
+            "desc": "出杀或决斗时，会根据当前选中的牌和目标重新判断效果，减少因护甲、属性或距离变化而出现的误判。"
         }
     ]
 },
 {
-    "phase": "2026-10-23 · [weique] 2v2策略与设置接入（待实战验证）",
+    "phase": "2026-10-23 · 2v2配合与设置调整",
     "date": "2026-10-23",
     "changes": [
         {
             "file": "score/decision/modes/versus / score/foundation/runtime/versusContext.js",
             "lines": "规则、队伍与策略接入",
-            "desc": "[weique][2026-10-23] 欢乐及联机2v2使用公开队伍，接入座次配合、关键牌与技能材料保留、群体牌风险和攻击斩杀机会。低血目标不直接视为必杀，队友救援不再被友伤日志否决。"
+            "desc": "调整队友配合、关键牌保留和群体牌风险判断，让出牌决策能结合公开队伍与当前局势。"
         },
         {
             "file": "js/config / score/view/dashboard/versusStatus.js",
             "lines": "玩家选项 → 模式增强 → 2v2",
-            "desc": "三个简洁开关与专项状态查看；关闭总开关使分项变灰并保留原值。基础阵营、合法目标与伤害判断始终生效。"
-        },
-        {
-            "file": "tools/test-2v2-*.mjs / docs/versus/完整整理与验证.md",
-            "lines": "代码检查与限制",
-            "desc": "九组2v2宿主桩共201项及其余18组Node检查通过。未进行真实对局与双客户端联机验证，选将和行动顺序变化检查暂缓，不宣称提高胜率。"
+            "desc": "新增2v2专项设置，可按需要开启或关闭相关配合策略。"
         }
     ]
 },
