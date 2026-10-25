@@ -32,4 +32,4 @@ async function transaction(mode,operation){
  });
 }
 export async function readModeModels(){const result=await transaction('readonly',store=>store.getAll());return result.unavailable?result:{...result,rows:result.value||[]};}
-export async function writeModeModel(key,value){return transaction('readwrite',store=>store.put({key,value}));}
+export async function writeModeModel(key,value,beforeWrite=null){return transaction('readwrite',store=>{beforeWrite?.();return store.put({key,value});});}

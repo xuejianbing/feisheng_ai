@@ -377,6 +377,8 @@ export async function postCheckBatch(entries, onResult) {
 /* ================= 查询接口 ================= */
 export function postCheckStats() {
     return {
+        source: 'legacy-postCheck', comparableToActionOutcomes: false,
+        collectionStatus: _totalChecks ? '旧版统计（不可与真实事件收益比较）' : '旧版统计未采集',
         /* 池状态 */
         poolSize: SNAPSHOT_POOL.size,
         round: _poolRound,

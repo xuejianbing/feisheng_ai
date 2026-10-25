@@ -243,7 +243,7 @@ export function generateSmartPanelHtml() {
 		const learning = learningPanelData();
 		html += '<div style="margin:4px 0;color:#dbe7f5;">已对局：' + learning.games + ' 局</div>';
 		html += '<div style="margin:4px 0;color:#dbe7f5;">胜率：' + Math.round(learning.winRate * 100) + '%</div>';
-		html += '<div style="margin:4px 0;color:#dbe7f5;">模型就绪：' + (learning.weightReady ? '✅' : '❌') + '</div>';
+		html += '<div data-djsc-model-state style="margin:4px 0;color:#dbe7f5;">模型状态：' + modelStateLabel(learning) + '</div>';
 
 		html += '</div>';
 
@@ -272,7 +272,19 @@ export function generateSmartPanelHtml() {
 export function openSmartPanel() {
     const active = _status.currentPhase || game.me;
     const html = active ? generateSmartPanelHtml() : '<p>当前没有进行中的对局。开始对局后，这里会显示局面、风险和学习数据。</p>';
-    openUtilityHtml('无名AI · 智能可视化（飞雀V2）', html, 'djsc-smart-panel');
+    const panel=openUtilityHtml('无名AI · 智能可视化（飞雀V2）', html, 'djsc-smart-panel');
+    const refresh=()=>{
+        if (!panel.isConnected) return;
+        const row=panel.querySelector('[data-djsc-model-state]');
+        if(row)row.textContent='模型状态：'+modelStateLabel(learningPanelData());
+        setTimeout(refresh,500);
+    };
+    refresh();
+}
+function modelStateLabel(data) {
+    return data.modelState==='disabled' ? '已禁用（权重'+(data.weightReady?'已就绪':'未就绪')+'）' :
+        data.weightReady ? '已就绪' : data.modelState==='loading'?'加载中':
+        data.modelState==='failed'?'加载失败（'+String(data.modelError||'未知原因')+'）':'未初始化';
 }
 
 /* ================= 3. 显示手牌推断 ================= */

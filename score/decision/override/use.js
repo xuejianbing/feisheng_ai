@@ -28,6 +28,7 @@ import {
 	cancelExecution,
 	invokeHost,
 	markExecutionFailure,
+	pendingExecution,
 } from '../execution/executionGateway.js?v=41a';
 import { cfg } from '../../foundation/config/util.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
@@ -36,6 +37,8 @@ import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
 import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
 import { trip, isTripped } from './circuit.js?v=41a';
 import { isAllyOf, cardValueOf } from '../threat/threat.js?v=41a';   /* ★ 阵营护栏/五谷拿牌桥 */
+
+import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
 
 const ORIG_KEY = '__djsc_orig_chooseToUse';
 const SENTINEL = '__djsc_overridden_use';
@@ -59,6 +62,9 @@ function _shouldOverride(player, event) {
 		sentinel: SENTINEL,
 		requireCurrentPhase: true,
 		extraGuard: function (_player, ev) {
+				// Saving/dying/response requests also use chooseToUse. Their
+				// dedicated policies must not consume ordinary play candidates.
+				if (ev.type !== 'phase') return 'not-phase-choice';
 			try {
 				const parent = ev.getParent && ev.getParent();
 				if (parent && parent.name === 'chooseToUse') return 'nested-chooseToUse';
@@ -427,153 +433,97 @@ export function installUseOverride() {
 		proto[ORIG_KEY] = orig;
 
 		proto.chooseToUse = function (...args) {
-			const player = this;
-			const ev = _status.event;
-
-			/* ★ 无懈官方入口必须先于 currentPhase guard：
-			 * _wuxie 的回合外响应本来就不是 currentPhase 玩家。
-			 * detected wuxie request 无论 resolved 与否都直接回宿主：
-			 * resolved 时只改写该 request.ai1；unresolved 时完全原样 fail-open。 */
-			const wuxieBridge = _bridgeWuxieChooseToUse(player, args);
-			if (wuxieBridge && wuxieBridge.isWuxie) {
-				return orig.apply(this, args);
-			}
-
-			/* ★ 窄范围桃救援护栏：独立于 currentPhase / _shouldOverride 先行安装。
-			 * 只在"对濒死目标使用桃"时追加 veto；非桃牌与其余路径完全不受影响。 */
-			const restoreGuard = _installTaoRescueGuard(player, ev);
-			try {
-				return _runChooseToUse.call(this, player, ev, orig, args);
-			} finally {
-				if (restoreGuard) restoreGuard();
-			}
-		};
-
-		/* ★ 原有 hard override 主流程（护栏已在外部装好并在 finally 恢复） */
-		const _runChooseToUse = function (player, ev, orig, args) {
-			if (!_shouldOverride(player, ev)) {
-				return orig.apply(this, args);
-			}
-
-			let ba = null;
-			const t0 = performance.now();
-			try {
-				ba = bestAction();
-			} catch (e) {
-				markExecutionFailure('use', player, 'bestAction 异常：' + e.message, 'fatal');
-				_stat('error');
-				return orig.apply(this, args);
-			}
-			const dt = performance.now() - t0;
-			if (dt > 800) {
-				markExecutionFailure('use', player, 'bestAction 耗时 ' + Math.round(dt) + 'ms', 'warn');
-				_stat('timeout');
-				return orig.apply(this, args);
-			}
-
-			if (!ba || !ba.rule) {
-				_stat('pass');
-				return orig.apply(this, args);
-			}
-
-			/* ★ Evaluate → Stage：hard override 也只登记事务，真正 useCard/endTurn 再 Commit。 */
-			try { stageExecutionDecision(player, ba, 'use'); }
-			catch (eTx) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eTx); }
-
-			/* ============ ★ 硬接管 A：引擎说"结束回合" → 短路 ============ */
-			if (ba.action === 'C' && ba.rule === 'end') {
-				if (_hasAvailableLimitedSkill(player) || _hasForcedSkill(player)) {
-					_stat('pass-limited');
-					try { cancelExecution(player, 'end-deferred-by-forced-skill', 'use'); } catch (eTx) {}
-					return orig.apply(this, args);
-				}
-				_stat('endTurn');
-				const origFilterEnd = ev.filterCard;
-				const host = invokeHost({
-					kind: 'use',
-					player: player,
-					orig: orig,
-					thisArg: this,
-					args: args,
-					prepare: function () {
-						try { ev[SENTINEL] = true; } catch (_) {}
-						ev.filterCard = function () { return false; };
-						return function () {
-							try { ev.filterCard = origFilterEnd; } catch (_) {}
-							try { delete ev[SENTINEL]; } catch (_) {}
-						};
-					},
-					cleanupOnSuccess: false,
-					onSuccess: function () {
-						/* filterCard 全 false 已把“结束回合”真实提交给宿主。 */
-						commitExecution(player, { type: 'end', id: 'end', target: null });
-					},
-					failureReason: function (e) { return 'filterCard 短路异常：' + e.message; },
-				});
-				if (!host.ok) cancelExecution(player, 'end-short-circuit-error', 'use');
-				return host.result;
-			}
-
-			/* ============ ★ 硬接管 B：否决低价值牌 ============ */
-
-			/* ★ 通用攻击牌阵营护栏：真友目标一律否决（治「无脑火攻火队友/借刀杀队友」等）。
-			 *   评分层 actionValue 已强罚真友，但宿主原生 AI 自选目标不受控——必须在 filterTarget 拦。
-			 *   豁免：self（自残类不新增约束）、拆/顺队友判定区的乐/兵/闪电（救援）、铁索已横置队友（解链救友）。
-			 *   AOE（nanman/wanjian 全员结算）不在名单。异常 fail-open。 */
-			installAIUseTargetGuard(ev);
-
-			/* ★ 借刀第二目标（被杀者）护栏：filterTarget2 存在时，被杀者为真友 → 否决 */
-			try {
-				if (typeof ev.filterTarget2 === 'function') {
-					const origFT2 = ev.filterTarget2;
-					ev.filterTarget2 = function (card, player, target) {
-						try {
-							if (typeof origFT2 === 'function' && !origFT2(card, player, target)) return false;
-                            if(get.name(card,player)==='jiedao'&&tacticalEnabled('enabled')){const pair=hostJiedaoTargetDecision(player,target,card);if(pair)return pair.allowed;}
-							if (target && target !== player) {
-								let isFriend = false;
-								try { isFriend = isAllyOf(player, target); } catch (eF2) { isFriend = false; }
-								if (isFriend) { _stat('allyGuard'); return false; }
-							}
-							return true;
-						} catch (errF2) {
-							try { return typeof origFT2 === 'function' ? origFT2(card, player, target) : true; }
-							catch (e2F2) { return true; }
-						}
-					};
-				}
-			} catch (eFT2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eFT2); }
-
-			const origFilterVeto = ev.filterCard;
-			const host = invokeHost({
-				kind: 'use',
-				player: player,
-				orig: orig,
-				thisArg: this,
-				args: args,
-				prepare: function () {
-					ev.filterCard = function (card, p, e) {
-						try {
-							if (typeof origFilterVeto === 'function' && !origFilterVeto(card, p, e)) return false;
-							if (_shouldVeto(player, card)) {
-								_stat('veto');
-								return false;
-							}
-							return true;
-						} catch (err) {
-							try { return typeof origFilterVeto === 'function' ? origFilterVeto(card, p, e) : true; }
-							catch (_) { return true; }
-						}
-					};
-					return function () { try { ev.filterCard = origFilterVeto; } catch (_) {} };
-				},
-				cleanupOnSuccess: true,
-				onSuccess: function () { _stat('pass'); },
-				failureReason: function (e) { return 'filterCard 否决异常：' + e.message; },
-			});
-			if (!host.ok) _stat('error');
-			return host.result;
-		};
+            const player = this;
+            if (choicePlayerBlocked(player)) return orig.apply(this, args);
+            const wuxieBridge = _bridgeWuxieChooseToUse(player, args);
+            if (wuxieBridge?.isWuxie) return orig.apply(this, args);
+            const host = invokeHost({ kind: 'use', player, orig, thisArg: this, args,
+                failureReason: e => '原生 chooseToUse 异常：' + e.message });
+            if (!host.ok) return host.result;
+            const next = host.result;
+            let decision = null, staged = null, endRequested = false;
+            bindChoiceLifecycle(next, 'use', function (ev, trace, registerCleanup) {
+                if (choicePlayerBlocked(player)) return;
+                const restores = [];
+                const rescueRestore = _installTaoRescueGuard(player, ev);
+                if (rescueRestore) restores.push(rescueRestore);
+                let restored = false;
+                const restore = () => { if (restored) return; restored = true; for (const undo of restores.reverse()) { try { undo(); } catch (_) {} } };
+                registerCleanup(restore);
+                if (!_shouldOverride(player, ev)) return restore;
+                const t0 = performance.now();
+                try { decision = bestAction(); }
+                catch (error) {
+                    markExecutionFailure('use', player, 'bestAction 异常：' + error.message, 'fatal');
+                    trace.error = String(error.message); _stat('error'); return restore;
+                }
+                if (performance.now() - t0 > 800) {
+                    markExecutionFailure('use', player, 'bestAction 耗时超过800ms', 'warn');
+                    _stat('timeout'); return restore;
+                }
+                if (!decision?.rule) { _stat('pass'); return restore; }
+                trace.suggested = true; _stat('suggested');
+                endRequested = decision.action === 'C' && decision.rule === 'end';
+                if (endRequested && (ev.type !== 'phase' || ev.forced || _hasAvailableLimitedSkill(player) || _hasForcedSkill(player))) {
+                    endRequested = false; _stat('pass-limited'); return restore;
+                }
+                staged = stageExecutionDecision(player, decision, 'use');
+                trace.staged = !!staged;
+                if (staged) { trace.transactionId = staged.id; _stat('stagedChoice'); }
+                else {
+                    trace.stageFailure = 'decision-transaction-not-stageable';
+                    _stat('stageFailed');
+                    return restore;
+                }
+                restores.push(() => { if (pendingExecution(player) === staged) cancelExecution(player, 'choice-setup-failed-or-completed', 'use'); });
+                ev[SENTINEL] = true;
+                restores.push(() => { delete ev[SENTINEL]; });
+                if (endRequested) {
+                    _stat('endSuggested');
+                    restores.push(patchChoiceField(ev, 'filterCard', () => false));
+                    // Native chooseCard also scores active/viewAs skills with ai1.
+                    restores.push(patchChoiceField(ev, 'ai1', () => 0));
+                    return restore;
+                }
+                const originalTarget = ev.filterTarget, originalTarget2 = ev.filterTarget2;
+                installAIUseTargetGuard(ev);
+                const guardedTarget = ev.filterTarget;
+                restores.push(() => { if (ev.filterTarget === guardedTarget) ev.filterTarget = originalTarget; });
+                if (typeof originalTarget2 === 'function') restores.push(patchChoiceField(ev, 'filterTarget2', function (card, p, target) {
+                    if (!originalTarget2.apply(this, arguments)) return false;
+                    try {
+                        if (get.name(card, p) === 'jiedao' && tacticalEnabled('enabled')) {
+                            const pair = hostJiedaoTargetDecision(p, target, card); if (pair) return pair.allowed;
+                        }
+                        if (target && target !== p && isAllyOf(p, target)) { _stat('allyGuard'); return false; }
+                    } catch (_) {}
+                    return true;
+                }));
+                const originalFilter = ev.filterCard;
+                restores.push(patchChoiceField(ev, 'filterCard', function (card, p, e) {
+                    // Host legality always wins, including filters installed through .set().
+                    if (typeof originalFilter === 'function' && !originalFilter.apply(this, arguments)) return false;
+                    try { if (_shouldVeto(player, card)) { _stat('veto'); return false; } }
+                    catch (_) {}
+                    return true;
+                }));
+                _stat('pass');
+                return restore;
+            }, function (ev, trace) {
+                completeChoiceTrace(ev, trace);
+                if (trace.selected) _stat('selected');
+                if (trace.executed) _stat('executed');
+                if (endRequested && ev.finished && ev.result?.bool === false && staged && pendingExecution(player) === staged) {
+                    const committed = commitExecution(player, { type: 'end', id: 'end', target: null });
+                    trace.ended = !!committed?.ok;
+                    if (trace.ended) { trace.attribution = 'matched-staged-end'; _stat('endTurn'); }
+                }
+                trace.candidateAccepted = staged?.state === 'committed';
+                if (trace.candidateAccepted) _stat('candidateAccepted');
+                if (staged && pendingExecution(player) === staged) cancelExecution(player, 'choice-completed-without-matching-action', 'use');
+            }, error => markExecutionFailure('use', player, '选择事件桥接异常：' + error.message, 'fatal'));
+            return next;
+        };
 
 		try { installWuguBridge(); } catch (eWg0) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWg0); }
 		try { installLoseHpBridge(); } catch (eWgI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWgI); }

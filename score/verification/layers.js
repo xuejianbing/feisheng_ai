@@ -41,7 +41,7 @@ function _item(name, pass, detail) {
 }
 
 async function _tryImport(rel) {
-    try { return { ok: true, mod: await import(rel) }; }
+    try { return { ok: true, mod: await import(rel.includes('?')?rel:rel+'?v=41a') }; }
     catch (e) { return { ok: false, err: String(e && e.message || e) }; }
 }
 

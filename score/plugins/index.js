@@ -11,10 +11,10 @@
  * 集中 import 所有插件模块（每个模块内部自注册）。
  * index.js 只需 import 本索引即完成插件系统装载；
  * 新增功能 = 在 score/plugins/ 下新建 1 个插件文件并在此登记 1 行 import。 */
-import './enginePlugin.js';
-import './panelPlugin.js';
-import './skillPlugin.js';
-import './cognitionPlugin.js';   /* ★ 新增功能示范：运行时情报中心 */
+import './enginePlugin.js?v=41a';
+import './panelPlugin.js?v=41a';
+import './skillPlugin.js?v=41a';
+import './cognitionPlugin.js?v=41a';   /* ★ 新增功能示范：运行时情报中心 */
 /* ★ 新增插件在此追加一行：import './myPlugin.js'; */
 
 import { installAllPlugins, uninstallAllPlugins, listPlugins, installedCount, pluginCount, scan, pluginState } from '../foundation/runtime/plugins.js?v=41a';

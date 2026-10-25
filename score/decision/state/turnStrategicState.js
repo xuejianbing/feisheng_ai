@@ -21,7 +21,7 @@
  */
 
 import { game, get, _status } from '../../foundation/adapt/host.js?v=41a';
-import '../../foundation/adapt/gameProfile.js';
+import '../../foundation/adapt/gameProfile.js?v=41a';
 import { strategicEffectOf } from '../../foundation/adapt/terms.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';
 import { delayedControlValue } from '../response/wuxieEvaluator.js?v=41a';

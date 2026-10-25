@@ -1,5 +1,6 @@
 /* 训练样本增量保存：版本在内存维护，内部主键随兜底恢复，不进入训练特征/导出标签。 */
 export function createSamplePersistence({ timeoutMs = 8000, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+ const WRITE_BATCH_SIZE = 1000;
  let sequence = 0;
  function transaction(db, enqueue, commit) {
   return new Promise((resolve, reject) => {
@@ -35,32 +36,34 @@ export function createSamplePersistence({ timeoutMs = 8000, setTimer = setTimeou
  function dirty(sample) {
   const current = state(sample);
   current.revision++;
+  sample._dataRevision = (Number.isSafeInteger(sample._dataRevision) ? sample._dataRevision : 0) + 1;
+  sample._modifiedAt = Date.now();
   if (current.retiringTx) { try { current.retiringTx.abort(); } catch (_) {} }
   sample._persisted = false;
  }
  function flush(db, getSamples) {
-  const task = queue.catch(() => {}).then(() => {
-   const entries = getSamples().filter(sample => !sample._persisted).map(sample => {
-    const current = state(sample);
-    return { sample, key: current.key, revision: current.revision,
-     value: JSON.parse(JSON.stringify({ ...sample, _persisted: true })) };
-   });
-   if (!entries.length) return { written: 0, pending: false };
-   // 新样本预留稳定字符串主键，超时后即使原事务迟到提交，重试也只覆盖同一条。
-   for (const entry of entries) {
-    if (entry.key === undefined) {
-     entry.key = reserveKey(entry.sample);
-    }
+  const task = queue.catch(() => {}).then(async () => {
+   const samples = getSamples().filter(sample => !sample._persisted);
+   let written = 0;
+   // Bound native commit work and temporary clones; the 8000ms transaction limit
+   // stays unchanged. A later failure does not revoke earlier committed chunks.
+   for (let offset = 0; offset < samples.length; offset += WRITE_BATCH_SIZE) {
+    const entries = samples.slice(offset, offset + WRITE_BATCH_SIZE).map(sample => {
+     const current = state(sample);
+     return { sample, key: reserveKey(sample), revision: current.revision,
+      value: JSON.parse(JSON.stringify({ ...sample, _persisted: true })) };
+    });
+    written += await transaction(db, store => {
+     for (const entry of entries) store.put(entry.value, entry.key);
+    }, () => {
+     for (const entry of entries) {
+      const current = state(entry.sample);
+      if (current.revision === entry.revision) entry.sample._persisted = true;
+     }
+     return entries.length;
+    });
    }
-   return transaction(db, store => {
-    for (const entry of entries) store.put(entry.value, entry.key);
-   }, () => {
-    for (const entry of entries) {
-     const current = state(entry.sample);
-     if (current.revision === entry.revision) entry.sample._persisted = true;
-    }
-    return { written: entries.length, pending: getSamples().some(sample => !sample._persisted) };
-   });
+   return { written, pending: getSamples().some(sample => !sample._persisted) };
   });
   queue = task;
   return task;
@@ -110,5 +113,5 @@ export function createSamplePersistence({ timeoutMs = 8000, setTimer = setTimeou
   queue = task;
   return task;
  }
- return { loaded, dirty, flush, capture, retire, fallbackValue, clear };
+ return { loaded, dirty, flush, capture, unchanged, retire, fallbackValue, clear };
 }

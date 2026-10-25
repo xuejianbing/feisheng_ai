@@ -1,3 +1,29 @@
+## 4.4.0 完整版（2026-10-25 · 统一版，替换当日 4.4.0 内测包）
+贡献标识：[weique]　分支：`release/4.4.0`（已合入 master）　基线：4.1.4.0 + 4.1.5.x 特性 + 134 维 v2 权重
+
+### 合并范围
+
+- **QA 线（46 文件）**：客户端稳定性（有界写事务/诊断绑定/selfCheck 宿主契约）、数据来源认证（sourceIdentity）、训练血缘（trainingDataset/cloudSampleState）、候选生命周期、自动特征证据等；
+- **4.1.5.x 线**：策略模型 v3 影子接线（policyModelV3 + engine 钩子）、策略模型热更通道（policy_manifest.json/policy_v3.json）、阵营字段（camp/winCamp/campWon）、身份场样本采集开关；
+- **后端 v6（D4）**：`backend/v6/`（来源认证/可信接收/训练契约/隔离测试），已并入 master；
+- **权重**：134 维 v2 重训（top1 0.6171 / bal 0.3678 / corr 0.4137）。
+
+### 合并方式
+
+以 master 为 ours、4.1.4.0 为 base、QA 包为 theirs 做三方合并（LF 归一后执行）：
+45 个文件自动合并通过；`cloudIngest.js` 采用 QA 重写版（回执 v1 + 来源信封，认证后端必需），
+4.1.5.x 的 `shadowPolicy` 上传通道随之让位（v3 影子记录仍在本地队列，不随上传）。
+
+### 验证
+
+- `test-regressions`：94 PASS / 0 FAIL（更新了上传成功桩以返回 `ingest-receipt-v1` 回执）
+- `test-policy-model-v3`：25 PASS；`test-policy-model-update`：22 PASS
+- `test-ingest-contract`：PASS；`test-weights`：636 PASS / 1 FAIL（已知 `dv=4<5` 断言，新权重 dv=5 已修复该问题）
+- 全量 46 个改动 JS 语法检查通过
+
+### 打包
+
+`wuming_ai_v4.4.0.zip`（根目录直接 extension.js/info.json），GitHub Release `v4.4.0` 资产同步更新。
 ## 待发布 · v4.1.5.2 阵营字段与身份场采样（2026-10-25）
 贡献标识：[weique]　涉及模块：`score/model/train/trainExport.js`、`js/config/configSchema.js`
 

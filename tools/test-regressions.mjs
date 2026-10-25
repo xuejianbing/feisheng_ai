@@ -432,7 +432,17 @@ section('P2-b 上传任务锁');
     const ci = await import('../score/foundation/cloud/cloudIngest.js?v=41a');
     const KEY = 'djsc_ingest_last';
     const setCursor = o => LS.setItem(KEY, JSON.stringify(Object.assign({ watermark: 0, keyFp: {}, lastOk: 0, lastErr: '', backoffUntil: 0 }, o || {})));
-    const okFetch = () => Promise.resolve({ ok: true, status: 200 });
+    /* v4.4.0：cloudIngest 改为要求 ingest-receipt-v1 回执（QA 线契约），成功桩必须带 body */
+    const okFetch = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
+        ok: true,
+        receipt: {
+            schema: 'ingest-receipt-v1', receivedSamples: 2, archivedSamples: 2, mergedNewSamples: 2,
+            duplicateSamples: 0, rejectedUnlabeledSamples: 0, unidentifiedSamples: 0,
+            requestId: 'test-receipt', durability: 'sqlite-full-and-fsynced-raw-v1', attachmentsArchived: true,
+            countSemantics: 'test', qualifiedSamples: null,
+            sourceTrust: { status: 'archive-only', eligibleSource: false },
+        },
+    }) });
     const http500 = () => Promise.resolve({ ok: false, status: 500 });
     const rate429 = () => Promise.resolve({ ok: false, status: 429 });
 
