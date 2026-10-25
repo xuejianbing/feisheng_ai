@@ -61,7 +61,7 @@ export const CONFIG_ITEMS = {
  tacticalJudgeRescue:{compact:true,type:'bool',default:true,label:'队友判定区救援优化',description:'优先拆顺队友的乐不思蜀、兵粮寸断；结合行动顺序与公开手牌数量判断紧迫程度。下一局生效。'},
  tacticalDelay:{compact:true,type:'bool',default:true,label:'贴兵贴乐优化',description:'统一兵乐目标与顺序，结合公开技能、手牌数量、行动顺序评估控制收益；下一局生效。'},
  tacticalCrossbow:{compact:true,type:'bool',default:true,label:'诸葛连弩连杀优化',description:'空武器栏且有多张有效杀时优先连弩；下一局生效。'},
- tacticalDiagnostics:{compact:true,type:'bool',default:false,label:'输出打法优化诊断',description:'记录调整原因，并在斗地主决策对账中补充早期评分、建议聚合、无懈与子选择的有界明细；不额外调用模型。下一局生效。'},
+ tacticalDiagnostics:{compact:true,type:'bool',default:false,label:'输出打法优化诊断',description:'记录 AI 调整出牌、无懈和选牌的原因，遇到异常时可打开，方便排查。下一局生效。'},
 	openPlayerHelp:{type:'action',label:'使用说明',description:'查看开关、难度、记录与学习的简明说明。',actionLabel:'查看'},
 	exportFeedbackData:{type:'action',label:'导出反馈数据',description:'导出对局、学习数据与设置备份，便于反馈问题。',actionLabel:'导出'},
 	openUpdateLog:{type:'action',label:'更新日志',description:'查看各版本的修改记录。',actionLabel:'查看'},
