@@ -1,4 +1,5 @@
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import {responseWindow} from './responseWindow.js?v=41a';
 import { cfg } from '../../foundation/config/util.js?v=41a';
 import { tacticalEnabled, tacticalSettingsSnapshot, fireUtility } from '../strategy/tacticalOptimization.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';
@@ -112,6 +113,8 @@ export function installWuxieOptimization(evaluate) {
     audit?.record('not-run',{reason:!active?'bridge-inactive':!tacticalEnabled('wuxie')?'optimization-off':cfg('responseAI',true)===false?'response-off':request[WUXIE_OPTIMIZED_REQUEST]?'already-prepared':'human-controlled'});
     return;
    }
+   const lifetime=responseWindow(player,request);
+   if(lifetime.reason())return;
    const decision = evaluate(player, request, { hostRequest: request });
    const facts=d=>({originalSpellId:d?.originalSpellId||null,sourceId:playerKey(d?.source),targetId:playerKey(d?.target),
     use:d?.use??null,score:d?.score??null,effectValue:d?.effectValue??null,resourceCost:d?.resourceCost??null,
@@ -125,10 +128,16 @@ export function installWuxieOptimization(evaluate) {
    }
    const native = typeof request.ai1 === 'function' ? request.ai1 : null;
    request.ai1 = function (item) {
+    const unavailable=!active?'bridge-inactive':!tacticalEnabled('wuxie')?'optimization-off':cfg('responseAI',true)===false?'response-off':lifetime.reason();
+    if(unavailable){
+     const score=native?native.apply(this,arguments):0;
+     audit?.record('native-fallback',{aiScore:Number.isFinite(score)?score:null,reason:unavailable,executionState:'suggested'});
+     return score;
+    }
     let current;
     try {
      const materialCost = wuxieMaterialCost(player, item);
-     if (materialCost !== null) current = evaluate(player, request, { hostRequest: request, materialCost });
+     if (materialCost !== null) {const event=lifetime.event();current = evaluate(player,event,{hostRequest:event,materialCost});}
     } catch (_) {}
     if (!current?.resolved) {
      const score=native ? native.apply(this, arguments) : 0;
@@ -140,10 +149,13 @@ export function installWuxieOptimization(evaluate) {
     return score;
    };
    request[WUXIE_OPTIMIZED_REQUEST] = true;
+   return lifetime;
  }
  const owned = function (...args) {
-  try { prepare(this, args[0]); } catch (_) {}
-  return original.apply(this, args);
+  let lifetime;
+  try { lifetime=prepare(this,args[0]); } catch (_) {}
+  try{const event=original.apply(this,args);lifetime?.bind(event);return event;}
+  catch(error){lifetime?.invalidate('host-choice-failed');throw error;}
  };
  proto.chooseToUse = owned;
  return () => { active = false; if (proto.chooseToUse === owned) proto.chooseToUse = original; };

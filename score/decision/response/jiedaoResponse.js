@@ -1,5 +1,6 @@
 /* 借刀的实际响应：只在已确认的持刀者/被杀者窗口比较出杀与交武器。 */
 import {lib,game,get,ui,ai,_status} from '../../foundation/adapt/host.js?v=41a';
+import {responseWindow} from './responseWindow.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
 import {dispositionOf} from '../relations/relations.js?v=41a';
 import {identityHostEffect} from '../../perception/observer/identityDiagnostics.js?v=41a';
@@ -99,17 +100,20 @@ export function installJiedaoResponseBridge(){
  const proto=lib.element?.Player?.prototype,original=proto?.chooseToUse;
  if(typeof original!=='function')return ()=>{};
  let active=true;
+ const windows=new WeakMap();
+ const lifetimeFor=(p,event)=>{let lifetime=windows.get(event);if(!lifetime){lifetime=responseWindow(p,event);windows.set(event,lifetime);}return lifetime;};
  const controlled=p=>p===game.me&&!_status.auto||p.isOnline2?.();
  const wrapped=function(...args){
   const p=this,parent=_status.event,result=original.apply(this,args);
   if(!active||!jiedaoPolicyEnabled()||controlled(p)||!result||typeof result!=='object'||!resolveJiedaoResponse(p,parent))return result;
   const native1=result.ai1,native2=result.ai2,epoch=cooperativeTrickEpoch();
+  const lifetime=lifetimeFor(p,result);
   const window=()=>{
    if(result.name!=='chooseToUse'||result.player!==p)return null;
    return (result.parent||result.getParent?.())?result:{...result,parent};
   };
   const evaluate=item=>{
-   if(!active||epoch!==cooperativeTrickEpoch()||controlled(p)||cfg('responseAI',true)===false)return null;
+   if(!active||epoch!==cooperativeTrickEpoch()||lifetime.reason()||controlled(p)||cfg('responseAI',true)===false)return null;
    const e=window();if(!e)return null;const decision=evaluateJiedaoResponse(p,e,item);
    beginChoiceAudit(!!cfg('tacticalDiagnostics',false),p,result,'jiedao-response',parent)?.record(decision.resolved?'evaluated':'unresolved',{
     action:decision.action||null,shaValue:decision.shaValue??null,transferValue:decision.transferValue??null,
@@ -128,8 +132,9 @@ export function installJiedaoResponseBridge(){
  const chooseMaterial=typeof nativeChooseCard==='function'?function(check,...args){
   const event=_status.event,p=event?.player;
   if(!active||!jiedaoPolicyEnabled()||!p||controlled(p)||!event.skill||!resolveJiedaoResponse(p,event))return nativeChooseCard.call(this,check,...args);
+  const lifetime=lifetimeFor(p,event);
   const score=function(item,...rest){
-   const d=active&&!controlled(p)?evaluateJiedaoResponse(p,event,item):null;
+   const d=active&&!lifetime.reason()&&!controlled(p)?evaluateJiedaoResponse(p,event,item):null;
    return d?.resolved?(d.action==='sha'?Math.min(8,Math.max(.1,d.delta)):-1):typeof check==='function'?check.call(this,item,...rest):0;
   };
   return nativeChooseCard.call(this,score,...args);

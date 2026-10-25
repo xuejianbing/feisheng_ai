@@ -23,6 +23,7 @@ import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import {
 	executionEligibility,
+	clearExecutionDegrade,
 	stageExecutionDecision,
 	commitExecution,
 	cancelExecution,
@@ -33,6 +34,7 @@ import { cfg } from '../../foundation/config/util.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { log } from '../../foundation/diag/logger.js?v=41a';
 import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
+import {responseWindow} from '../response/responseWindow.js?v=41a';
 import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
 import { trip, isTripped } from './circuit.js?v=41a';
 import { isAllyOf, cardValueOf } from '../threat/threat.js?v=41a';   /* ★ 阵营护栏/五谷拿牌桥 */
@@ -43,6 +45,8 @@ const VETO_THRESHOLD = 8;  /* ★ 否决阈值：候选分差超过此值 → �
 const MAX_DYING_DEPTH = 6;      /* ★ 濒死事件链最大上溯层数 */
 const TAO_GUARD_KEY = '__djsc_tao_guard';  /* ★ 护栏安装哨兵（避免叠加） */
 const WUXIE_BRIDGE_KEY = '__djsc_wuxie_host_bridge';
+const wuxieWindows=new WeakMap();
+let useHookToken=null;
 
 function _stat(action) {
 	try {
@@ -169,12 +173,12 @@ function _wuxieRequestOf(args) {
 	} catch (e) { return null; }
 }
 
-function _bridgeWuxieChooseToUse(player, args) {
+function _bridgeWuxieChooseToUse(player, args, token=useHookToken) {
 	const request = _wuxieRequestOf(args);
 	if (!request) return null;
 	const base = { isWuxie: true, bridged: false, resolved: false, use: null, decision: null };
 	// The independent soft response bridge owns the new policy, including material costs.
-	if (tacticalEnabled('wuxie')) return base;
+	if (tacticalEnabled('wuxie')||token?.active===false) return base;
 
 	try {
 		/* 无懈虽走 chooseToUse，但执行语义属于 respond：
@@ -187,6 +191,8 @@ function _bridgeWuxieChooseToUse(player, args) {
 			if (request[WUXIE_BRIDGE_KEY]) return request[WUXIE_BRIDGE_KEY];
 		} catch (e) {}
 
+		const lifetime=responseWindow(player,request);
+		if(lifetime.reason())return base;
 		const decision = evaluateWuxie(player, request, { hostRequest: request });
 		const result = {
 			isWuxie: true,
@@ -210,20 +216,19 @@ function _bridgeWuxieChooseToUse(player, args) {
 
 		const originalAi1 = (typeof request.ai1 === 'function') ? request.ai1 : null;
 		request.ai1 = function () {
-			try {
-				if (!decision.use) return 0;
-				let nativeScore = 0;
-				if (originalAi1) {
-					const n = Number(originalAi1.apply(this, arguments));
-					if (isFinite(n)) nativeScore = n;
-				}
-				/* evaluator 已经完成最终 use 判定时，至少返回正分确保宿主 AI 真正选择无懈；
-				 * 同时保留更高的原生正分，不破坏宿主内部选牌排序。 */
-				return Math.max(1, nativeScore, 1 + Math.max(0, Number(decision.score) || 0));
-			} catch (e) {
-				return decision.use ? 1 : 0;
-			}
+            const fallback=()=>originalAi1?originalAi1.apply(this,arguments):0;
+            // A legacy response is still a live choice, not the decision captured at installation.
+            if(token?.active===false||tacticalEnabled('wuxie')||cfg('responseAI',true)===false||lifetime.reason())return fallback();
+            if(!executionEligibility('respond',player,request,{allowMissingEvent:true}).ok)return fallback();
+            let current;
+            try{const event=lifetime.event();current=evaluateWuxie(player,event,{hostRequest:event});}catch(_){return fallback();}
+            if(!current?.resolved)return fallback();
+            result.decision=current;result.use=!!current.use;
+            if(!current.use)return 0;
+            const native=Number(fallback());
+            return Math.max(1,Number.isFinite(native)?native:0,1+Math.max(0,Number(current.score)||0));
 		};
+        wuxieWindows.set(request,lifetime);
 		result.bridged = true;
 
 		try {
@@ -425,8 +430,10 @@ export function installUseOverride() {
 		const orig = proto.chooseToUse;
 		if (typeof orig !== 'function') return;
 		proto[ORIG_KEY] = orig;
+        const token={active:true};useHookToken=token;
 
 		proto.chooseToUse = function (...args) {
+            if(!token.active)return orig.apply(this,args);
 			const player = this;
 			const ev = _status.event;
 
@@ -434,9 +441,11 @@ export function installUseOverride() {
 			 * _wuxie 的回合外响应本来就不是 currentPhase 玩家。
 			 * detected wuxie request 无论 resolved 与否都直接回宿主：
 			 * resolved 时只改写该 request.ai1；unresolved 时完全原样 fail-open。 */
-			const wuxieBridge = _bridgeWuxieChooseToUse(player, args);
+			const wuxieBridge = _bridgeWuxieChooseToUse(player, args,token);
 			if (wuxieBridge && wuxieBridge.isWuxie) {
-				return orig.apply(this, args);
+                const lifetime=wuxieWindows.get(args[0]);
+                try{const event=orig.apply(this,args);lifetime?.bind(event);return event;}
+                catch(error){lifetime?.invalidate('host-choice-failed');throw error;}
 			}
 
 			/* ★ 窄范围桃救援护栏：独立于 currentPhase / _shouldOverride 先行安装。
@@ -575,6 +584,7 @@ export function installUseOverride() {
 			return host.result;
 		};
 
+        token.owned=proto.chooseToUse;
 		try { installWuguBridge(); } catch (eWg0) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWg0); }
 		try { installLoseHpBridge(); } catch (eWgI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWgI); }
 		try { installJiedaoTargetBridge(); } catch (eJtI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eJtI); }
@@ -588,13 +598,13 @@ export function uninstallUseOverride() {
 	try {
 		const proto = lib.element && lib.element.Player && lib.element.Player.prototype;
 		if (!proto || !proto[ORIG_KEY]) return;
-		proto.chooseToUse = proto[ORIG_KEY];
+        if(useHookToken)useHookToken.active=false;
+		if(proto.chooseToUse===useHookToken?.owned)proto.chooseToUse = proto[ORIG_KEY];
 		delete proto[ORIG_KEY];
-		DEGRADED.clear();
+		clearExecutionDegrade('use');
 		try { uninstallWuguBridge(); } catch (eWgU0) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWgU0); }
 		try { uninstallLoseHpBridge(); } catch (eWgU) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWgU); }
 		try { uninstallJiedaoTargetBridge(); } catch (eJtU) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eJtU); }
-		DEGRADED.clear();
 		log.info('override', 'chooseToUse 硬接管层已卸载');
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 }
