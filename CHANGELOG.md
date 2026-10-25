@@ -17,11 +17,21 @@
 - 回归：`test-policy-model-v2`（33 PASS）、`test-ingest-contract`（PASS）、`test-regressions`（94 PASS）全部通过；改动文件 `node --check` 全通过。
 - 未验证：真机安卓 WebView 懒加载时延、真实对局中的影子一致率（需内测包实测，面板 `policyModelV3.stats()` 可见）。
 
+### 模型热更通道（同轮补，服务端零改动）
+
+- 服务端复用既有 `/update/` 受限静态路由（仅 .zip/.json、防穿越、no-store），新增文件：
+  `update/model/manifest.json`（`djsc-policy-model-update-v1`）+ `update/model/policy_v3.json`（`{meta}` 纯数据，46,821 B）。
+- 新增 `js/update/policyModelUpdate.js`：拉清单 → 版本区间门（requiresExtension）→ releaseSeq 单调 → 下载 → size/SHA-256/meta 形状三重校验 → 写缓存；失败静默保留内置权重；开关 `cfg('policyModelHotUpdate', true)`。
+- `policyModelV3.js` 改为**缓存优先**：热更缓存校验通过则用纯数据重建模型（本地解码 + 前向，不执行远端脚本），否则回退随包内置 UMD 权重；`stats().source` 标识 'cache' / 'builtin'。
+- 新增 `tools/export-policy-model-json.mjs`：从内置 v3 权重导出 `policy_v3.json` 与 `manifest.json`（releaseSeq 自增、打印 SHA-256）。
+- 新增 `tools/test-policy-model-update.mjs`：22 项断言（清单状态机 / meta 校验 / 重建对拍 maxΔ<1e-12 / 下载缓存 / 坏 SHA 拒绝且不覆盖）。
+- 线上实测：`http://127.0.0.1:8787/update/model/manifest.json` 200；公网 `https://data.feiqiaoai.uno/update/model/manifest.json` 200 + CORS `*`；下载 SHA-256 与 size 与清单一致。
+
 ### 明确未做
 
 - **未接 active 模式**：v3 软加分需 `cfg('policyModelV3Mode')==='active'` 且影子连续达标，本版默认 shadow。
 - **未动 v2 接线**：policyModelV2 仍为独立模块（未接引擎），后续按影子数据决定是否接 v2 对照。
-- **未做权重热更包**：v3 随扩展版本发布，`/update/model/manifest.json` 通道接入留待下一轮（P0 日志 4.6 方案）。
+- **未做 v3 热更包的自动晋级**：热更只下发权重数据，仍受 shadow 默认门控。
 ## 待发布 · v4.1.4.0 内测包（2026-10-25）
 贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
 

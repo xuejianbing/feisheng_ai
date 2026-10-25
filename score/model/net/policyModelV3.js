@@ -24,6 +24,100 @@
  *   因此 130/134/142 维特征均可用（统一取前 130 维），<130 维拒绝。
  */
 import { safeGet, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=41a';
+import { loadCachedPolicyMeta } from '../../../js/update/policyModelUpdate.js?v=41a';
+
+/* ===== 纯数据模型重建（热更缓存 → 模型对象；不执行任何远端脚本）=====
+ * 与 client_policy_model_v3.js 的 UMD 工厂同构：base64→LE float64，relu 隐层 + softmax。
+ * 单测用它做「内置 vs 缓存」预测一致性对拍。 */
+export function buildModelFromMeta(meta) {
+    if (!meta || !Array.isArray(meta.classes)) return null;
+    const m = meta;
+    function b64ToF64(b64) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        const clean = String(b64).replace(/[^A-Za-z0-9+/]/g, '');
+        const n = Math.floor(clean.length * 3 / 4);
+        const bytes = new Uint8Array(n);
+        let p = 0;
+        for (let i = 0; i < clean.length; i += 4) {
+            const c0 = chars.indexOf(clean[i]);
+            const c1 = chars.indexOf(clean[i + 1]);
+            const c2 = chars.indexOf(clean[i + 2]);
+            const c3 = chars.indexOf(clean[i + 3]);
+            if (i + 1 < clean.length) bytes[p++] = ((c0 << 2) | (c1 >> 4)) & 255;
+            if (i + 2 < clean.length) bytes[p++] = (((c1 & 15) << 4) | (c2 >> 2)) & 255;
+            if (i + 3 < clean.length) bytes[p++] = (((c2 & 3) << 6) | c3) & 255;
+        }
+        const dv = new DataView(bytes.buffer);
+        const out = new Float64Array(Math.floor(n / 8));
+        for (let k = 0; k < out.length; k++) out[k] = dv.getFloat64(k * 8, true);
+        return out;
+    }
+    const W1 = b64ToF64(m.w1), B1 = b64ToF64(m.b1), W2 = b64ToF64(m.w2), B2 = b64ToF64(m.b2);
+    function pick114(features130) {
+        const keep = m.featureKeep;
+        const x = new Array(m.featureDim);
+        for (let i = 0; i < m.featureDim; i++) {
+            x[i] = (features130[keep[i]] - m.normMin[i]) / m.normRange[i];
+        }
+        return x;
+    }
+    function forward114(x114) {
+        const h = new Array(m.hidden);
+        for (let j = 0; j < m.hidden; j++) {
+            let s = B1[j];
+            const off = j * m.featureDim;
+            for (let i = 0; i < m.featureDim; i++) s += W1[off + i] * x114[i];
+            h[j] = s > 0 ? s : 0;
+        }
+        const out = new Array(m.numClasses);
+        for (let k = 0; k < m.numClasses; k++) {
+            let s2 = B2[k];
+            const off2 = k * m.hidden;
+            for (let j2 = 0; j2 < m.hidden; j2++) s2 += W2[off2 + j2] * h[j2];
+            out[k] = s2;
+        }
+        return out;
+    }
+    function softmax(logits) {
+        let max = logits[0];
+        for (let i = 1; i < logits.length; i++) if (logits[i] > max) max = logits[i];
+        let sum = 0;
+        const exps = new Array(logits.length);
+        for (let j = 0; j < logits.length; j++) { exps[j] = Math.exp(logits[j] - max); sum += exps[j]; }
+        const probs = new Array(logits.length);
+        for (let k = 0; k < logits.length; k++) probs[k] = exps[k] / sum;
+        return probs;
+    }
+    return {
+        meta: m,
+        classes: m.classes,
+        featureDim: m.featureDim,
+        featureKeep: m.featureKeep,
+        threshold: m.threshold,
+        schema: m.schema,
+        format: m.format,
+        predictProba: function (features130) { return softmax(forward114(pick114(features130))); },
+        topK: function (features130, k) {
+            const probs = this.predictProba(features130);
+            const arr = [];
+            for (let i = 0; i < probs.length; i++) arr.push({ action: m.classes[i], probability: probs[i] });
+            arr.sort(function (a, b) { return b.probability - a.probability; });
+            return arr.slice(0, k || 3);
+        },
+        selfTest: function () {
+            const zero = new Array(130).fill(0);
+            const probs = this.predictProba(zero);
+            let sum = 0;
+            for (let j = 0; j < probs.length; j++) sum += probs[j];
+            return {
+                ok: Math.abs(sum - 1) < 1e-9 && m.classes.length === m.numClasses &&
+                    W1.length === m.featureDim * m.hidden && W2.length === m.hidden * m.numClasses,
+                msg: 'policy model v3 (built from data) selfTest',
+                data: { top3: this.topK(zero, 3), sum: sum },
+            };
+        },
+    };
+}
 
 const WEAPON_IDS = ['zhuge', 'guanshi', 'zhangba', 'guding', 'cixiong', 'qinggang',
     'qinglong', 'hanbing', 'qilin', 'zhuque', 'fangtian', 'muniu'];
@@ -38,24 +132,41 @@ let _model = null;
 let _loadPromise = null;
 let _loadStarted = false;
 let _loadMs = null;
+let _source = '';   /* 'cache'（热更缓存）| 'builtin'（随包内置） */
 
-/* ===== 懒加载：动态 import，避免扩展启动时解析失败卡住主线程 ===== */
+/* ===== 懒加载：先看热更缓存（纯数据重建），否则加载随包内置权重 ===== */
 export function startLoading() {
     if (_loadStarted) return _loadPromise;
     _loadStarted = true;
     const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-    _loadPromise = import('./client_policy_model_v3.js?v=41a')
-        .then(function (ns) {
-            try {
-                _model = (typeof window !== 'undefined' && window.CLIENT_POLICY_V3)
-                    || (typeof globalThis !== 'undefined' && globalThis.CLIENT_POLICY_V3)
-                    || (ns && (ns.CLIENT_POLICY_V3 || (ns.default && ns.default.classes ? ns.default : null)))
-                    || null;
-                _loadMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
-            } catch (e) { _model = null; }
-            return _model;
-        })
-        .catch(function () { _model = null; return null; });
+    _loadPromise = Promise.resolve().then(function () {
+        /* 1) 热更缓存优先（policyModelUpdate.js 校验通过后写入） */
+        try {
+            const cached = loadCachedPolicyMeta();
+            if (cached) {
+                const built = buildModelFromMeta(cached);
+                if (built && built.selfTest && built.selfTest().ok) {
+                    _model = built; _source = 'cache';
+                    _loadMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
+                    return _model;
+                }
+            }
+        } catch (eCache) { /* 缓存损坏 → 回退内置 */ }
+        /* 2) 内置权重（UMD） */
+        return import('./client_policy_model_v3.js?v=41a')
+            .then(function (ns) {
+                try {
+                    _model = (typeof window !== 'undefined' && window.CLIENT_POLICY_V3)
+                        || (typeof globalThis !== 'undefined' && globalThis.CLIENT_POLICY_V3)
+                        || (ns && (ns.CLIENT_POLICY_V3 || (ns.default && ns.default.classes ? ns.default : null)))
+                        || null;
+                    _source = 'builtin';
+                    _loadMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
+                } catch (e) { _model = null; }
+                return _model;
+            })
+            .catch(function () { _model = null; return null; });
+    });
     return _loadPromise;
 }
 /* 扩展启动后空闲时自动后台加载（requestIdleCallback 兜底 setTimeout） */
@@ -233,6 +344,7 @@ export function policyModelStats() {
         loaded: !!m,
         loadingStarted: _loadStarted,
         loadMs: _loadMs,
+        source: _source,
         schema: MODEL_SCHEMA,
         classes: m ? m.classes.length : 0,
         mode: 'shadow-default',
