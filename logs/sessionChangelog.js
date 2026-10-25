@@ -17,6 +17,22 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-25 · [weique] 收紧2v2主动技能材料消耗判断",
+    "date": "2026-10-25",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus/materialReserve.js",
+            "lines": "主动 chooseToUse 材料入口与设置开关",
+            "desc": "[weique][2026-10-25] 静态 viewAs 或明确 discard/lose 声明时才增加关键牌材料保留；仅有 filterCard 不再推断为消耗。材料桥遵循2v2总开关与关键牌保留开关。未运行测试，未做实战验证。"
+        },
+        {
+            "file": "CHANGELOG.md / docs/versus/技能材料留牌-第五项.md",
+            "lines": "修改记录与适用边界",
+            "desc": "补充本次材料消耗边界修正及动态用途、特殊区域牌的现有限制。"
+        }
+    ]
+},
+{
     "phase": "2026-10-23 · [weique] 2v2实体攻击选择衔接",
     "date": "2026-10-23",
     "changes": [
