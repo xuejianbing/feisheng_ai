@@ -17,6 +17,27 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-25 · 响应窗口失效与卸载清理",
+    "date": "2026-10-25",
+    "changes": [
+        {
+            "file": "score/decision/response/responseWindow.js / score/decision/response/wuxieOptimization.js / score/decision/override/use.js",
+            "lines": "新旧无懈的实际响应窗口",
+            "desc": "新旧无懈回调绑定实际返回的宿主窗口，关闭响应、改为手动、窗口结束、离场、换局、切换模式或卸载后交回原生评分；旧版无懈每次复核收益与反无懈状态，不沿用初次决定。"
+        },
+        {
+            "file": "score/decision/response/jiedaoResponse.js / score/decision/override/use.js",
+            "lines": "借刀材料与卸载流程",
+            "desc": "借刀技能材料阶段增加窗口与局次校验；修复卸载引用已删除 DEGRADED 导致辅助桥清理中断，改用统一降级接口。主包装器按所有权卸载，保留后装包装，旧回调重装后不复活。设置按钮、默认值、保存配置和模型权重不变。"
+        },
+        {
+            "file": "tools/test-response-lifecycle.mjs / tools/cross-mode-response-host-scenes.mjs / docs/doudizhu/响应窗口后续修复.md",
+            "lines": "完整回归与真实跨模式场景",
+            "desc": "21 组 Node 工具通过，新增 42 项生命周期检查；真实宿主身份、国战、2v2 对决各 5 场景，斗地主 6 固定结算与 11 手动对照通过；完整托管对局经历 11 回合、44 次用牌，脚本异常为 0。联机双客户端、移动端及胜率仍待验收。"
+        }
+    ]
+},
+{
     "phase": "2026-10-23 · 斗地主意图凭据与策略范围修复",
     "date": "2026-10-23",
     "changes": [

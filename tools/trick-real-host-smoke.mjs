@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 在隔离浏览器中加载完整无名杀宿主；不替换 Player、GameEvent、卡牌内容或触发器。
-// 可选参数：--host-root 宿主目录 --browser Chrome路径 --playwright Playwright包路径 --output 报告路径；--autoplay 跑完整托管对局，--manual 跑浏览器点击场景
+// 可选参数：--host-root 宿主目录 --browser Chrome路径 --playwright Playwright包路径 --output 报告路径；--autoplay 跑完整托管对局，--manual 跑浏览器点击场景；--cross-mode --mode identity|guozhan|versus 跑原生模式与响应窗口检查
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -10,6 +10,8 @@ import {createRequire} from 'node:module';
 
 const args=process.argv.slice(2);
 const option=name=>{const i=args.indexOf('--'+name);return i<0?null:args[i+1];};
+const hostMode=option('mode')||'doudizhu';
+assert(['doudizhu','identity','guozhan','versus'].includes(hostMode),'unsupported smoke mode');
 const repoRoot=fileURLToPath(new URL('../',import.meta.url));
 const hostRoot=path.resolve(option('host-root') || path.join(repoRoot,'../..'));
 const extensionRoot=path.resolve(option('extension-root')||repoRoot);
@@ -46,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
             res.setHeader('Content-Type','application/json');res.end(JSON.stringify({success:true,data}));
         } else {
             data=await fs.readFile(filename);
-            if(relative==='game/config.json'){const config=JSON.parse(data.toString());config.mode='doudizhu';config.extensions=[];config.extension_auto_import=false;config.mode_config.doudizhu.doudizhu_mode='normal';data=Buffer.from(JSON.stringify(config));}
+            if(relative==='game/config.json'){const config=JSON.parse(data.toString());config.mode=hostMode;config.extensions=[];config.extension_auto_import=false;config.mode_config.doudizhu.doudizhu_mode='normal';config.mode_config.versus.versus_mode='two';config.mode_config.versus.two_assign=false;data=Buffer.from(JSON.stringify(config));}
             res.setHeader('Content-Type',mime[path.extname(filename)] || 'application/octet-stream');
             res.setHeader('Cache-Control','no-store');res.end(data);
         }
@@ -88,13 +90,25 @@ try {
     });
     console.error('[smoke] phase hook ready');
     if(await page.getByText('跳过向导',{exact:true}).isVisible())await page.getByText('跳过向导',{exact:true}).click();
+    // Some native modes show a version notice before character selection.
+    if(await page.getByText(/1\.11\.6更新内容/).isVisible())await page.getByText('确定',{exact:true}).click();
     await page.evaluate(()=>{if(realHost._status.paused){realHost._status.auto=false;realHost.ui.click.auto();}});
-    await page.waitForFunction(()=>window.smokeReady===true,{},{timeout:30000});
+    await page.waitForFunction(()=>window.smokeReady===true||document.body.innerText.includes('1.11.6更新内容'),{},{timeout:30000});
+    if(!await page.evaluate(()=>window.smokeReady===true)){await page.getByText('确定',{exact:true}).click();await page.waitForFunction(()=>window.smokeReady===true,{},{timeout:30000});}
       break;
-     }catch(error){if(startupAttempt>=3)throw error;console.error('[smoke] retry startup after',error.message.slice(0,120));}
+     }catch(error){
+      console.error('[smoke] startup state',JSON.stringify(await page.evaluate(()=>({auto:realHost?._status.auto,paused:realHost?._status.paused,event:realHost?._status.event?.name,player:realHost?._status.event?.player?.name,body:document.body.innerText.slice(-900)})).catch(()=>null)));
+      if(startupAttempt>=3)throw error;console.error('[smoke] retry startup after',error.message.slice(0,120));
+     }
     }
     startupComplete=true;console.error('[smoke] game initialized');
-    if(args.includes('--manual')){
+    if(args.includes('--cross-mode')){
+      const {runCrossModeResponseScenes}=await import('./cross-mode-response-host-scenes.mjs');
+      const report=await runCrossModeResponseScenes(page,hostMode);
+      const result={completedAt:new Date().toISOString(),status:errors.length?'failed':'passed',scope:'实际模式初始化、固定公开局面与原生结算；非完整对局或联机测试',browserVersion:await browser.version(),...report,errors};
+      if(option('output'))await fs.writeFile(option('output'),JSON.stringify(result,null,2)+'\n');
+      console.log(JSON.stringify(result,null,2));assert.deepEqual(errors,[]);
+    }else if(args.includes('--manual')){
       const {runManualIntentScenes}=await import('./manual-intent-host-scenes.mjs');
       const report=await runManualIntentScenes(page);
       const result={completedAt:new Date().toISOString(),status:errors.length?'failed':'passed',scope:'真实宿主固定局面、浏览器点击输入的本地手动用牌验证；非远端联机',browserVersion:await browser.version(),...report,errors};

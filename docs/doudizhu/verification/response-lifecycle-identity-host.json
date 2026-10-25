@@ -1,0 +1,47 @@
+{
+  "completedAt": "2026-10-25T00:14:45.975Z",
+  "status": "passed",
+  "scope": "实际模式初始化、固定公开局面与原生结算；非完整对局或联机测试",
+  "browserVersion": "156.0.8078.47",
+  "hostVersion": "1.11.6",
+  "mode": "identity",
+  "submode": null,
+  "players": 8,
+  "scenes": [
+    {
+      "name": "policy-scope",
+      "enabled": false,
+      "stripUndefined": true,
+      "borrowedPairResolved": false,
+      "allyRelation": 1
+    },
+    {
+      "name": "optimized-window-expiry",
+      "distinctHostEvent": true,
+      "before": 9.8,
+      "after": -9,
+      "prototypeRestored": true,
+      "auxiliaryReleased": true
+    },
+    {
+      "name": "legacy-window-expiry",
+      "distinctHostEvent": true,
+      "before": 6.575,
+      "after": -9,
+      "prototypeRestored": true,
+      "auxiliaryReleased": true
+    },
+    {
+      "name": "duel-low-sha",
+      "enemyHpLost": 1,
+      "allyHp": 4
+    },
+    {
+      "name": "legacy-judge-rescue",
+      "plan": "rescue",
+      "remainingJudges": [],
+      "armor": "bagua"
+    }
+  ],
+  "errors": []
+}
