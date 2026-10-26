@@ -19,6 +19,8 @@ import { isAllyOf as relIsAlly, isEnemyOf } from '../relations/relations.js?v=41
 import { evaluateTaoRescue } from '../safety/rescuePolicy.js?v=41a';
 import { evaluateWuxie, shouldUseWuxie } from '../response/wuxieEvaluator.js?v=41a';   /* ★ 无懈唯一权威策略源 */
 import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
+import {dyingTargetForEvent} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
 import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choiceStat, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
 
@@ -35,6 +37,8 @@ function _shouldOverride(player, event) {
 
 function _keepShan(player) {
 	try {
+		// 2v2 不因“以后可能需要闪”额外否决当前合法响应，交回宿主判断。
+		if (readVersusMode().is2v2) return false;
 		if (player.hp <= 2) return false;
 		const enemies = (game.players || []).filter(function (p) {
 			return p && p.alive !== false && p !== player && isEnemyOf(player, p);
@@ -56,6 +60,8 @@ function _keepTao(player, dyingTarget, ctx) {
 	try {
 		if (dyingTarget) {
 			if (evaluateTaoRescue(player, dyingTarget, ctx || {}).allow) {
+				// 公开队伍已确认，友伤记录不能再次否决救援；敌人已由唯一策略拒绝。
+				if (readVersusMode().is2v2) return false;
 				/* ★ 打濒死再救拦截：濒死目标 90s 内被我方（player 本人或其队友）伤害过 → 拒救。
 				 *   场景：AI 把敌方打至濒死又出桃救活（所有模式）。 */
 				try {
@@ -118,7 +124,7 @@ function _shouldRespond(player, card, event) {
 		const id = get.name(card, player);
 		if (id === 'shan') return !_keepShan(player);
 		if (id === 'tao') {
-			const dying = _status.event && _status.event.dying;
+			const dying = readVersusMode().is2v2 ? dyingTargetForEvent(event) : _status.event && _status.event.dying;
 			return !_keepTao(player, dying);
 		}
 		if (id === 'wuxie') return !_keepWuxie(player, event);
@@ -133,7 +139,8 @@ function _brainRespond(player, card, event) {
 		const par = (event && event.getParent && event.getParent()) || event || {};
 		const trig = par._trigger || {};
 		const srcName = trig.card ? get.name(trig.card, player) : '';
-		const tgtObj = trig.target;
+		const rescueTarget = id==='tao'&&readVersusMode().is2v2 ? dyingTargetForEvent(event) : null;
+		const tgtObj = rescueTarget || trig.target;
 		const me = {
 			hp: player.hp !== undefined ? player.hp : 3,
 			maxHp: player.maxHp || 3,
@@ -146,12 +153,14 @@ function _brainRespond(player, card, event) {
 		 *   身份未明时真队友才救；敌/中性不救（防止救反贼/内奸） */
 		let allyOfMe = false;
 		try { if (tgtObj) allyOfMe = relIsAlly(player, tgtObj); } catch (e) { allyOfMe = false; }
+		if (readVersusMode().is2v2 && tgtObj === player) allyOfMe = true;
 		let allyOfDying = allyOfMe;
 		try { if (tgtObj) allyOfDying = relIsAlly(player, tgtObj); } catch (e) { allyOfDying = allyOfMe; }
+		if (readVersusMode().is2v2 && tgtObj === player) allyOfDying = true;
 		const ev = {
 			source: srcName,
 			card: srcName,
-			dying: !!(par.dying || (_status.event && _status.event.dying)),
+			dying: !!(rescueTarget || par.dying || (_status.event && _status.event.dying)),
 			dyingIsMe: !!(_status.event && _status.event.player === player),
 			dyingTarget: {
 				isAlly: allyOfDying, isMe: tgtObj === player,
@@ -163,7 +172,7 @@ function _brainRespond(player, card, event) {
 			target: { isMe: tgtObj === player, isLord: !!(tgtObj && tgtObj.isLord), threat: allyOfMe ? 1 : 0, isAlly: allyOfMe },
 			keyTrick: CRITICAL_TRICKS.indexOf(srcName) >= 0 ? srcName : '',
 			wuxieUse: null,          /* ★ 无懈：唯一权威结论（null=无法判断 → 不否决） */
-			keepShan: me.hp >= 3,
+			keepShan: !readVersusMode().is2v2 && me.hp >= 3,
 		};
 		if (id === 'wuxie') {
 			try {

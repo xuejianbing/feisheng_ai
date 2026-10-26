@@ -19,6 +19,7 @@ import { cardValueOf } from '../threat/threat.js?v=41a';
 import { decideDiscard } from '../basic/discardBrain.js?v=41a';
 import { executionEligibility, invokeHost } from '../execution/executionGateway.js?v=41a';
 import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
+import {versusDiscardPremium} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
 import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choiceStat, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
 
@@ -158,7 +159,8 @@ function _buildCheck(player) {
 				b.check = (b.check || 0) + 1;
 			} catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
 
-			return -v * mul;
+			// Keep the native choice lifecycle's null fallback on failures.
+			return -v * mul - versusDiscardPremium(player, card, _status.event);
 		} catch (e) { return null; }
 	};
 }

@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-23",
+  "base": "372cc9b",
+  "kind": "code-and-host-stubs-only",
+  "tests": [
+    {
+      "test": "test-ai-boundaries.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 4 借刀组合距离失效时连招同步失效",
+        "AI boundary tests: 12 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-decision-audit.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68181) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-decision-state-fingerprint.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 技能变化触发状态监听并清除派生缓存",
+        "Decision state fingerprint tests: 12 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-friendly-strip-plan.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68183) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-identity.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 真实引擎包装器与全局完成技能贯通并可卸载",
+        "Identity tests: 44 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-ingest-contract.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS ingest receipt contract"
+      ]
+    },
+    {
+      "test": "test-jiedao-pair.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68186) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-jiedao-response.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68187) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-manual-fire-control.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68188) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-regressions.mjs",
+      "exit": 0,
+      "tail": [
+        "================ 结果 ================",
+        "PASS 94  FAIL 0"
+      ]
+    },
+    {
+      "test": "test-removal-cooperation.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68190) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-response-material-packing.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 长交替路径可重排到500次响应，无递归组合爆炸",
+        "Response material packing tests: 17 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-suggestion-fusion.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68192) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-trick-boundaries.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68193) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "test-trick-cooperation.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 真实引擎useCard包装捕获手动意图，卸载后凭据失效",
+        "Trick cooperation tests: 25 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-utility-boundaries.mjs",
+      "exit": 0,
+      "tail": [
+        "PASS 8 多轮上下文建议使用一次有界修正，不重复写入同一来源",
+        "Utility boundary tests: 7 passed, 0 failed"
+      ]
+    },
+    {
+      "test": "test-weights.mjs",
+      "exit": 0,
+      "tail": [
+        "",
+        "==== ALL PASS (637) ===="
+      ]
+    },
+    {
+      "test": "test-wuxie-player-intent.mjs",
+      "exit": 0,
+      "tail": [
+        "(node:68197) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    }
+  ]
+}

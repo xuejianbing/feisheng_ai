@@ -357,7 +357,7 @@ section('离线可用 / 内置默认权重');
 ok('内置默认权重结构版本 = 运行时 v' + SCHEMA, DEFAULT_WEIGHTS.v === SCHEMA, DEFAULT_WEIGHTS.v);
 ok('内置默认权重维度 = 运行时 dims', JSON.stringify(DEFAULT_WEIGHTS.dims) === JSON.stringify(DIMS));
 ok('内置默认权重 ready = true（离线开箱可用）', DEFAULT_WEIGHTS.ready === true);
-ok('已知既有不一致：内置 dv=4 < DATA_EPOCH=5（走 _decodeDefault 不受影响，未修改）', Number(DEFAULT_WEIGHTS.dv) < EPOCH, DEFAULT_WEIGHTS.dv);
+ok('内置默认权重数据纪元 >= 当前 DATA_EPOCH（可离线加载）', Number(DEFAULT_WEIGHTS.dv) >= EPOCH, DEFAULT_WEIGHTS.dv);
 
 /* ---------- 10. 备份安全（P0-1 / P2-1） ---------- */
 section('备份安全（P0-1 / P2-1）');

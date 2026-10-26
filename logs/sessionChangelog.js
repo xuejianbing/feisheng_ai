@@ -38,6 +38,44 @@ export const SESSION_CHANGELOG = [
     ]
 },
 {
+    "phase": "2026-10-25 · 2v2技能用牌调整",
+    "date": "2026-10-25",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus/materialReserve.js",
+            "lines": "主动 chooseToUse 材料入口与设置开关",
+            "desc": "调整技能用牌时对关键牌的判断，减少把仍可能用于救援或防守的牌当作普通材料消耗的情况。"
+        },
+    ]
+},
+{
+    "phase": "2026-10-23 · 2v2出牌与目标判断",
+    "date": "2026-10-23",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus/attackChoiceBridge.js / lethal.js / score/decision/engine/engine.js",
+            "lines": "普通实体杀和决斗的实际选牌、选目标入口",
+            "desc": "出杀或决斗时，会根据当前选中的牌和目标重新判断效果，减少因护甲、属性或距离变化而出现的误判。"
+        }
+    ]
+},
+{
+    "phase": "2026-10-23 · 2v2配合与设置调整",
+    "date": "2026-10-23",
+    "changes": [
+        {
+            "file": "score/decision/modes/versus / score/foundation/runtime/versusContext.js",
+            "lines": "规则、队伍与策略接入",
+            "desc": "调整队友配合、关键牌保留和群体牌风险判断，让出牌决策能结合公开队伍与当前局势。"
+        },
+        {
+            "file": "js/config / score/view/dashboard/versusStatus.js",
+            "lines": "玩家选项 → 模式增强 → 2v2",
+            "desc": "新增2v2专项设置，可按需要开启或关闭相关配合策略。"
+        }
+    ]
+},
+{
     "phase": "2026-10-21 · 数据上报回执与专项训练诊断",
     "date": "2026-10-21",
     "changes": [

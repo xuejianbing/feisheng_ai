@@ -13,6 +13,7 @@
 import { game } from '../../foundation/adapt/host.js?v=41a';
 import { isEnemyOf } from '../relations/relations.js?v=41a';   /* ★ 指令 05 Stage B：敌我唯一权威源 */
 import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 
 /* ★ 预测接下来 3 轮的局势 */
 export function multiTurnPlan(me) {
@@ -47,8 +48,9 @@ export function multiTurnPlan(me) {
 			desc = '残局，由残局策略决定攻守';
 		}
 		else if (phase.phase === GAME_PHASE.EARLY) {
-			strategy = 'early';
-			desc = '早期，攒牌发育';
+			const versus=readVersusMode().is2v2;
+			strategy = versus ? 'early_versus' : 'early';
+			desc = versus ? '双人开局，按合法动作净收益与座次配合判断' : '早期，攒牌发育';
 		}
 		else if (phase.phase === GAME_PHASE.MID) {
 			if (enemyCount >= 3) {

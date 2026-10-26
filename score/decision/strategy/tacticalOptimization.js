@@ -9,6 +9,8 @@ import {beginChoiceAudit} from '../../perception/journal/choiceAudit.js?v=41a';
 import {resetCooperativeTrickIntents} from '../state/cooperativeTrickIntent.js?v=41a';
 import {cooperationPolicyEnabled} from './cooperationPolicy.js?v=41a';
 import {configureFriendlyStrip,friendlyStripPlan,friendlyJudgeRescuePlan,selectableStrip} from './friendlyStripPlan.js?v=41a';
+import {relayArmorPlan} from '../modes/versus/seatTacticsRuntime.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 let active = {enabled:false, fire:false, guding:false, diagnostic:false};
 export function captureTacticalSettings(){
  resetCooperativeTrickIntents();
@@ -109,6 +111,8 @@ function nativeStripPositive(p,t,card){
  try{return identityHostEffect(t,card,p,p)>0;}finally{evaluatingStrip=false;}
 }
 function immediateLethal(p,slashes){
+ // 尚未得到宿主死亡确认；2v2不能因一血空手就跳过拆防/队友救援。
+ if(readVersusMode().is2v2)return false;
  return game.players.some(t=>t!==p&&dispositionOf(p,t)<0&&t.hp<=1&&t.countCards('h')===0&&slashes.some(c=>p.canUse(c,t)&&identityHostEffect(t,c,p,p)>0));
 }
 export function stripPlan(p,card,t,resolution=false){
@@ -129,20 +133,23 @@ export function stripPlan(p,card,t,resolution=false){
   if(!active.strip&&!delayedStrip)return null;
   if(!resolution&&!nativeStripPositive(p,t,card))return null;
   if(delayedStrip)return delayedStrip;
-  if(!slashes.length)return null;
+  // 接力防具选择沿用同一 effect/按钮运输；不叠加第二份拆防具收益。
+  const relay=active.strip?relayArmorPlan(p,card,t):null;
+  if(!slashes.length)return relay;
   const useful=slashes.filter(c=>p.canUse(c,t,false)&&identityHostEffect(t,c,p,p)>0);
-  if(!useful.length)return null;
+  if(!useful.length)return relay;
   const reachable=useful.some(c=>p.canUse(c,t));
   const mount=t.getEquip(3);
   if(mount&&selectableStrip(p,t,mount,name)&&profitableEquipLoss(p,t,mount)&&
    (reachable||useful.some(c=>reachesAfterMount(p,t,c,mount))))return {kind:'mount',card:mount,score:reachable?7:9};
-  if(!reachable)return null;
+  if(!reachable)return relay;
   const armor=t.getEquip(2);
   const ignoresArmor=t.hasSkillTag?.('unequip2')||useful.every(c=>p.hasSkillTag?.('unequip',false,{name:get.name(c,p),target:t,card:c})||p.hasSkillTag?.('unequip_ai',false,{name:get.name(c,p),target:t,card:c}));
   if(armor&&!ignoresArmor&&selectableStrip(p,t,armor,name)&&profitableEquipLoss(p,t,armor))return {kind:'armor',card:armor,score:6};
   const handCount=t.countCards('h');
   const canSelectHand=name==='shunshou'?t.countGainableCards?.(p,'h'):t.countDiscardableCards?.(p,'h');
   if(handCount===1&&canSelectHand!==0)return {kind:'hand',position:'h',score:4};
+  return relay;
  }catch(_){}
  return null;
 }
@@ -188,7 +195,8 @@ export function extraCardOrder(p,card,original){
    if(enemies.some(t=>t.countCards('h')===0&&t.hp===base+1&&attackable(t))){trace('酒杀时机',{order:14});return Math.max(original,14);}
   }
   if(['guohe','shunshou'].includes(name)){
-   const plan=game.players.map(t=>stripPlan(p,card,t)).filter(Boolean).sort((a,b)=>b.score-a.score)[0];
+   // 队友接力只是机会，不使用“自己已有后续杀”的 order=13 强顺序。
+   const plan=game.players.map(t=>stripPlan(p,card,t)).filter(plan=>plan&&plan.kind!=='relay-armor').sort((a,b)=>b.score-a.score)[0];
    if(plan){trace('拆顺顺序',{kind:plan.kind,order:13});return Math.max(original,13);}
   }
   if(active.crossbow&&name==='zhuge'&&!weapon&&slashes.length>=2){

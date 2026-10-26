@@ -19,6 +19,7 @@ import { identityBiasOf } from '../../perception/observer/identity.js?v=41a';  /
 import { dispositionOf as _dispositionOf, isAllyOf as _isAllyOf, isNeutralOf as _isNeutralOf, relationStateKey } from '../relations/relations.js?v=41a';  /* ★ 统一敌我系统：与 relations 单一权威源收敛 */
 import { isPlayerLinked } from '../state/playerState.js?v=41a';  /* ★ 指令 02：唯一横置状态读取入口 */
 import { getGamePhase, GAME_PHASE } from '../state/gamePhase.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 import { probHasSha as inferProbHasSha, probHasShan as inferProbHasShan } from '../../model/predict/handInference.js?v=41a';
 import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 
@@ -274,6 +275,10 @@ function hasBadStatus(tgt) {
 function tempoFactor() {
 	try {
 		const phase = getGamePhase();
+		if (phase.phase === GAME_PHASE.EARLY && readVersusMode().is2v2) {
+			return {stage:phase.phase,round:phase.round,alive:phase.alive,
+				atkMul:1,keepMul:1,burstMul:1,desc:'双人开局按净收益判断，不统一压低进攻或奖励攒牌'};
+		}
 		const T = {
 			early:   { atkMul: 0.9, keepMul: 1.1, burstMul: 0.8, desc: "蓄爆期（适度进攻）" },
 			mid:     { atkMul: 1.2, keepMul: 0.9, burstMul: 1.2, desc: "常规期（主动进攻）" },

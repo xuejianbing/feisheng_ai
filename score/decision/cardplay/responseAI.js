@@ -28,6 +28,8 @@ import { isAllyOf, isEnemyOf, isNeutralOf } from '../relations/relations.js?v=41
 import {installJiedaoChoiceBridge} from '../cards/jiedaoChoiceBridge.js?v=41a';
 import {trickResponseContext} from '../response/trickResponseContext.js?v=41a';
 import {resolveJiedaoResponse,evaluateJiedaoResponse,installJiedaoResponseBridge} from '../response/jiedaoResponse.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
+import {dyingTargetForEvent} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
 const SKILL_ID = '_djsc_responseAI';
 let _installed = false;
@@ -37,6 +39,7 @@ let _removeJiedaoBridge=null,_removeJiedaoChoiceBridge=null;
 /* 判断：这张闪是否值得保留 */
 function _shouldKeepShan(player, card) {
 	try {
+		if (readVersusMode().is2v2) return false; // 不以留闪为由屏蔽当前响应能力。
 		/* 濒死区：血量越低，闪越宝贵，保留闪应对下一张杀 */
 		if (player.hp <= 2) return true;
 
@@ -140,10 +143,12 @@ function _shouldSaveTao(player, target, ctx) {
 		/* 濒死目标识别：ctx.dyingTarget 覆盖 → _status.event.dying */
 		let dyingTarget;
 		if (ctx && ('dyingTarget' in ctx)) dyingTarget = ctx.dyingTarget;
-		else { try { dyingTarget = _status.event && _status.event.dying; } catch (e) { dyingTarget = null; } }
+		else { try { dyingTarget = readVersusMode().is2v2 ? dyingTargetForEvent(_status.event) : _status.event && _status.event.dying; } catch (e) { dyingTarget = null; } }
 		if (target === dyingTarget || (target === player && (player.hp || 0) <= 0)) {
 			return !evaluateTaoRescue(player, target, ctx || {}).allow;
 		}
+		// 2v2 的主动留桃成本在统一消耗层结算，不在这里再按血量一刀切压低自疗。
+		if (readVersusMode().is2v2) return false;
 		/* 非濒死：原有「留桃待救」逻辑 */
 		if ((target.hp || 0) >= (target.maxHp || 1)) return false;
 		if (target === player && player.hp > 1) return true;
