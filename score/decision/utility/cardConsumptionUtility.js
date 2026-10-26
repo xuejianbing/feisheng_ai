@@ -1,5 +1,6 @@
 import { keepBonus } from '../cardplay/keepStrategyOpt.js?v=41a';
 import { applyOwnedUtility } from './utilityPipeline.js?v=41a';
+import {versusConsumptionReserve} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
 const OWNER = 'cardConsumption';
 const BASE_COST = Object.freeze({ shan: 1.5, tao: 1.5, wuxie: 1.5, jiu: 0.8, sha: 0.3,
@@ -31,10 +32,12 @@ export function evaluateCardConsumptionCost(me, candidate, context = {}) {
 	const keepMultiplier = Number.isFinite(rawMultiplier) ? Math.max(0, Math.min(1, rawMultiplier)) : 1;
 	const retentionCost = Math.abs(score) * (1 - keepMultiplier);
 	const forecastCost = Number.isFinite(context.forecastRetention) ? Math.max(0, context.forecastRetention) : 0;
-	const cost = Math.max(baseCost, retentionCost, forecastCost);
+	const reserve = versusConsumptionReserve(me, context.card || candidate.id, baseCost);
+	const reserveCost = reserve.cost;
+	const cost = Math.max(baseCost, retentionCost, forecastCost, reserveCost);
 	if (!Number.isFinite(cost)) throw new TypeError('Invalid card consumption cost');
-	return { baseCost, retentionCost, forecastCost, keepMultiplier, cost, weight,
-		selectedEstimate: forecastCost > Math.max(baseCost, retentionCost) ? 'forecast' : retentionCost > baseCost ? 'retention' : baseCost > retentionCost ? 'base' : 'equal' };
+	return { baseCost, retentionCost, forecastCost, reserveCost, reserveReason:reserve.reason, keepMultiplier, cost, weight,
+		selectedEstimate: reserveCost > Math.max(baseCost, retentionCost, forecastCost) ? 'versus-reserve' : forecastCost > Math.max(baseCost, retentionCost) ? 'forecast' : retentionCost > baseCost ? 'retention' : baseCost > retentionCost ? 'base' : 'equal' };
 }
 
 export function applyCardConsumptionUtility(me, candidate, context) {
@@ -44,6 +47,6 @@ export function applyCardConsumptionUtility(me, candidate, context) {
 	const display = value => (Math.round(value * 10000) / 10000).toString();
 	const applied = applyOwnedUtility(candidate, OWNER, [{ dimension: 'opportunityCost', delta: -estimate.cost,
 		details: { ...estimate, aggregation: 'max' },
-		note: '基础估计=' + display(estimate.baseCost) + '；保留估计=' + display(estimate.retentionCost) + '；预测估计=' + display(estimate.forecastCost) + '；取较大值一次扣除' }]);
+		note: '基础估计=' + display(estimate.baseCost) + '；保留估计=' + display(estimate.retentionCost) + '；预测估计=' + display(estimate.forecastCost) + '；2v2救援资源估计=' + display(estimate.reserveCost) + '；取较大值一次扣除' }]);
 	return { ...estimate, applied };
 }

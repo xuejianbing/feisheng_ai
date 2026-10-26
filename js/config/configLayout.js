@@ -10,6 +10,17 @@ const QQ_GROUP = String(configDefault('qqGroup', ''));
 const FEEDBACK_URL = 'https://wj.qq.com/s2/28087292/uhbn/';
 
 export function arrangeConfig(source, lib, game) {
+    function refreshVersus() {
+        if(typeof document==='undefined')return;
+        const enabled=lib.config.extension_无名AI_versusStrategy!==false;
+        document.querySelectorAll('[data-versus-child]').forEach(label=>{
+            const row=label.closest('.config');if(!row)return;
+            row.classList.toggle('disabled',!enabled);
+            row.style.opacity=enabled?'':'0.5';
+            row.style.pointerEvents=enabled?'':'none';
+        });
+    }
+    setTimeout(refreshVersus,0);
     const retentionKey='extension_无名AI_logRetain';
     const oldRetention=lib.config[retentionKey] ?? lib.config['extension_决策积分引擎_logRetain'];
     if(oldRetention!==undefined && !['50','100','200'].includes(String(oldRetention))){
@@ -241,6 +252,12 @@ export function arrangeConfig(source, lib, game) {
                 option.name = name;
             }
             if(key==='archiveGames'){option.onclick=function(value){lib.config.extension_无名AI_archiveGames=value;game.saveConfig('extension_无名AI_archiveGames',value);setTimeout(refreshRecords,0);};}
+            if(['versusSeatProtection','versusReserve'].includes(key))option.name=option.name.replace('class="djsc-setting-name"','data-versus-child="true" class="djsc-setting-name"');
+            if(key==='versusStrategy')option.onclick=function(value){
+                lib.config.extension_无名AI_versusStrategy=value;
+                game.saveConfig('extension_无名AI_versusStrategy',value);
+                setTimeout(refreshVersus,0);
+            };
             result[key] = option;
         }
     }

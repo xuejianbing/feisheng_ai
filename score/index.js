@@ -300,7 +300,7 @@ export function installScoreEngine() {
 		/* ★ P0-10：收集全部暴露任务，全部 settle 后按结果置 modular 状态与 modularReady */
 		const _exposeTasks = [];
 		MODULES_TO_EXPOSE.forEach(function ([name, path]) {
-			_exposeTasks.push(import(path).then(function (mod) {
+			_exposeTasks.push(import(path+'?v=41a').then(function (mod) {
 				if (myGen !== _gen || !_installed) return;   /* ★ P1-24：卸载后不再暴露 */
 				try { window.__DJSC.modular.loaded.push(name); } catch (eT) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eT); }
 				/* ★ 统一经总线软合并：只补缺失键，不覆盖模块自挂载的 canonical 实现 */

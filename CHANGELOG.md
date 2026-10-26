@@ -4,10 +4,126 @@
 - 关闭“无懈优化”时，也会根据当前局面重新判断是否出牌，减少错误反无懈。
 - 修复借刀杀人通过技能出杀时，选牌可能受到旧判断影响的问题。
 - 修复停用扩展后，部分选牌辅助未正确退出的问题。
-- 原有设置保持不变，更新后无需重新配置。
+- 已适配 4.4.0，原有设置保持不变，更新后无需重新配置。
 
 开发记录见 [响应窗口修复说明](docs/doudizhu/响应窗口后续修复.md)。
 
+## 4.4.0 完整版（2026-10-25 · 统一版，替换当日 4.4.0 内测包）
+贡献标识：[weique]　分支：`release/4.4.0`（已合入 master）　基线：4.1.4.0 + 4.1.5.x 特性 + 134 维 v2 权重
+
+### 合并范围
+
+- **QA 线（46 文件）**：客户端稳定性（有界写事务/诊断绑定/selfCheck 宿主契约）、数据来源认证（sourceIdentity）、训练血缘（trainingDataset/cloudSampleState）、候选生命周期、自动特征证据等；
+- **4.1.5.x 线**：策略模型 v3 影子接线（policyModelV3 + engine 钩子）、策略模型热更通道（policy_manifest.json/policy_v3.json）、阵营字段（camp/winCamp/campWon）、身份场样本采集开关；
+- **后端 v6（D4）**：`backend/v6/`（来源认证/可信接收/训练契约/隔离测试），已并入 master；
+- **权重**：134 维 v2 重训（top1 0.6171 / bal 0.3678 / corr 0.4137）。
+
+### 合并方式
+
+以 master 为 ours、4.1.4.0 为 base、QA 包为 theirs 做三方合并（LF 归一后执行）：
+45 个文件自动合并通过；`cloudIngest.js` 采用 QA 重写版（回执 v1 + 来源信封，认证后端必需），
+4.1.5.x 的 `shadowPolicy` 上传通道随之让位（v3 影子记录仍在本地队列，不随上传）。
+
+### 验证
+
+- `test-regressions`：94 PASS / 0 FAIL（更新了上传成功桩以返回 `ingest-receipt-v1` 回执）
+- `test-policy-model-v3`：25 PASS；`test-policy-model-update`：22 PASS
+- `test-ingest-contract`：PASS；`test-weights`：636 PASS / 1 FAIL（已知 `dv=4<5` 断言，新权重 dv=5 已修复该问题）
+- 全量 46 个改动 JS 语法检查通过
+
+### 打包
+
+`wuming_ai_v4.4.0.zip`（根目录直接 extension.js/info.json），GitHub Release `v4.4.0` 资产同步更新。
+## 待发布 · v4.1.5.2 阵营字段与身份场采样（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/train/trainExport.js`、`js/config/configSchema.js`
+
+### 背景
+
+用户指出：标签里只有「胜/负」，没有「阵营胜负」。核库确认：
+- `m.identity` 在池子里几乎全为 null（斗地主为主），身份场样本仅 3,510 条；
+- `m.gameOutcome/outcomeTarget` 是**采样者个人**胜负，不是阵营；
+- `actionOutcome.deltas` 有逐玩家 camp（-1/1），但没有「采样者阵营 / 获胜阵营」字段；
+- **身份场样本此前被 `identityModelCompatibility` 硬暂停采集**（`sampleAllowed=false`）。
+
+### 本版改动
+
+- 新增阵营推导：身份场 `zhu/zhong→lord`、`fan→rebel`、`nei→nei`；其他模式 `landlord/farmer`；
+- 样本新增 `m.camp`（采样者阵营）、`m.winCamp`（获胜阵营，终局按各玩家 win 标记推导）、`m.campWon`（本阵营是否获胜）；
+- 新增配置 `identitySampling`（默认关）：打开后**只放行身份场训练样本**，身份场推理仍暂停（`allowed=false` 不变），用于积累身份场/阵营数据；
+- 版本号 4.1.5.2。
+
+### 明确未做
+
+- 未解除身份场推理暂停（语义兼容仍待验证）；
+- 未改训练脚本使用 campWon（下一轮接入 label policy）；
+- 未回填旧样本（历史池无 camp 字段）。
+## 待发布 · v4.1.5.1 重训权重包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/weights/defaultWeights.js`、`info.json`、`js/config/version.js`
+
+在 v4.1.5.0 接线基础上，用**全量已结算样本池**（merged_shards + ai_shards 共 30.4 万条，覆盖身份场/斗地主/国战等 12 种模式）重训 134 维主网默认权重。
+
+### 训练配方（v2 变体，扫描 3 组后胜出）
+
+- 教师 512/256 → 蒸馏学生 128/64 + QAT（沿用 S8 配方）
+- 类权重指数 0.5、负样本加权 1.0、**按 top1 选模**（v1 的 corr/bal 优先与 v3 的混合选模均未过 top1 门）
+- 130 维旧样本补零至 134；验证按 sessionId 整场留出（1,561 场 / 23,913 条）
+
+### 指标（会话级留出验证集）
+
+| 指标 | 在架权重 | 新权重 |
+| --- | --- | --- |
+| top1 准确率 | 0.5500 | **0.6171**（+0.067） |
+| 均衡召回 bal | 0.2756 | **0.3678**（+0.092） |
+| 价值相关 corr | 0.2181 | **0.4137**（+0.196） |
+| MSE | 0.0442 | 0.0383 |
+
+质量门（corr≥基线+0.005 / acc≥基线-0.015 / bal≥基线-0.03）三项全过。
+
+### 产物
+
+- `defaultWeights.js`（v=7 / dv=5 / dims=[134,128,64,6]，trained=1,657,410）
+- 热更 bundle：`main-actor-critic-w7d5-134-v2-*.json`（releaseSeq 1，待发布）
+- 测试包：`wuming_ai_v4.1.5.1.zip`
+
+### 明确未做
+
+- 未改动任何前端逻辑（仅权重与版本号）；
+- 未把新权重发布到线上 manifest（先经测试者验证）；
+- 未吸收 LLM 复判信号（7B 绝对打分试点未通过：corr −0.09，见开发者日志）。
+## 待发布 · v4.1.5.0 策略模型接线包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/net/policyModelV3.js`（新增）、`score/decision/engine/engine.js`、`score/foundation/cloud/cloudIngest.js`、`extension.js`、`tools/test-policy-model-v3.mjs`（新增）、`backend/sharded/server_sharded.py`
+
+本轮是「模型和权重接线」第一步：把 v3 蒸馏学生（slot17_student_v3，51KB）以**影子模式**接入引擎决策路径与数据上报链路，**不改变候选分与出牌行为**。
+
+### 接线内容
+
+- 新增 `score/model/net/policyModelV3.js` 适配层：懒加载 v3 权重（UMD `self.CLIENT_POLICY_V3`），提供 predict / shadow / apply / drain / stats / selfTest，自注册 `window.__DJSC.policyModelV3`。
+- 引擎接线（`engine.js` bestActionCore telemetry 阶段）：每次决策提交后调用 `policyModelV3.shadow(eligibleActs, best, ...)`，记录模型 top1/top3 与引擎最终槽位的一致性；`cfg('policyModelV3Shadow', true)` 可关，模型未加载完自动跳过（skipped++，不阻塞决策）。
+- 上报接线（`cloudIngest.js`）：新增 `shadowPolicy` 信封字段；数据源 `djsc_shadow_v3_pending`（上限 1500，单条 ~200B），decisionId 游标去重（FIFO 2000），随首批上传，全部成功后推进游标，失败自动重传。
+- 服务端（`backend/sharded/server_sharded.py`）：信封白名单新增 `shadowPolicy`，与 `shadowV5` 同口径按 decisionId 幂等去重后落盘。
+- 维度兼容：v3 只吃 f0-f129，130/134/142 维新客户端样本均可产出影子记录；<130 维拒绝。
+
+### 验证
+
+- 新增 `tools/test-policy-model-v3.mjs`：25 项断言全过（权重自检 / 17 类 / 维度适配 130-134-142 / 影子不改分 / 队列 drain-confirm / 自检统计）。
+- 回归：`test-policy-model-v2`（33 PASS）、`test-ingest-contract`（PASS）、`test-regressions`（94 PASS）全部通过；改动文件 `node --check` 全通过。
+- 未验证：真机安卓 WebView 懒加载时延、真实对局中的影子一致率（需内测包实测，面板 `policyModelV3.stats()` 可见）。
+
+### 模型热更通道（同轮补，服务端零改动）
+
+- 服务端复用既有 `/update/` 受限静态路由（仅 .zip/.json、防穿越、no-store），新增文件：
+  `update/model/manifest.json`（`djsc-policy-model-update-v1`）+ `update/model/policy_v3.json`（`{meta}` 纯数据，46,821 B）。
+- 新增 `js/update/policyModelUpdate.js`：拉清单 → 版本区间门（requiresExtension）→ releaseSeq 单调 → 下载 → size/SHA-256/meta 形状三重校验 → 写缓存；失败静默保留内置权重；开关 `cfg('policyModelHotUpdate', true)`。
+- `policyModelV3.js` 改为**缓存优先**：热更缓存校验通过则用纯数据重建模型（本地解码 + 前向，不执行远端脚本），否则回退随包内置 UMD 权重；`stats().source` 标识 'cache' / 'builtin'。
+- 新增 `tools/export-policy-model-json.mjs`：从内置 v3 权重导出 `policy_v3.json` 与 `manifest.json`（releaseSeq 自增、打印 SHA-256）。
+- 新增 `tools/test-policy-model-update.mjs`：22 项断言（清单状态机 / meta 校验 / 重建对拍 maxΔ<1e-12 / 下载缓存 / 坏 SHA 拒绝且不覆盖）。
+- 线上实测：`http://127.0.0.1:8787/update/model/manifest.json` 200；公网 `https://data.feiqiaoai.uno/update/model/manifest.json` 200 + CORS `*`；下载 SHA-256 与 size 与清单一致。
+
+### 明确未做
+
+- **未接 active 模式**：v3 软加分需 `cfg('policyModelV3Mode')==='active'` 且影子连续达标，本版默认 shadow。
+- **未动 v2 接线**：policyModelV2 仍为独立模块（未接引擎），后续按影子数据决定是否接 v2 对照。
+- **未做 v3 热更包的自动晋级**：热更只下发权重数据，仍受 shadow 默认门控。
 ## 待发布 · v4.1.4.0 内测包（2026-10-25）
 贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
 
@@ -149,6 +265,19 @@
 - 原有火攻、铁索、拆顺、无懈等设置继续有效，无需新增配置。
 
 开发记录见 [配合判断修复说明](docs/doudizhu/评论边界修复.md)。
+
+---
+
+## 2v2 调整（尚未随正式版本发布）
+
+这轮调整主要是让出牌和队友配合判断更贴近当前局面：
+
+- **出牌判断：** 出杀或决斗时，会结合当前选中的牌、目标、防具和距离重新判断，减少选错牌或目标的情况。
+- **关键牌保留：** 用牌和弃牌时会考虑桃、闪、无懈等牌之后可能派上的用场，减少不必要的消耗；正常救援和响应仍按游戏规则进行。
+- **队友配合：** 结合公开队伍、座次和局势，调整保护队友、接力拆防具等判断。
+- **群体牌风险：** 使用南蛮、万箭时会考虑队友受到伤害的风险，不只看对敌方是否有利。
+- **攻击机会：** 根据手上可用的牌、距离、防具和可能的救援判断攻击效果，不会只因对方血量低就当作必杀。
+- **设置：** 欢乐2v2和联机2v2可分别开关配合策略与关键牌保留；其他玩法不受这些专项设置影响。
 
 ## 待发布 · 数据上报回执与专项训练诊断（2026-10-21）
 

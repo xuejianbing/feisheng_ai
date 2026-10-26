@@ -121,7 +121,7 @@ export function basePriority(id, ctx, targetOverride) {
 		case 'output': {
 			if (id === 'sha' || id === 'huosha' || id === 'leisha') {
 				// 能补刀/目标低血/大概率无闪 → 大幅提高
-				if (t && canKill(ctx, t)) return 99;                              // 补刀硬规则
+				if (t && canKill(ctx, t, id)) return 99;                          // 已确认的补刀职责
 				const hit = t ? (1 - (t.shanProb || 0.5)) : 0.5;
 				const lowHp = t ? ((t.hp || 3) <= 1) : false;
 				return lowHp ? 74 : (hit > 0.6 ? 66 : 42);
@@ -184,7 +184,19 @@ export function pickTarget(id, ctx) {
 		const shanProb = t.shanProb || 0.5;
 		const shaProb = t.shaProb || 0.5;
 
-		if (id === 'sha' || id === 'huosha' || id === 'leisha') {
+		if (['sha','huosha','leisha','juedou'].includes(id)&&typeof ctx.attackStrategy==='function') {
+			const plan=ctx.attackStrategy(id,t);
+			if(plan?.resolved) {
+				if(!plan.legal)return;
+				// 使用同一攻击估值，不再叠加一份低血/击杀分。
+				s=plan.evaluation.score;
+			} else if(id==='juedou') {
+				// 宿主信息异常或未决时，回退既有的公开信息估值。
+				s=(t.shaCount===0?4:(t.shaCount===1?2:0))+lowHp*2+threat*0.3;
+			} else {
+				s=lowHp*4+(1-shanProb)*2+threat*0.5-equip*0.3;
+			}
+		} else if (id === 'sha' || id === 'huosha' || id === 'leisha') {
 			s = lowHp * 4 + (1 - shanProb) * 2 + threat * 0.5 - equip * 0.3;
 		} else if (id === 'juedou') {
 			s = (t.shaCount === 0 ? 4 : (t.shaCount === 1 ? 2 : 0)) + lowHp * 2 + threat * 0.3;
@@ -266,11 +278,15 @@ function goodControlTarget(ctx, targetOverride) {
 	if (!t || t.isAlly) return false;
 	return (t.handCount >= 4) || !!t.nextToAct || (t.threat || 0) >= 2;
 }
-function canKill(ctx, targetOverride) {
+function canKill(ctx, targetOverride, id='sha') {
 	const targets = targetOverride ? [targetOverride] : (ctx.targetLocked === true ? [] : (ctx.targets || []));
 	for (let i = 0; i < targets.length; i++) {
 		const t = targets[i];
 		if (!t || t.isAlly) continue;
+		if(typeof ctx.attackStrategy==='function') {
+			if(ctx.attackStrategy(id,t)?.certain===true)return true;
+			continue; // 概率性机会不能替代已确认职责，仍按正常utility排序。
+		}
 		if ((t.hp || 3) <= 1 && (1 - (t.shanProb || 0.5)) >= 0.5) return true;
 	}
 	return false;

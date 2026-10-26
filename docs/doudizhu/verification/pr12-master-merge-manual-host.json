@@ -1,0 +1,2275 @@
+{
+  "completedAt": "2026-10-26T09:20:51.309Z",
+  "status": "passed",
+  "scope": "真实宿主固定局面、浏览器点击输入的本地手动用牌验证；非远端联机",
+  "browserVersion": "156.0.8078.47",
+  "hostVersion": "1.11.6",
+  "setup": "正常斗地主初始化后安排公开身份、手牌及装备，清理武将技能；原生Player/GameEvent、牌内容与AI评分不由测试替换；9个人工点击场景、1个强制自火攻及1个指定敌方进攻对照",
+  "settings": {
+    "wuxie_self": false,
+    "tacticalDiagnostics": true,
+    "localAuto": false
+  },
+  "scenes": [
+    {
+      "name": "manual-self-fire",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 3,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "huogong",
+          "actor": "me",
+          "targets": [
+            "me"
+          ]
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "huogong",
+            "target": [
+              "450438510"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_1",
+          "rootActionId": "choice_1",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-fire",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:huogong(score=-3.2):respect-manual-friendly-fire",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_2",
+          "rootActionId": "choice_1",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-fire",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:huogong(score=-3.2):respect-manual-friendly-fire",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_2",
+          "rootActionId": "choice_1",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-fire",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:huogong(score=-3.2):respect-manual-friendly-fire",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_2",
+          "rootActionId": "choice_1",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "bool": true,
+          "cardCount": 1,
+          "executionState": "selection-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_3",
+          "rootActionId": "choice_1",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "fire-selection",
+          "phase": "discard-returned",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-self-fire-legacy",
+      "optimized": false,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 3,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "huogong",
+          "actor": "me",
+          "targets": [
+            "me"
+          ]
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "huogong",
+            "target": [
+              "450438510"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_4",
+          "rootActionId": "choice_4",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "reason": "optimization-off",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_5",
+          "rootActionId": "choice_4",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "not-run",
+          "trainingEligible": false
+        },
+        {
+          "domain": "response",
+          "phase": "legacy-evaluated",
+          "actorId": "510427511",
+          "resolved": true,
+          "use": false,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-fire",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "originalSpellId": "huogong",
+          "reason": "hold-wuxie:huogong(score=-3.2):respect-manual-friendly-fire",
+          "effectValue": 0,
+          "resourceCost": 3.2
+        },
+        {
+          "bool": true,
+          "cardCount": 1,
+          "executionState": "selection-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_6",
+          "rootActionId": "choice_4",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "fire-selection",
+          "phase": "discard-returned",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-friendly-duel",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 3,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "juedou",
+          "actor": "me",
+          "targets": [
+            "ally"
+          ]
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "juedou",
+            "target": [
+              "510427511"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_7",
+          "rootActionId": "choice_7",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-3.2):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_8",
+          "rootActionId": "choice_7",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-3.2):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_8",
+          "rootActionId": "choice_7",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-3.2):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_8",
+          "rootActionId": "choice_7",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-link-pair",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": true,
+        "ally": true
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "tiesuo",
+          "actor": "me",
+          "targets": [
+            "me",
+            "ally"
+          ]
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "tiesuo",
+            "target": [
+              "450438510",
+              "510427511"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_9",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_10",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_10",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_10",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_11",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_11",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "tiesuo",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-link-plan",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:tiesuo(score=-3.2):respect-manual-link-plan",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_11",
+          "rootActionId": "choice_9",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-remove-lion",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 3,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "guohe",
+          "actor": "me",
+          "targets": [
+            "ally"
+          ]
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "guohe",
+            "target": [
+              "510427511"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_12",
+          "rootActionId": "choice_12",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "guohe",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -11.7,
+          "effectValue": 8.5,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-removal",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:guohe(score=-11.7):respect-manual-friendly-removal",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_13",
+          "rootActionId": "choice_12",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "guohe",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -11.7,
+          "effectValue": 8.5,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-removal",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:guohe(score=-11.7):respect-manual-friendly-removal",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_13",
+          "rootActionId": "choice_12",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "guohe",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -11.7,
+          "effectValue": 8.5,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-removal",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:guohe(score=-11.7):respect-manual-friendly-removal",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_13",
+          "rootActionId": "choice_12",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-friendly-duel-cancelled",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "juedou",
+          "actor": "me",
+          "targets": [
+            "ally"
+          ]
+        },
+        {
+          "card": "wuxie",
+          "actor": "me",
+          "targets": []
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "juedou",
+            "target": [
+              "510427511"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_14",
+          "rootActionId": "choice_14",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "reason": "human-controlled",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_15",
+          "rootActionId": "choice_14",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "response",
+          "phase": "not-run",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "wuxie",
+            "target": []
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_16",
+          "rootActionId": "choice_16",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -2.9,
+          "effectValue": 0,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou@state-1(score=-2.9):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_17",
+          "rootActionId": "choice_16",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -2.9,
+          "effectValue": 0,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou@state-1(score=-2.9):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_17",
+          "rootActionId": "choice_16",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -2.9,
+          "effectValue": 0,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-friendly-duel",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou@state-1(score=-2.9):respect-manual-friendly-duel",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_17",
+          "rootActionId": "choice_16",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-enemy-duel-counter",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 3
+      },
+      "allyWuxie": 0,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "juedou",
+          "actor": "me",
+          "targets": [
+            "lord"
+          ]
+        },
+        {
+          "card": "wuxie",
+          "actor": "lord",
+          "targets": []
+        },
+        {
+          "card": "wuxie",
+          "actor": "ally",
+          "targets": []
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "juedou",
+            "target": [
+              "736029712"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_18",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-15.2)",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_19",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_19",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:juedou(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_19",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_20",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_20",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_20",
+          "rootActionId": "choice_18",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "wuxie",
+            "target": []
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_21",
+          "rootActionId": "choice_21",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 9.1,
+          "effectValue": 12,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou@state-1",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_22",
+          "rootActionId": "choice_21",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 9.1,
+          "effectValue": 12,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou@state-1",
+          "executionState": "suggested",
+          "aiScore": 10.1,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_22",
+          "rootActionId": "choice_21",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "juedou",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": true,
+          "score": 9.1,
+          "effectValue": 12,
+          "resourceCost": 2.9,
+          "hostState": -1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:juedou@state-1",
+          "executionState": "suggested",
+          "aiScore": 10.1,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_22",
+          "rootActionId": "choice_21",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "wuxie",
+            "target": []
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_23",
+          "rootActionId": "choice_23",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-nanman",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 3
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "nanman",
+          "actor": "me",
+          "targets": [
+            "ally",
+            "lord"
+          ]
+        }
+      ],
+      "responses": [
+        {
+          "card": "sha",
+          "actor": "ally",
+          "targets": []
+        }
+      ],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "nanman",
+            "target": [
+              "510427511",
+              "736029712"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_24",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_25",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_25",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_25",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "cardId": "sha",
+          "before": 3.2,
+          "after": 3.2,
+          "executionState": "suggested",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_26",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "card-order",
+          "phase": "order-scored",
+          "trainingEligible": false
+        },
+        {
+          "cardId": "sha",
+          "before": 3.2,
+          "after": 3.2,
+          "executionState": "suggested",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_26",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "card-order",
+          "phase": "order-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-15.2)",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_27",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_27",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "nanman",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:nanman(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_27",
+          "rootActionId": "choice_24",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "manual-wanjian",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 3
+      },
+      "allyWuxie": 1,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "wanjian",
+          "actor": "me",
+          "targets": [
+            "ally",
+            "lord"
+          ]
+        }
+      ],
+      "responses": [
+        {
+          "card": "shan",
+          "actor": "ally",
+          "targets": []
+        }
+      ],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "wanjian",
+            "target": [
+              "510427511",
+              "736029712"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_28",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_29",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_29",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "510427511",
+          "use": false,
+          "score": -3.2,
+          "effectValue": 0,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": true,
+          "cooperativeIntent": {
+            "kind": "manual-defendable-aoe",
+            "provenance": "observed-host-use",
+            "respect": true
+          },
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-3.2):respect-manual-defendable-aoe",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_29",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "cardId": "shan",
+          "before": 3,
+          "after": 3,
+          "executionState": "suggested",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_30",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "card-order",
+          "phase": "order-scored",
+          "trainingEligible": false
+        },
+        {
+          "cardId": "shan",
+          "before": 3,
+          "after": 3,
+          "executionState": "suggested",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_30",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "card-order",
+          "phase": "order-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-15.2)",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_31",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_31",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "wanjian",
+          "sourceId": "450438510",
+          "targetId": "736029712",
+          "use": false,
+          "score": -15.2,
+          "effectValue": 12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "hold-wuxie:wanjian(score=-15.2)",
+          "executionState": "suggested",
+          "aiScore": 0,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_31",
+          "rootActionId": "choice_28",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "forced-self-fire-control",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 0,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "huogong",
+          "actor": "me",
+          "targets": [
+            "me"
+          ]
+        },
+        {
+          "card": "wuxie",
+          "actor": "ally",
+          "targets": []
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "action": {
+            "type": "card",
+            "id": "huogong",
+            "target": [
+              "450438510"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_32",
+          "rootActionId": "choice_32",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "450438510",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_33",
+          "rootActionId": "choice_32",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_33",
+          "rootActionId": "choice_32",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "450438510",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_33",
+          "rootActionId": "choice_32",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "wuxie",
+            "target": []
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_34",
+          "rootActionId": "choice_34",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "hostile-fire-control",
+      "optimized": true,
+      "auto": false,
+      "actors": {
+        "me": "450438510",
+        "ally": "510427511",
+        "lord": "736029712"
+      },
+      "hp": {
+        "me": 4,
+        "ally": 4,
+        "lord": 4
+      },
+      "allyWuxie": 0,
+      "lordWuxie": 0,
+      "linked": {
+        "me": false,
+        "ally": false
+      },
+      "allyArmor": null,
+      "uses": [
+        {
+          "card": "huogong",
+          "actor": "lord",
+          "targets": [
+            "me"
+          ]
+        },
+        {
+          "card": "wuxie",
+          "actor": "ally",
+          "targets": []
+        }
+      ],
+      "responses": [],
+      "traces": [
+        {
+          "cardId": "huogong",
+          "before": 9.2,
+          "after": 9.2,
+          "executionState": "suggested",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_35",
+          "rootActionId": null,
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "card-order",
+          "phase": "order-scored",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "huogong",
+            "target": [
+              "450438510"
+            ]
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_36",
+          "rootActionId": "choice_36",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "736029712",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "736029712",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "settings": {
+            "tactical": {
+              "enabled": true,
+              "fire": true,
+              "tiesuo": true,
+              "wuxie": true,
+              "guding": true,
+              "wine": true,
+              "strip": true,
+              "rescue": true,
+              "crossbow": true,
+              "diagnostic": true,
+              "delay": true
+            },
+            "responseAI": true
+          },
+          "schema": "choice-audit-v1",
+          "requestId": "choice_37",
+          "rootActionId": "choice_36",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "evaluated",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "736029712",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_37",
+          "rootActionId": "choice_36",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "originalSpellId": "huogong",
+          "sourceId": "736029712",
+          "targetId": "450438510",
+          "use": true,
+          "score": 8.8,
+          "effectValue": -12,
+          "resourceCost": 3.2,
+          "hostState": 1,
+          "playerIntentRespected": false,
+          "cooperativeIntent": null,
+          "effectBasis": "effect-estimate",
+          "reason": "use-wuxie:huogong",
+          "executionState": "suggested",
+          "aiScore": 9.8,
+          "schema": "choice-audit-v1",
+          "requestId": "choice_37",
+          "rootActionId": "choice_36",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "response",
+          "phase": "material-scored",
+          "trainingEligible": false
+        },
+        {
+          "action": {
+            "type": "card",
+            "id": "wuxie",
+            "target": []
+          },
+          "transactionId": null,
+          "executionState": "host-call-returned",
+          "schema": "choice-audit-v1",
+          "requestId": "choice_38",
+          "rootActionId": "choice_38",
+          "sessionId": "manual-fixed-scenes",
+          "actorId": "510427511",
+          "domain": "execution",
+          "phase": "host-use-created",
+          "trainingEligible": false
+        }
+      ],
+      "error": null
+    }
+  ],
+  "errors": []
+}

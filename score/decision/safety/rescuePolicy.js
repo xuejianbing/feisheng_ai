@@ -24,6 +24,8 @@
 import { applyOwnedUtility } from '../utility/utilityPipeline.js?v=41a';
 import { utilitySnapshot } from '../utility/utilityVector.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
+import {taoRescueFacts} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
 /* Score 契约（方案 §Score Alignment） */
 const SCORE = { self: 8, ally: 5, neutral: -3, enemy: -8, invalid: -8 };
@@ -86,23 +88,29 @@ function _resolveDisposition(player, target, ctx) {
  */
 export function evaluateTaoRescue(player, target, ctx = {}) {
     ctx = ctx && typeof ctx === 'object' ? ctx : {};
+    const decide=(...args)=>{
+        const result=_decision(...args);
+        if(player&&target&&typeof player==='object'&&typeof target==='object'&&readVersusMode().is2v2)
+            result.rescueFacts=taoRescueFacts(player,target);
+        return result;
+    };
     if (!player || !target || typeof player !== 'object' || typeof target !== 'object') {
-        return _decision(false, 'unknown', 0, SCORE.invalid, 'tao.dying.invalid:missing-target');
+        return decide(false, 'unknown', 0, SCORE.invalid, 'tao.dying.invalid:missing-target');
     }
     if (Object.hasOwn(ctx, 'dyingTarget') && ctx.dyingTarget !== target) {
-        return _decision(false, 'unknown', 0, SCORE.invalid, 'tao.dying.invalid:context-target-mismatch');
+        return decide(false, 'unknown', 0, SCORE.invalid, 'tao.dying.invalid:context-target-mismatch');
     }
     /* FR-4：自救必须特判（dispositionOf(player, player) 会返回 0） */
     if (target === player) {
-        return _decision(true, 'self', 1, SCORE.self, 'tao.dying.self');
+        return decide(true, 'self', 1, SCORE.self, 'tao.dying.self');
     }
     const d = _resolveDisposition(player, target, ctx);
     if (d === null) {
-        return _decision(false, 'unknown', 0, SCORE.invalid, 'tao.dying.unknown:relation-failure');
+        return decide(false, 'unknown', 0, SCORE.invalid, 'tao.dying.unknown:relation-failure');
     }
-    if (d > 0) return _decision(true, 'ally', 1, SCORE.ally, 'tao.dying.ally');
-    if (d < 0) return _decision(false, 'enemy', -1, SCORE.enemy, 'tao.dying.enemy');
-    return _decision(false, 'neutral', 0, SCORE.neutral, 'tao.dying.neutral');
+    if (d > 0) return decide(true, 'ally', 1, SCORE.ally, 'tao.dying.ally');
+    if (d < 0) return decide(false, 'enemy', -1, SCORE.enemy, 'tao.dying.enemy');
+    return decide(false, 'neutral', 0, SCORE.neutral, 'tao.dying.neutral');
 }
 
 export const TAO_RESCUE_SCORE = SCORE;

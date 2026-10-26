@@ -10,7 +10,7 @@ import {identityHostEffect,identityHostAttitude} from '../../score/perception/ob
 
 import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 import { initAICardOpt } from './optimization.js?v=41a';
-import './afunction.js';
+import './afunction.js?v=41a';
 
 export function precontent(config, pack) {
 	{

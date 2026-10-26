@@ -26,6 +26,7 @@ export const UTILITY_MIGRATION = Object.freeze({
 		{ source: 'strategicTransition', family: 'card-specific-timing', dimensions: ['opportunityCost'] },
 		{ source: 'actionDirectionGuard', family: 'target-direction-policy', dimensions: ['team'] },
 		{ source: 'commonContext', family: 'common-context-suggestions', dimensions: ['team', 'future', 'resource', 'risk', 'synergy'] },
+		{ source: 'versusSeatTempo', family: 'versus-seat-opportunity', dimensions: ['tempo'] },
 		{ source: 'comboFallback', family: 'combo-chain', dimensions: ['synergy'] },
 	],
 	// 旧观察层已改为同基准建议/方向上限；无事件依据的身份隐蔽奖励退出评分。

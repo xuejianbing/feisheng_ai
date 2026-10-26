@@ -239,8 +239,8 @@ export function learnMetric(key, error) {
         _totalLearned++;
 
         /* 限制范围：不能太离谱 */
-        const min = def.init * 0.5;
-        const max = def.init * 2.0;
+        const min = Math.min(def.init * 0.5, def.init * 2.0);
+        const max = Math.max(def.init * 0.5, def.init * 2.0);
         if (m.value < min) m.value = min;
         if (m.value > max) m.value = max;
 
@@ -284,13 +284,13 @@ export function softMetricStats() {
                 key: k,
                 current: Math.round(m.value * 100) / 100,
                 init: init,
-                drift: Math.round((m.value - init) / init * 100) / 100,
+                drift: init === 0 ? null : Math.round((m.value - init) / init * 100) / 100,
                 samples: m.samples,
             });
         });
         /* ★ 返回总学习次数，和config.js对齐 */
         return {
-            totalLearn: _totalLearned,
+            totalLearn: list.reduce((sum,m)=>sum+(m.samples||0),0),
             metrics: list,
         };
     } catch (e) { return { totalLearn: 0, metrics: [] }; }

@@ -22,6 +22,7 @@ import { decisionActionSnapshot } from '../decision/analysis/decisionStages.js?v
 /* ★ 特征维度单一来源：直接引用 features.js 导出的 FEATURE_DIM，杜绝散落硬编码导致漂移 */
 import { FEATURE_DIM } from '../model/features/features.js?v=41a';
 import { isReady as weightsReady } from '../model/weights/weights.js?v=41a';
+import { cfg } from '../foundation/config/util.js?v=41a';
 import { normalizedMargin, candidateSpread, DECISION_MARGIN } from '../decision/state/decisionMargin.js?v=41a';
 import { isCandidateEligible, sameCandidatePolicyBand } from '../decision/state/actionCandidate.js?v=41a';
 import { probHasShan, probHasWuxie, probHasSha } from '../model/predict/handInference.js?v=41a';
@@ -41,7 +42,7 @@ function _num(x) { return (typeof x === 'number' && Number.isFinite(x)) ? x : 0;
 function _modelConfidenceOf(feat) {
 	try {
 		/* 双保险：即便有人绕过 engine 的 safeModelPredict，也不允许未就绪模型进入深度复核。 */
-		if (!weightsReady()) return 0;
+		if (!cfg('useTrainedModel', true) || !cfg('deepThink', true) || !weightsReady()) return 0;
 		const conf = window.__DJSC && window.__DJSC.confidence;
 		if (!conf) return 0;
 		const buf = new Int8Array(FEATURE_DIM);
@@ -114,7 +115,7 @@ export function criticBest(me, acts, best, ctx) {
 
 		/* P0 fail-closed：模型未就绪时，本层没有改写最终决策的资格。
 		 * 不能退化成“规则分-风险”再排一次，否则 deepThink 仍可能越权推翻规则/冠军策略。 */
-		if (!weightsReady()) {
+		if (!cfg('useTrainedModel', true) || !cfg('deepThink', true) || !weightsReady()) {
 			_stats.skippedNotReady++;
 			out.evidence.reason='model-not-ready';
             out.thinking.push('模型未就绪：跳过模型深度思考，不允许改写当前决策');

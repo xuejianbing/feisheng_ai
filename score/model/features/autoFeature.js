@@ -19,6 +19,7 @@ import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '.
  */
 import { lib, game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import { log } from '../../foundation/diag/logger.js?v=41a';
+import {createAutoFeatureEvidence} from './autoFeatureEvidence.js?v=41a';
 
 /* ================= 存储 ================= */
 const STORE_KEY = 'djsc_auto_features_v1';
@@ -37,80 +38,15 @@ function _load() {
         _loaded = true;
     } catch (e) { _loaded = true; }
 }
-let _autoFeatureSaveTimer = null;
-const AUTO_FEATURE_SAVE_DEBOUNCE_MS = 500;
-
-function _flushAutoFeatureStore() {
-    _autoFeatureSaveTimer = null;
-    try {
-        _lsSet(STORE_KEY, JSON.stringify(STORE));
-    } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+// Runtime-owned execution bindings are intentionally not restored from v1 history.
+const evidence=createAutoFeatureEvidence({configuration:()=>JSON.stringify(
+    Object.entries(lib.config||{}).filter(([key])=>key.startsWith('extension_无名AI_')).sort(([a],[b])=>a.localeCompare(b))
+)});
+export function recordDecisionContext(context, transaction, sample) {
+    return evidence.record(context, transaction, sample);
 }
-
-function _save() {
-    try {
-        /* ★ 性能：AutoFeature 只影响后续学习，不参与当前 bestAction。
-         * 内存 STORE 仍同步更新；昂贵的 stringify + localStorage 写盘合并到后续任务，
-         * 避免每个决策点把持久化 I/O 算进本次出牌延迟。 */
-        if (_autoFeatureSaveTimer !== null) return;
-        _autoFeatureSaveTimer = setTimeout(_flushAutoFeatureStore, AUTO_FEATURE_SAVE_DEBOUNCE_MS);
-    } catch (e) {
-        /* 极旧宿主若定时器不可用则保留同步兜底，绝不丢学习数据。 */
-        _flushAutoFeatureStore();
-    }
-}
-
-/* ================= 记录一次决策 ================= */
-export function recordDecisionContext(context) {
-    try {
-        _load();
-        if (!context) return;
-
-        /* 把场景特征组合成一个 key */
-        const key = _comboKey(context);
-        if (!key) return;
-
-        if (!STORE.combos[key]) {
-            STORE.combos[key] = {
-                count: 0,
-                totalReward: 0,
-                wins: 0,
-                lastSeen: Date.now(),
-            };
-        }
-
-        STORE.combos[key].count++;
-        STORE.combos[key].lastSeen = Date.now();
-
-        /* 保留最近 500 个组合 */
-        const keys = Object.keys(STORE.combos);
-        if (keys.length > 500) {
-            keys.sort(function (a, b) {
-                return STORE.combos[a].lastSeen - STORE.combos[b].lastSeen;
-            });
-            for (let i = 0; i < keys.length - 500; i++) {
-                delete STORE.combos[keys[i]];
-            }
-        }
-
-        _save();
-    } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-}
-
-/* ================= 对局结束后回填收益 ================= */
-export function settleDecisionContext(context, reward, win) {
-    try {
-        _load();
-        if (!context) return;
-
-        const key = _comboKey(context);
-        if (!key || !STORE.combos[key]) return;
-
-        STORE.combos[key].totalReward += reward;
-        if (win) STORE.combos[key].wins++;
-
-        _save();
-    } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+export function settleDecisionContext(feedback, sample) {
+    return evidence.observe(feedback, sample);
 }
 
 /* ================= 组合成 key ================= */
@@ -432,77 +368,22 @@ function _comboKey(context) {
 
 /* ================= 查询：这个场景是否是重要特征 ================= */
 export function getAutoFeatureWeight(context) {
-    try {
-        _load();
-        const key = _comboKey(context);
-        if (!key || !STORE.combos[key]) return 0;
-
-        const c = STORE.combos[key];
-        if (c.count < 5) return 0;  // 样本太少不算
-
-        /* 计算平均收益 */
-        const avgReward = c.totalReward / c.count;
-        const winRate = c.wins / c.count;
-
-        /* 如果平均收益显著偏离 0，就给一个权重 */
-        let weight = 0;
-        if (avgReward > 5) weight = Math.min(2.0, avgReward / 10);   // 正收益 → 正权重
-        if (avgReward < -5) weight = Math.max(-2.0, avgReward / 10);  // 负收益 → 负权重
-
-        return weight;
-    } catch (e) { return 0; }
+    // No verified scoring application exists. Do not tune the old abs(avg)>5
+    // threshold or rescale rewards to manufacture an apparent treatment effect.
+    return 0;
 }
-
-/* ================= 统计接口 ================= */
 export function autoFeatureStats() {
-    try {
-        _load();
-        const combos = Object.keys(STORE.combos);
-        let important = 0;
-        let totalSamples = 0;
-        combos.forEach(function (k) {
-            const c = STORE.combos[k];
-            totalSamples += c.count || 0;
-            if (c.count >= 5 && Math.abs(c.totalReward / c.count) > 5) {
-                important++;
-            }
-        });
-        return {
-            /* ★ 原有字段 */
-            totalCombos: combos.length,
-            importantCombos: important,
-            /* ★ 新增字段（和config.js对齐） */
-            totalDimensions: combos.length,  /* 总维度数 */
-            totalSamples: totalSamples,     /* 总样本数 */
-            importantDimensions: important, /* 重要维度数 */
-        };
-    } catch (e) { return { totalCombos: 0, importantCombos: 0, totalDimensions: 0, totalSamples: 0, importantDimensions: 0 }; }
+    _load();
+    const history=Object.values(STORE.combos||{}).reduce((n,c)=>n+(c&&Number.isSafeInteger(c.count)&&c.count>=0?c.count:0),0);
+    const counts=evidence.stats();counts.historicalUnverifiable=history;
+    return {sampleScope:'真实执行事务（当前模块保留窗口）',rewardScope:'可靠动作观察；缺少配置影响证明时不得调整',
+        decisionUse:'未接入正式评分',adjustmentEnabled:false,adjustmentBlock:'E_AUTOFEATURE_NOT_APPLIED',
+        evidence:counts,totalCombos:0,importantCombos:0,totalDimensions:0,totalSamples:counts.confirmed,importantDimensions:0};
 }
-
-/* ================= 列出 Top 10 重要特征 ================= */
-export function topAutoFeatures(n) {
-    try {
-        _load();
-        const list = [];
-        Object.keys(STORE.combos).forEach(function (k) {
-            const c = STORE.combos[k];
-            if (c.count >= 5) {
-                list.push({
-                    combo: k,
-                    count: c.count,
-                    avgReward: Math.round((c.totalReward / c.count) * 100) / 100,
-                    winRate: Math.round((c.wins / c.count) * 100) / 100,
-                });
-            }
-        });
-        list.sort(function (a, b) {
-            return Math.abs(b.avgReward) - Math.abs(a.avgReward);
-        });
-        return list.slice(0, n || 10);
-    } catch (e) { return []; }
-}
+export function topAutoFeatures(n) { return []; }
 
 export function resetAutoFeatures() {
+    evidence.reset();
     STORE = { v: VERSION, combos: {} };
     try { _lsRemove(STORE_KEY); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
     log.info('autoFeature', '自动特征发现数据已复位');

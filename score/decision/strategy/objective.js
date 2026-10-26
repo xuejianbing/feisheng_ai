@@ -11,6 +11,7 @@ import { evaluateSpyStance } from './identityStance.js?v=41a';
 import { dispositionOf } from '../relations/relations.js?v=41a';
 import { classifyIdentityRisk, resolveStrategicIntentCore } from './objectiveCore.js?v=41a';
 import { playerKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 
 function keyOf(p) {
 	try { return playerKey(p); } catch (_) { return null; }
@@ -86,6 +87,7 @@ export function buildObjectiveContext(me) {
 
 	return {
 		mode,
+		versus2v2:readVersusMode().is2v2,
 		selfRole,
 		selfKey: keyOf(me),
 		selfHp: Number(me && me.hp) || 0,

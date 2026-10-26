@@ -44,6 +44,8 @@ import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
 import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
 import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
+import {readVersusMode, readVersusState} from '../../foundation/runtime/versusContext.js?v=41a';
+import {hasKnownSide, sameTeamBySide} from '../modes/versus/team.js?v=41a';
 import { spyDispositionOf } from '../strategy/identityStance.js?v=41a';
 import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
@@ -68,6 +70,10 @@ function _isIdentityMode() {
 function exposureOf(me, t) {
 	try {
 		if (!t) return { shown: false, known: 0, source: 'none', inferConfidence: 0 };
+		if (readVersusMode().is2v2) {
+			const known = hasKnownSide(t);
+			return {shown:known, known:known?1:0, source:known?'public_side':'none', inferConfidence:0};
+		}
 		const identityMode = _isIdentityMode();
 		const publicRole = identityMode ? publicIdentityRole(t) : null;
 		/* 身份局严格只认公开身份；国战等其它模式保留原有“公开 group”语义。 */
@@ -114,6 +120,10 @@ function campRelationOf(me, t) {
 	try {
 		if (!me || !t) return 'unknown';
 		if (me === t) return 'same';
+		if (readVersusMode().is2v2) {
+			const same = sameTeamBySide(me, t);
+			return same === null ? 'unknown' : same ? 'same' : 'opposite';
+		}
 		/* 独立身份按 observer 视角识别；target 未公开时不得直接读取真实 identity。 */
 		if (isIndependent(me, t)) return 'independent';
 		if (isIndependent(me, me)) return 'independent';
@@ -129,6 +139,7 @@ function campRelationOf(me, t) {
 function isIndependent(observer, p) {
 	try {
 		if (!p) return false;
+		if (readVersusMode().is2v2) return false;
 		if (p.isYezin || (p.identityShown && p.identity === 'yezin')) return true;
 		const role = (observer && p === observer)
 			? (p === game.zhu ? 'zhu' : p.identity)
@@ -194,6 +205,10 @@ function _identityDisposition(me, t) {
 
 function dispositionOf(me, t) {
 	if (!me || !t || t === me) return 0;
+	if (readVersusMode().is2v2) {
+		const same = sameTeamBySide(me, t);
+		return same === null ? 0 : same ? 1 : -1;
+	}
 	try {
 		if (_isIdentityMode()) return _identityDisposition(me, t);
 	} catch (eMode) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eMode); }
@@ -226,6 +241,10 @@ const isEnemyOf = isEnemyOfR;
 function relationStateKey(me) {
 	try {
 		if (!me) return 'no_me';
+		if (readVersusMode().is2v2) {
+			return JSON.stringify({state:readVersusState(me),relations:(game.players||[])
+				.filter(p=>p&&p!==me).map(p=>[playerKey(p),p.side,dispositionOf(me,p)])});
+		}
 		const out = [];
 		for (const p of (game.players || [])) {
 			if (!p || p === me || p.alive === false) continue;

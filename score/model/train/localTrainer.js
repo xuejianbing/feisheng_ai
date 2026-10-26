@@ -48,6 +48,13 @@ export function lastResult() { return _lastResult; }
 /* ★ P2-38：分片协程训练。兼容旧回调 onDone(result)，同时返回 Promise(result)。
  *   训练本身仍在主线程执行，但每 YIELD_EVERY 样本让出一次，不再长时间卡死 UI。 */
 export function trainLocalAsync(onDone) {
+    // Legacy trainer mutates public weights and has no preserved session holdout.
+    const blocked={ok:false,code:'E_LEGACY_SPLIT_UNVERIFIED',err:'旧训练入口缺少可验证的整局留出与数据集Manifest，已阻断；请使用专项候选流程'};
+    if(onDone){try{onDone(blocked);}catch(_){}}
+    return Promise.resolve(blocked);
+}
+// Retained implementation for inspection only; never exported or invoked.
+function _legacyTrainLocalAsync(onDone) {
     if (_training) {
         const busy = { ok: false, err: '正在训练' };
         if (onDone) { try { onDone(busy); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }

@@ -37,14 +37,20 @@ export function evaluateAttackExpectedValue(id, context) {
 	} else return null;
 	const kill = Number.isFinite(c.targetHp) && c.targetHp <= damage ? 6 : 0;
 	const lowHp = id === 'sha' && Number.isFinite(c.targetHp) && c.targetHp <= 2 ? 1 : 0;
-	const offense = hit * (2 * damage + kill + lowHp);
+	const lethal=c.lethal?.schema==='versus-lethal-v1'?c.lethal:null;
+	if(lethal){hit=probability(lethal.hitProbability);damage=Math.max(0,Number(lethal.damage)||0);}
+	const killProbability=lethal?probability(lethal.killProbability,0):hit*(kill>0?1:0);
+	const offense = lethal ? hit*(2*damage+(lethal.hpDamage>0?lowHp:0))+6*killProbability : hit * (2 * damage + kill + lowHp);
+	const resolution=lethal?probability(lethal.resolutionProbability,1):1;
+	const duelFailure=lethal?probability(lethal.duelFailureProbability,1-hit):1-hit;
 	// 反击只在成功伤害后发生，概率计一次；决斗失败自伤按1点血量价值计算。
-	const risk = -(c.vengeance ? 3 * hit : 0) - (id === 'juedou' ? 2 * (1 - hit) : 0);
-	const resourceCost = -ownResponseCost;
+	const risk = -(c.vengeance ? 3 * hit : 0) - (id === 'juedou' ? 2 * duelFailure : 0);
+	const resourceCost = -ownResponseCost*resolution;
 	const score = Math.round((offense + risk + resourceCost) * 100) / 100;
 	return { score, offense, risk, resourceCost, hitProbability: hit, damage,
+		...(lethal?{killProbability,dyingProbability:lethal.dyingProbability,rescueProbability:lethal.rescueProbability,lethalCertain:false}:{}),
 		responseProbability: id === 'sha' ? probability(c.shanProbability) : probability(c.shaProbability),
-		expectedOwnResponses: distribution?.expectedOwnResponses || 0 };
+		expectedOwnResponses: (distribution?.expectedOwnResponses || 0)*resolution };
 }
 
 export function createAttackUtilitySeed(evaluation, scale) {
@@ -52,7 +58,8 @@ export function createAttackUtilitySeed(evaluation, scale) {
 	const total = evaluation.score * scale;
 	const offense = evaluation.offense * scale, risk = evaluation.risk * scale, cost = evaluation.resourceCost * scale;
 	applyOwnedUtility(seed, 'attackExpectedValue', [
-		{ dimension: 'offense', delta: offense, note: '命中、伤害与击杀期望', details: { hitProbability: evaluation.hitProbability, responseProbability: evaluation.responseProbability, damage: evaluation.damage, scale } },
+		{ dimension: 'offense', delta: offense, note: '命中、伤害与击杀期望', details: { hitProbability: evaluation.hitProbability, responseProbability: evaluation.responseProbability, damage: evaluation.damage, scale,
+			killProbability:evaluation.killProbability,dyingProbability:evaluation.dyingProbability,rescueProbability:evaluation.rescueProbability,lethalCertain:evaluation.lethalCertain } },
 		{ dimension: 'risk', delta: risk, note: '成功伤害反击/决斗失败自伤' },
 		{ dimension: 'resourceCost', delta: cost, note: '决斗响应消耗我方杀', details: { expectedOwnResponses: evaluation.expectedOwnResponses } },
 		{ dimension: 'legacyResidual', delta: total - offense - risk - cost, note: 'EV舍入差额' },

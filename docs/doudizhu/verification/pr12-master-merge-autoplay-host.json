@@ -1,0 +1,90 @@
+{
+  "completedAt": "2026-10-26T09:23:03.680Z",
+  "status": "passed",
+  "scope": "真实斗地主宿主完整托管对局烟测；非胜率或全配置验证",
+  "browserVersion": "156.0.8078.47",
+  "report": {
+    "settings": {
+      "enabled": true,
+      "fire": true,
+      "tiesuo": true,
+      "wuxie": true,
+      "guding": true,
+      "wine": true,
+      "strip": true,
+      "rescue": true,
+      "crossbow": true,
+      "diagnostic": false,
+      "delay": true
+    },
+    "startedAt": 1793006548781,
+    "phases": 18,
+    "uses": 56,
+    "done": true,
+    "initial": [
+      {
+        "id": "198581310",
+        "role": "fan",
+        "name": "ty_liue",
+        "hp": 5
+      },
+      {
+        "id": "670027411",
+        "role": "fan",
+        "name": "hm_shen_yl_luzhi",
+        "hp": 4
+      },
+      {
+        "id": "599845012",
+        "role": "zhu",
+        "name": "guanlu",
+        "hp": 4
+      }
+    ],
+    "result": true,
+    "elapsedMs": 34897,
+    "hostVersion": "1.11.6",
+    "mode": "doudizhu",
+    "submode": "normal",
+    "decisions": 20,
+    "overrideStats": {
+      "use": {
+        "suggested": 47,
+        "stagedChoice": 47,
+        "pass": 46,
+        "selected": 44,
+        "executed": 37,
+        "veto": 20,
+        "allyGuard": 3,
+        "endSuggested": 1,
+        "endTurn": 1,
+        "candidateAccepted": 1
+      },
+      "respond": {
+        "block": 1
+      },
+      "discard": {},
+      "compare": {},
+      "soft": {
+        "hit": 40
+      }
+    },
+    "alive": [
+      {
+        "role": "fan",
+        "hp": 4
+      },
+      {
+        "role": "fan",
+        "hp": 3
+      }
+    ],
+    "dead": [
+      {
+        "role": "zhu",
+        "hp": 0
+      }
+    ]
+  },
+  "errors": []
+}

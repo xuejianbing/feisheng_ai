@@ -16,6 +16,8 @@ import { isAllyOf, isEnemyOf } from '../relations/relations.js?v=41a';
 import { probHasBagua } from '../threat/threat.js?v=41a';
 import { baguaSuccessRate } from '../../model/predict/deckPredict.js?v=41a';
 import { probHasSha, probHasShan } from '../../model/predict/handInference.js?v=41a';
+import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=41a';
+import {readAoeTeamRisk} from '../modes/versus/aoeRiskRuntime.js?v=41a';
 
 function _clamp01(v) {
 	const n = Number(v);
@@ -72,13 +74,14 @@ function _impactWeight(player) {
 /* ★ 计算 AOE 期望收益。
  * enemyHit / allyHit 是预计无法响应的人数期望；
  * netImpact 额外考虑公开血线，但不包含任何“残局就该进攻”的阶段加成。 */
-export function aoeValue(me, cardId) {
+export function aoeValue(me, cardId, context={}) {
 	try {
 		let enemyHit = 0, allyHit = 0;
 		let enemyImpact = 0, allyImpact = 0;
 		let enemyCount = 0, allyCount = 0, unknownCount = 0;
+		const impacts=[];
 
-		for (const p of (game.players || [])) {
+		for (const p of (context.targets || game.players || [])) {
 			if (!p || !_isAlive(p) || p === me) continue;
 			if (me && typeof me.canUse === 'function' && me.canUse({ name: cardId }, p, false) === false) continue;
 			if (aoePublicImmune(me, p, cardId)) continue;
@@ -90,6 +93,7 @@ export function aoeValue(me, cardId) {
 			const responseProb = aoeResponseProbability(p, cardId);
 			const hitProb = _clamp01(1 - responseProb);
 			const impact = hitProb * _impactWeight(p);
+			impacts.push({id:playerKey(p),relation:enemy?'enemy':'ally',hp:p.hp,hitProbability:hitProb});
 
 			if (enemy) {
 				enemyCount++;
@@ -102,6 +106,11 @@ export function aoeValue(me, cardId) {
 			}
 		}
 
+		let teamRisk=null;
+		// 专项异常不能抹掉已经得到的公共AOE评估；保持原生回退。
+		try {teamRisk=readAoeTeamRisk(me,cardId,impacts,context);}catch(_){}
+		const baseAllyImpact=allyImpact;
+		allyImpact+=teamRisk?.extraImpact||0;
 		const netDamage = enemyHit - allyHit;
 		const netImpact = enemyImpact - allyImpact;
 		return {
@@ -109,6 +118,7 @@ export function aoeValue(me, cardId) {
 			allyHit: allyHit,
 			enemyImpact: enemyImpact,
 			allyImpact: allyImpact,
+			baseAllyImpact,teamRisk,
 			enemyCount: enemyCount,
 			unknownCount: unknownCount,
 			allyCount: allyCount,

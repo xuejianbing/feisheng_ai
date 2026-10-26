@@ -24,6 +24,7 @@ const _antiPiracy = {
 
 import { lib, game, ui, get, ai, _status } from '../shared/utils.js?v=41a';
 import { openStateCardPanel } from '../../score/view/dashboard/stateCards.js?v=41a';
+import { openVersusStatus } from '../../score/view/dashboard/versusStatus.js?v=41a';
 import { arrangeConfig } from './configLayout.js?v=41a';
 import { applyConfigSchema } from './configSchema.js?v=41a';
 import { changelog } from './changelog.js?v=41a';
@@ -598,6 +599,10 @@ export let config = {
 
 	/* ===== 战报/日志 ===== */
 	reportBd: { clear: true, name: '<div style="color: #9ad8ff; text-align:center; padding: 4px;">▸ 战报/日志</div>' },
+	versusStrategy:{name:'2v2策略增强'},
+	versusSeatProtection:{name:'座次配合与队友保护'},
+	versusReserve:{name:'关键牌保留'},
+	openVersusStatus:{name:'专项状态',clear:true,onclick:function(){openVersusStatus();return false;}},
 	tacticalOptimization:{name:'启用打法优化覆盖'},
 	tacticalFire:{name:'火攻与铁索联动优化'},
 	tacticalTiesuo:{name:'铁索使用与重铸优化'},
@@ -1248,6 +1253,10 @@ export let config = {
 					if (!D || !D.postCheck) { alert('决策后检测未就绪'); return false; }
 
 					const pc = D.postCheck.stats();
+					if(pc.source==='legacy-postCheck') {
+						const actual=D.actionOutcomeStats?.();
+						alert(pc.collectionStatus+'\n此口径不代表真实执行或终局标签。\n本次保留日志中已完成收益观察：'+(actual?.completeness==='retained-window'?actual.observed:'未取得完整数据')+'\n非历史累计；不能与旧版计数比较。');return false;
+					}
 
 					const extra =
 						'<div style="margin:4px 0; color:#dbe7f5;">🎯 功能说明：</div>' +
@@ -1462,6 +1471,8 @@ export let config = {
 				if (!D.autoFeature) return alert('自动发现未挂载');
 				const stats = D.autoFeature.stats();
 				openStateCardPanel('🔮 自动特征发现状态', [
+					{ label: '数据口径', value: stats.sampleScope || '旧版数据口径未知', color: '#9ad8ff' },
+					{ label: '评分接入', value: stats.decisionUse || '未确认', color: '#ffd479' },
 					{ label: '总维度数', value: stats.totalDimensions || 0, color: '#7fe3a0' },
 					{ label: '总样本数', value: stats.totalSamples || 0, color: '#9ad8ff' },
 					{ label: '重要维度', value: stats.importantDimensions || 0, color: '#ffd479' },
@@ -1500,6 +1511,10 @@ export let config = {
 				const D = window.__DJSC || {};
 				if (!D.postCheck) return alert('后检测未挂载');
 				const stats = D.postCheck.stats();
+				if(stats.source==='legacy-postCheck') {
+					const actual=D.actionOutcomeStats?.();
+					alert(stats.collectionStatus+'\n此口径不代表真实执行或终局标签。\n本次保留日志中已完成收益观察：'+(actual?.completeness==='retained-window'?actual.observed:'未取得完整数据')+'\n非历史累计；不能与旧版计数比较。');return false;
+				}
 				openStateCardPanel('🔍 决策后检测状态', [
 					{ label: '总检测次数', value: stats.totalChecks || 0, color: '#7fe3a0' },
 					{ label: '平均收益', value: stats.avgReward || 0, color: '#9ad8ff' },

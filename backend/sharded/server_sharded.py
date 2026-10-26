@@ -842,9 +842,9 @@ class IngestHandler(BaseHTTPRequestHandler):
                     }
                     # v2 envelope 扩展字段落盘（shadow 决策摘要/连招/存储快照/诊断），存在才存
                     if isinstance(payload, dict):
-                        for extra in ("shadowV5", "comboChains", "storage", "skillDiag", "skillBreakdown", "sampleDiag", "zipEnv", "config"):
+                        for extra in ("shadowV5", "shadowPolicy", "comboChains", "storage", "skillDiag", "skillBreakdown", "sampleDiag", "zipEnv", "config"):
                             if extra in payload:
-                                if extra == "shadowV5" and isinstance(payload[extra], list):
+                                if extra in ("shadowV5", "shadowPolicy") and isinstance(payload[extra], list):
                                     # PR7c: 按 decisionId 去重（重复=客户端游标写不进的重传，服务端只收首次）
                                     fresh = []
                                     for it in payload[extra]:

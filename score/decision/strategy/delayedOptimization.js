@@ -4,6 +4,7 @@ import {lib, game, get} from '../../foundation/adapt/host.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
 import {dispositionOf} from '../relations/relations.js?v=41a';
 import {effectiveJudgeName} from './judgeName.js?v=41a';
+import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 
 let delayedActive=false,delayedDiagnostics=false;
 export function captureDelayedSettings(){
@@ -62,6 +63,7 @@ export function delayedStateImpact(p,t,name){
 }
 let checkingDelayedKill=false;
 function immediateDelayedKill(p){
+ if(readVersusMode().is2v2)return false;
  if(checkingDelayedKill)return false;
  checkingDelayedKill=true;
  try{

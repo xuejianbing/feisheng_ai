@@ -6,7 +6,8 @@ export function createAreaUtilitySeed(value, scale) {
  const seed = { score: 0 };
  applyOwnedUtility(seed, 'areaExpectedValue', [
   { dimension: 'offense', delta: 2 * value.enemyImpact * scale, note: 'AOE预计敌方伤害收益', details: { enemyHit: value.enemyHit, enemyCount: value.enemyCount, scale } },
-  { dimension: 'risk', delta: -2 * value.allyImpact * scale, note: 'AOE预计友方伤害损失', details: { allyHit: value.allyHit, allyCount: value.allyCount, unknownCount: value.unknownCount || 0 } },
+  { dimension: 'risk', delta: -2 * value.allyImpact * scale, note: 'AOE预计友方伤害及濒死救援风险', details: { allyHit: value.allyHit, allyCount: value.allyCount, unknownCount: value.unknownCount || 0,
+   casualtyRisk:value.teamRisk?.casualtyRisk||0,rescueCost:value.teamRisk?.rescueCost||0,orderStatus:value.teamRisk?.orderStatus||'public-baseline' } },
  ]);
  return seed;
 }

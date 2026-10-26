@@ -2,7 +2,7 @@
 	"name": "无名AI",
 	"author": "飞升",
 	"intro": "<style>.djsc-update-log{display:block!important;position:relative!important;width:100%;margin:8px 0;font-family:xinwei,STXinwei,KaiTi,serif}.djsc-update-log>summary{display:flex!important;align-items:center;justify-content:space-between;list-style:none!important;padding:7px 14px;border:1px solid #ffffff38;border-radius:18px;background:rgba(205,202,202,.28);cursor:pointer;} .djsc-update-log>summary::-webkit-details-marker{display:none}.djsc-update-log>summary::after{content:'▶';font-size:12px;transition:transform .15s}.djsc-update-log[open]>summary::after{transform:rotate(90deg)}.djsc-update-content{position:static!important;display:block!important;white-space:normal;line-height:1.65;padding:10px 12px;text-align:left}.djsc-update-log:not([open])>.djsc-update-content{display:none!important}</style><div style='color:#f3e8ae;font-family:xinwei,STXinwei,KaiTi,serif'>无名AI · 飞雀V2 决策积分引擎 v4.1（合并优化版）</div><div style='display:block;position:relative;line-height:1.65;margin:8px 0 14px;font-size:14px;white-space:normal'><span style='color:#FFD700'>开发与维护</span>：<br />· 原作者 / 核心开发：飞升<br />· 当前维护 / 后续开发：WeiqiaoCode（微雀qiao），子右<br />· 内测与宣传：小小王同志<br />· 反馈与交流QQ群：1080487560</div>",
-	"version": "4.1.4.0",
+	"version": "4.4.0",
 	"diskURL": "",
 	"forumURL": ""
 }

@@ -1,17 +1,24 @@
 // Real production bridges; native request -> distinct returned GameEvent like Player.chooseToUse.
 import assert from 'node:assert/strict';
 import {register} from 'node:module';
+let nativeLifecycle=false;
+class ChoiceEvent{
+ constructor(name){this.name=name;this.after=[];this.handlers=[];}
+ pushHandler(fn){this.handlers.push(fn);}
+ setContent(fn){this.content=fn;}
+ begin(){for(const fn of this.handlers)fn(this,{state:'begin'});}
+}
 class Player{
  constructor(id,identity='fan'){Object.assign(this,{playerid:id,identity,hp:3,maxHp:4,hand:[],equip:[]});}
  getCards(z){return z==='e'?this.equip:this.hand;}countCards(z){return this.getCards(z).length;}
  hasSkill(){return false;}hasSkillTag(){return false;}getSkills(){return this.skills||[];}isOnline2(){return false;}
  chooseCard(){return {};}chooseBool(){return {};}chooseTarget(){return {};}
- chooseToUse(params){if(failHost)throw Error('native-host-error');return {name:'chooseToUse',player:this,parent:stub._status.event,...params};}
+ chooseToUse(params){if(failHost)throw Error('native-host-error');const fields={name:'chooseToUse',player:this,parent:stub._status.event,...params};return nativeLifecycle?Object.assign(new ChoiceEvent('chooseToUse'),fields):fields;}
 }
 const human=new Player('human'),bot=new Player('bot'),enemy=new Player('enemy','zhu');
 const wx={name:'wuxie'},sha={name:'sha'},red={name:'shan',color:'red'};bot.hand=[wx,sha,red];bot.equip=[{name:'zhuge',subtypes:['equip1'],value:4}];
 let mode='doudizhu',damage=-2,failHost=false;
-const stub={lib:{config:{},element:{Player},card:{huogong:{},jiedao:{}},skill:{},filter:{cardEnabled:()=>true,cardEnabled2:()=>true,cardUsable:()=>true,targetEnabled:()=>true,targetInRange:()=>true}},game:{me:human,players:[human,bot,enemy],dead:[],log(){},writeFile(){}},get:{mode:()=>mode,name:c=>c?.name,value:()=>4,subtypes:c=>c.subtypes||[],attitude:(a,b)=>a.identity===b.identity?5:-5,damageEffect:()=>damage,effect:()=>12},_status:{mode:'normal'},ui:{selected:{cards:[],targets:[]}},ai:{}};
+const stub={lib:{config:{},element:{Player,GameEvent:ChoiceEvent},card:{huogong:{},jiedao:{}},skill:{},filter:{cardEnabled:()=>true,cardEnabled2:()=>true,cardUsable:()=>true,targetEnabled:()=>true,targetInRange:()=>true}},game:{me:human,players:[human,bot,enemy],dead:[],log(){},writeFile(){}},get:{mode:()=>mode,name:c=>c?.name,value:()=>4,subtypes:c=>c.subtypes||[],attitude:(a,b)=>a.identity===b.identity?5:-5,damageEffect:()=>damage,effect:()=>12},_status:{mode:'normal'},ui:{selected:{cards:[],targets:[]}},ai:{}};
 globalThis.__NONAME_STUB=stub;globalThis.window={__DJSC:{}};register('./noname-stub-loader.mjs',import.meta.url);
 const tactical=await import('../score/decision/strategy/tacticalOptimization.js?v=41a');
 const intent=await import('../score/decision/state/cooperativeTrickIntent.js?v=41a');
@@ -90,6 +97,27 @@ for(const [name,mutate] of [
  const event={name:'chooseToUse',player:bot,parent:root,sourcex:enemy,skill:'wusheng',filterCard:()=>true};stub._status.event=event;
  let saved;stub.ai.basic={chooseCard(score){saved=score;return score(red);}};
  const cleanup=installJiedaoResponseBridge();try{assert(stub.ai.basic.chooseCard(()=>-9)>0);mutate(event,cleanup);assert.equal(saved(red),-9);}finally{cleanup();bot.skills=[];delete stub._status.event;}
+});
+check('合并后的普通选择在事件开始时安装限制，保留宿主后设过滤器，卸载立即恢复',()=>{
+ reset(false);nativeLifecycle=true;const cleanup=install(false);
+ try{
+  const initial=()=>true,afterSet=()=>true;
+  const event=bot.chooseToUse({type:'dying',dying:enemy,filterCard:initial});
+  assert.equal(event.filterCard,initial);assert(event.__djscChoiceTrace);
+  event.filterCard=afterSet;event.begin();assert.notEqual(event.filterCard,afterSet);
+  assert.equal(event.filterCard({name:'tao'},bot,event),false);assert.equal(event.filterCard(sha,bot,event),true);
+  cleanup();assert.equal(event.filterCard,afterSet);assert.equal(event.__djsc_tao_guard,undefined);
+ }finally{cleanup();nativeLifecycle=false;}
+});
+check('合并后的普通选择在开始前卸载，不再应用旧限制',()=>{
+ reset(false);nativeLifecycle=true;const cleanup=install(false);
+ try{const native=()=>true,event=bot.chooseToUse({type:'dying',dying:enemy,filterCard:native});cleanup();event.begin();assert.equal(event.filterCard,native);assert.equal(event.filterCard({name:'tao'},bot,event),true);}
+ finally{cleanup();nativeLifecycle=false;}
+});
+check('重新安装后，上一轮创建的普通选择不会借用新一轮权限',()=>{
+ reset(false);nativeLifecycle=true;const cleanup=install(false);let again;
+ try{const native=()=>true,event=bot.chooseToUse({type:'dying',dying:enemy,filterCard:native});cleanup();again=install(false);event.begin();assert.equal(event.filterCard,native);}
+ finally{again?.();cleanup();nativeLifecycle=false;}
 });
 console.log(`Response lifecycle tests: ${passed} passed, 0 failed`);
 process.exit(0);
