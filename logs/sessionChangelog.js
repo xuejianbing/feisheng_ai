@@ -17,23 +17,44 @@
 
 export const SESSION_CHANGELOG = [
 {
-    "phase": "2026-10-23 · 斗地主意图凭据与策略范围修复",
+    "phase": "2026-10-25 · 斗地主无懈与托管修复",
+    "date": "2026-10-25",
+    "changes": [
+        {
+            "file": "score/decision/response/responseWindow.js / score/decision/response/wuxieOptimization.js / score/decision/override/use.js",
+            "lines": "新旧无懈的实际响应窗口",
+            "desc": "修复关闭 AI 响应、切回手动或换局后，仍沿用上一次无懈判断的问题；关闭“无懈优化”时，也会按当前局面重新判断是否出牌。"
+        },
+        {
+            "file": "score/decision/response/jiedaoResponse.js / score/decision/override/use.js",
+            "lines": "借刀材料与卸载流程",
+            "desc": "修复借刀杀人通过技能出杀时，选牌可能受到旧判断影响的问题；修复停用扩展后，部分选牌辅助未正确退出的问题。"
+        },
+        {
+            "file": "tools/test-response-lifecycle.mjs / tools/cross-mode-response-host-scenes.mjs / docs/doudizhu/响应窗口后续修复.md",
+            "lines": "完整回归与真实跨模式场景",
+            "desc": "已适配 4.4.0，原有设置保持不变，更新后无需重新配置。"
+        }
+    ]
+},
+{
+    "phase": "2026-10-23 · 斗地主配合判断修复",
     "date": "2026-10-23",
     "changes": [
         {
             "file": "score/decision/state/cooperativeTrickIntent.js / score/decision/response/wuxieEvaluator.js",
             "lines": "玩家意图凭据与原生回退",
-            "desc": "主动配合只依据当前有效用牌记录；缺少记录不再仅凭人类控制认定主动自伤，而是交还原生无懈判断。强制自火攻按普通收益处理；正常手动自火攻、配合与反无懈方向保持有效。"
+            "desc": "调整队友的无懈判断：正常出牌时手动火攻自己等配合操作，会尽量尊重玩家选择；技能强制用牌和托管另行判断。"
         },
         {
             "file": "score/decision/strategy/cooperationPolicy.js / score/model/net/modelGuard.js",
             "lines": "新增策略的统一启用范围",
-            "desc": "手动配合、新增友方拆顺收益及借刀组合的评分、实际响应和护栏统一检查经典斗地主范围与原有开关；休闲、开黑、欢乐适用，其他模式保留原有救判定和通用纠错。设置按钮、默认值、保存配置和模型权重不变。"
+            "desc": "这次配合调整用于经典斗地主的休闲、开黑和欢乐玩法，其他玩法保留原来的处理方式。"
         },
         {
             "file": "tools/test-cooperation-scope.mjs / tools/manual-intent-host-scenes.mjs / docs/doudizhu/评论边界修复.md",
             "lines": "回归与真实宿主验证",
-            "desc": "19 组 Node 工具通过（1037 项编号检查及 1 组回执契约）；无名杀 1.11.6 的 6 个固定结算、11 个手动与强制对照场景通过，脚本异常为 0。其他模式为宿主桩回归；真实双客户端联机、移动端和胜率未验收。"
+            "desc": "原有火攻、铁索、拆顺、无懈等设置继续有效，无需新增配置。"
         }
     ]
 },
@@ -107,48 +128,43 @@ export const SESSION_CHANGELOG = [
     ]
 },
 {
-    "phase": "2026-10-20 · 斗地主配合意图与决策衔接（PR #6）",
+    "phase": "2026-10-20 · 斗地主配合与锦囊调整",
     "date": "2026-10-20",
     "changes": [
         {
             "file": "score/decision/state/cooperativeTrickIntent.js / score/decision/response/wuxieEvaluator.js",
             "lines": "相关决策入口",
-            "desc": "手动配合：正常出牌阶段手动火攻自己、铁索、拆顺、借刀及友方决斗时，队友无懈优先尊重本次操作；托管、强制用牌不取得相同权限。南蛮、万箭只放宽当前响应者有合法防御且非致命的目标，不视为全体安全。"
+            "desc": "调整农民队友的无懈判断，减少打断玩家手动火攻自己、铁索连环、拆顺和友方决斗等配合的情况。南蛮入侵、万箭齐发仍会考虑队友能否防御，以及是否有致命危险。"
         },
         {
             "file": "score/decision/response/wuxieEvaluator.js",
             "lines": "相关决策入口",
-            "desc": "反无懈：仍按恢复后的实际收益判断，不会仅凭玩家配合意图浪费无懈；既能保留玩家取消的友方决斗，也能恢复被敌方无懈的有效进攻。"
+            "desc": "玩家用无懈取消自己的锦囊后，队友不会只因为是配合操作就强行反无懈；进攻被敌人无懈时，仍会判断是否值得恢复。"
         },
         {
             "file": "score/decision/strategy/friendlyStripPlan.js / score/decision/cards/jiedaoEvaluator.js",
             "lines": "相关决策入口",
-            "desc": "拆顺与借刀：拆队友兵乐、拆受伤白银狮子回血，以及持刀者到被杀者的借刀组合，贯通评分、目标护栏与实际选牌，减少后续规则覆盖专项计划。"
+            "desc": "改进拆队友乐不思蜀、兵粮寸断和受伤白银狮子的选择；借刀杀人能正确区分持刀者和被杀目标。"
         },
         {
             "file": "score/decision/response/responseMaterials.js / score/decision/response/responseMaterialPacking.js",
             "lines": "相关决策入口",
-            "desc": "响应纠错：决斗不再比杀的点数，旧铁索提示不再限制其他牌；武圣、龙胆、丈八等静态转化计入材料消耗，多次响应寻找不重复用牌的可行组合，避免有牌却误判材料不足。"
+            "desc": "修复决斗中因杀的点数过低而不响应的问题，改善武圣、龙胆、丈八蛇矛等出杀判断，减少有牌却不出的情况。"
         },
         {
             "file": "score/foundation/storage/cache.js / score/decision/state/decisionCache.js",
             "lines": "相关决策入口",
-            "desc": "状态与估值：护甲、翻面、自身技能、跳过阶段及实体牌替换后及时重算；福利牌采用实际效果或公开五谷牌池，兵乐主动打法与无懈共用阶段损失估计，通用建议按理由去重。"
+            "desc": "护甲、翻面或技能变化后及时重新判断；五谷丰登的无懈判断会考虑当前剩余牌。"
         },
         {
             "file": "score/decision/strategy/tacticalOptimization.js",
             "lines": "相关决策入口",
-            "desc": "选牌权：本机手动及远端连接玩家保留火攻展示选择；离线 AI 和本机托管仍保留原展示优化。远端保护有针对性测试，尚未真实双客户端联机验收。"
+            "desc": "手动自火攻时，保留玩家选择展示牌的操作。"
         },
         {
             "file": "js/config/configSchema.js / docs/doudizhu/PR修复与验证.md",
             "lines": "相关决策入口",
-            "desc": "设置说明：继续使用已有火攻、铁索、拆顺、无懈等专项按钮，不新增按钮，不更换模型权重；打法优化设置按原说明下一局生效。已有“输出打法优化诊断”可查看意图、调整原因及执行对账。"
-        },
-        {
-            "file": "docs/doudizhu/verification/pr-isolated-regressions.json / docs/doudizhu/verification/pr-isolated-manual-scenes.json",
-            "lines": "相关决策入口",
-            "desc": "验证范围：独立分支 1014 项工具检查、20 项 Python 测试通过；无名杀 1.11.6 的 6 个固定场景、10 个浏览器输入场景及完整托管对局通过。联机、手机性能、大样本胜率及全部扩展技能仍未验收；复杂动态技能和未知失装收益保留宿主回退。"
+            "desc": "火攻、铁索、拆顺、无懈等设置继续有效，打法优化类选项仍在下一局生效。"
         }
     ]
 },

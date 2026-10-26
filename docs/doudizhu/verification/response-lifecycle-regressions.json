@@ -1,0 +1,254 @@
+{
+  "completedAt": "2026-10-25T00:15:15.308129+00:00",
+  "status": "passed",
+  "suiteCount": 21,
+  "results": [
+    {
+      "suite": "tools/test-ai-boundaries.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 3 铁索关闭且遗留建议存在时，其他牌仍按自己的合法目标选择",
+        "PASS 3 原生禁选保持，友方攻击保护保持",
+        "PASS 4 只有防具或坐骑不再凭装备位置触发借刀连招",
+        "PASS 4 真实合法持刀队友可触发，不要求借刀者自己装备武器",
+        "PASS 4 借刀组合距离失效时连招同步失效",
+        "AI boundary tests: 12 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-cooperation-scope.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS doudizhu/unknown/专项=true：新增策略退出，旧救援和原生评分保留",
+        "PASS doudizhu/normal/专项=false：新增策略退出，旧救援和原生评分保留",
+        "PASS 已生成的借刀回调在切换到范围外模式后回退原生",
+        "PASS 总开关关闭同时撤回借刀评分、响应和护栏权限",
+        "PASS 统一模式读取支持离线和联机配置，不从其他模式借用 normal 子模式",
+        "Cooperation scope tests: 16 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-decision-audit.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 真实导出包含设置、被压制建议、模型未参与状态",
+        "PASS 跨局跨玩家记录不串联，响应评分不冒充执行",
+        "PASS 首选改变保留阶段归因，分数变化不冒充动作改变",
+        "Decision audit tests: 32 passed, 0 failed",
+        "(node:12155) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-decision-state-fingerprint.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 自身同名同花色同点数的另一张实体牌不沿用旧引用",
+        "PASS 技能及手牌枚举顺序改变不制造状态变化",
+        "PASS 护甲变化使真实状态键和两层共享缓存检查失效",
+        "PASS 技能变化触发状态监听并清除派生缓存",
+        "PASS 身份、国战、对决与斗地主各子模式仍保留通用状态及缓存纠错",
+        "Decision state fingerprint tests: 13 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-friendly-strip-plan.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 已安装宿主effect入口消费相同计划",
+        "PASS 最终模型护栏也消费白银净收益计划，不再按友方非判定一律拦截",
+        "PASS 最终护栏的兵乐救援与原生公开判定区保持一致",
+        "Friendly strip tests: 15 passed, 0 failed",
+        "(node:12159) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-identity.mjs",
+      "exitCode": 0,
+      "summary": [
+        "[engine] ✅ skillTags 已手动挂载",
+        "[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）",
+        "[无名AI] 选将评分系统已加载，当前模式: normal",
+        "PASS 真实生产模型入口在身份场返回暂停原因",
+        "PASS 真实引擎包装器与全局完成技能贯通并可卸载",
+        "Identity tests: 44 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-ingest-contract.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS ingest receipt contract"
+      ]
+    },
+    {
+      "suite": "tools/test-jiedao-pair.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 实际安装卸载流程接通主动桥，且不干扰后续响应桥",
+        "PASS 合法借刀组合不能绕过已验证的forced击杀职责",
+        "PASS 旧身份局卡牌优化入口消费同一计划，避免再按他人隐藏杀判断",
+        "Jiedao pair tests: 22 passed, 0 failed",
+        "(node:12162) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-jiedao-response.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 选定的杀与目标评分一致；换局后旧响应回调失效",
+        "PASS 自定义禁牌禁目标保留；宿主后设AI优先",
+        "PASS 不为保贵武器攻击濒死队友；宿主认可正收益的受伤配合仍可选",
+        "Jiedao response tests: 17 passed, 0 failed",
+        "(node:12163) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-manual-fire-control.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 宿主已有展示回调和筛选条件保持权威",
+        "PASS 关闭专项时不注入自动展示",
+        "PASS 原生牌内容只调用一次并保留参数、接收对象和返回结果",
+        "Manual fire control tests: 8 passed, 0 failed",
+        "(node:12164) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-policy-model-v2.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS policyModelV2 自检通过",
+        "PASS 统计口径为 shadow 模式",
+        "",
+        "========================================",
+        "PASS 33  FAIL 0",
+        "========================================"
+      ]
+    },
+    {
+      "suite": "tools/test-regressions.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 归档开关/查看/导出入口保持",
+        "PASS 菜单入口同样需要确认（取消则不动数据）",
+        "PASS 设置菜单入口：确认后清空",
+        "",
+        "================ 结果 ================",
+        "PASS 94  FAIL 0"
+      ]
+    },
+    {
+      "suite": "tools/test-removal-cooperation.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 帮助敌方回复的失装备操作也按响应者视角计入",
+        "PASS 宿主不提供回复语义时保留装备损失，不伪造回血",
+        "PASS 新旧无懈路径都理解玩家拆顺配合",
+        "Removal cooperation tests: 17 passed, 0 failed",
+        "(node:12171) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-response-lifecycle.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 借刀转化技能的已捕获材料回调在结束后回退",
+        "PASS 借刀转化技能的已捕获材料回调在模式切换后回退",
+        "PASS 借刀转化技能的已捕获材料回调在响应关闭后回退",
+        "PASS 借刀转化技能的已捕获材料回调在手动接管后回退",
+        "PASS 借刀转化技能的已捕获材料回调在卸载后回退",
+        "Response lifecycle tests: 42 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-response-material-packing.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 奇数环与外接路径可同时匹配，不把材料图误当成两组",
+        "PASS 评估不改写手牌、技能列表、事件或材料选项",
+        "PASS 穷举六张材料的全部32768张双材料图，与独立最优解一致",
+        "PASS 穷举五张材料的32768种单/双材料混合配置，与独立最优解一致",
+        "PASS 长交替路径可重排到500次响应，无递归组合爆炸",
+        "Response material packing tests: 17 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-suggestion-fusion.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 开启或关闭诊断不影响修复后的结果，收益账本守恒",
+        "PASS 非枚举基准标记传到真实资源模块，避免斩杀收益重复计分",
+        "PASS 单模块失败只回退该建议，不影响其它来源",
+        "Suggestion fusion tests: 19 passed, 0 failed",
+        "(node:12175) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-trick-boundaries.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 6 原生viewAsFilter未返回false时允许，兼容武圣的实际接口",
+        "PASS 6 宿主转化技能递归选材料仍使用当前借刀分支，关闭卸载及普通窗口回退",
+        "PASS 后续第二项 多次响应的可行材料组合贯通玩家AOE意图与无懈",
+        "Trick boundary tests: 22 passed, 0 failed",
+        "(node:12176) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "suite": "tools/test-trick-cooperation.mjs",
+      "exitCode": 0,
+      "summary": [
+        "[engine] ✅ data 文件夹已就绪",
+        "[engine] ✅ skillTags 已手动挂载",
+        "[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）",
+        "[无名AI] 选将评分系统已加载，当前模式: normal",
+        "PASS 真实引擎useCard包装捕获手动意图，卸载后凭据失效",
+        "Trick cooperation tests: 25 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-utility-boundaries.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 8 铁索专用基础估值不再叠加连招奖励，其他未来提示仍有界",
+        "PASS 8 多个连招取最大值，不把同一候选多次相乘",
+        "PASS 8 没有合法后续候选或被policy否决时不制造未来收益",
+        "PASS 8 借刀连招后续跟随被杀者，不误把持刀队友当成后续杀目标",
+        "PASS 8 多轮上下文建议使用一次有界修正，不重复写入同一来源",
+        "Utility boundary tests: 7 passed, 0 failed"
+      ]
+    },
+    {
+      "suite": "tools/test-weights.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 38d 遗留弹窗被安全取消（resolve=defaultValue）",
+        "PASS 38d 仅剩进度浮层",
+        "PASS 38e 进度浮层被弹窗替换",
+        "PASS 38e 弹窗正常关闭且无残留",
+        "",
+        "==== ALL PASS (637) ===="
+      ]
+    },
+    {
+      "suite": "tools/test-wuxie-player-intent.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS 出牌后切换托管仍保留已捕获的手动意图",
+        "PASS 联机托管或疯狂角色不能取得人类主动权限",
+        "PASS 已安装的材料评分回调在凭据失效后调用原生",
+        "20 checks passed",
+        "(node:12193) Warning: `--localstorage-file` was provided without a valid path",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    }
+  ]
+}
