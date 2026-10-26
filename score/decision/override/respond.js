@@ -22,6 +22,8 @@ import { executionEligibility, invokeHost } from '../execution/executionGateway.
 import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
 import {dyingTargetForEvent} from '../modes/versus/resourceReserveRuntime.js?v=41a';
 
+import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choiceStat, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
+
 const ORIG_KEY = '__djsc_orig_chooseToRespond';
 const SENTINEL = '__djsc_overridden_respond';
 
@@ -195,46 +197,36 @@ export function installRespondOverride() {
 		if (typeof orig !== 'function') return;
 		proto[ORIG_KEY] = orig;
 
-		proto.chooseToRespond = function (...args) {
-			const player = this;
-			const ev = _status.event;
-
-			if (!_shouldOverride(player, ev)) {
-				return orig.apply(this, args);
-			}
-
-			const originalFilter = ev.filterCard;
-			const host = invokeHost({
-				kind: 'respond',
-				player: player,
-				orig: orig,
-				thisArg: this,
-				args: args,
-				prepare: function () {
-					try { ev[SENTINEL] = true; } catch (_) {}
-					ev.filterCard = function (card, p, e) {
-						try {
-							if (typeof originalFilter === 'function' && !originalFilter(card, p, e)) return false;
-							const should = _shouldRespond(p, card, e);
-							try {
-								if (!_status.djsc_overrideStats) _status.djsc_overrideStats = { use: {}, respond: {}, discard: {}, compare: {} };
-								const b = _status.djsc_overrideStats.respond;
-								const key = should ? 'allow' : 'block';
-								b[key] = (b[key] || 0) + 1;
-							} catch (_) {}
-							return should;
-						} catch (_) { return false; }
-					};
-					return function () {
-						try { ev.filterCard = originalFilter; } catch (_) {}
-					};
-				},
-				/* 宿主 GameEvent 仍需使用改写后的 filterCard；成功时不提前恢复。 */
-				cleanupOnSuccess: false,
-				failureReason: function (e) { return '原生 chooseToRespond 异常：' + e.message; },
-			});
-			return host.result;
-		};
+        proto.chooseToRespond = function (...args) {
+            const player = this;
+            if (choicePlayerBlocked(player)) return orig.apply(this, args);
+            const host = invokeHost({ kind: 'respond', player, orig, thisArg: this, args,
+                failureReason: e => '原生 chooseToRespond 异常：' + e.message });
+            if (!host.ok) return host.result;
+            const next = host.result;
+            bindChoiceLifecycle(next, 'respond', function (ev, trace, registerCleanup) {
+                if (choicePlayerBlocked(player) || !_shouldOverride(player, ev)) return;
+                const originalFilter = ev.filterCard;
+                let restoreFilter = () => {};
+                const restore = () => { restoreFilter(); delete ev[SENTINEL]; };
+                registerCleanup(restore);
+                ev[SENTINEL] = true;
+                restoreFilter = patchChoiceField(ev, 'filterCard', function (card, p, e) {
+                    if (typeof originalFilter === 'function' && !originalFilter.apply(this, arguments)) return false;
+                    try {
+                        const should = _shouldRespond(p, card, e || ev);
+                        choiceStat('respond', should ? 'allow' : 'block');
+                        return should;
+                    } catch (_) { return true; }
+                });
+                return restore;
+            }, function (ev, trace) {
+                completeChoiceTrace(ev, trace);
+                if (trace.selected) choiceStat('respond', 'selected');
+                if (trace.executed) choiceStat('respond', 'executed');
+            });
+            return next;
+        };
 
 		log.info('override', 'chooseToRespond 接管层已安装');
 	} catch (e) {

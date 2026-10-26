@@ -43,4 +43,13 @@ check('技能变化触发状态监听并清除派生缓存',()=>{
  try{assert.equal(checkStateChanged(),true);assert.equal(cacheGet('derived'),null);assert.equal(checkStateChanged(),false);}
  finally{actor.skills=['wusheng'];}
 });
+check('身份、国战、对决与斗地主各子模式仍保留通用状态及缓存纠错',()=>{
+ for(const [mode,submode] of [['identity','normal'],['guozhan','normal'],['versus','two'],['doudizhu','normal'],['doudizhu','binglin'],['unknown','unknown']]){
+  stub.get.mode=()=>mode;stub._status.mode=submode;
+  const entry={actor,key:stateKey(),window:choice,epoch:1,t:100,ba:{}};
+  const ctx=()=>({actor,key:stateKey(),window:choice,epoch:1,now:101,ttl:1500});
+  assert(decisionCacheMatches(entry,ctx()));other.hujia=1;
+  try{assert.notEqual(stateKey(),entry.key);assert.equal(decisionCacheMatches(entry,ctx()),false);}finally{other.hujia=0;}
+ }
+});
 console.log(`Decision state fingerprint tests: ${n} passed, 0 failed`);

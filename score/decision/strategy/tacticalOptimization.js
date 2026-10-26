@@ -7,9 +7,10 @@ import {effectiveJudgeName} from './judgeName.js?v=41a';
 import {captureDelayedSettings, delayedOptimizationEnabled, installDelayedBridges, stripForDelayedPlan} from './delayedOptimization.js?v=41a';
 import {beginChoiceAudit} from '../../perception/journal/choiceAudit.js?v=41a';
 import {resetCooperativeTrickIntents} from '../state/cooperativeTrickIntent.js?v=41a';
+import {cooperationPolicyEnabled} from './cooperationPolicy.js?v=41a';
+import {configureFriendlyStrip,friendlyStripPlan,friendlyJudgeRescuePlan,selectableStrip} from './friendlyStripPlan.js?v=41a';
 import {relayArmorPlan} from '../modes/versus/seatTacticsRuntime.js?v=41a';
 import {readVersusMode} from '../../foundation/runtime/versusContext.js?v=41a';
-import {configureFriendlyStrip,friendlyStripPlan,selectableStrip} from './friendlyStripPlan.js?v=41a';
 let active = {enabled:false, fire:false, guding:false, diagnostic:false};
 export function captureTacticalSettings(){
  resetCooperativeTrickIntents();
@@ -126,7 +127,7 @@ export function stripPlan(p,card,t,resolution=false){
   if(relation>0){
    // Ordering still leaves an immediately available low-risk kill to native AI.
    if(!resolution&&immediateLethal(p,slashes))return null;
-   return friendlyStripPlan(p,card,t);
+   return cooperationPolicyEnabled()?friendlyStripPlan(p,card,t):friendlyJudgeRescuePlan(p,card,t);
   }
   const delayedStrip=stripForDelayedPlan(p,card,t,resolution);
   if(!active.strip&&!delayedStrip)return null;

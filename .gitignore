@@ -1,2 +1,7 @@
 /dist/
 /wuming_ai_v*.zip
+
+# Python 字节码缓存
+__pycache__/
+*.py[cod]
+*.bak

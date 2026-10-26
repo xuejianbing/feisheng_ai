@@ -1,3 +1,265 @@
+## 4.4.0 完整版（2026-10-25 · 统一版，替换当日 4.4.0 内测包）
+贡献标识：[weique]　分支：`release/4.4.0`（已合入 master）　基线：4.1.4.0 + 4.1.5.x 特性 + 134 维 v2 权重
+
+### 合并范围
+
+- **QA 线（46 文件）**：客户端稳定性（有界写事务/诊断绑定/selfCheck 宿主契约）、数据来源认证（sourceIdentity）、训练血缘（trainingDataset/cloudSampleState）、候选生命周期、自动特征证据等；
+- **4.1.5.x 线**：策略模型 v3 影子接线（policyModelV3 + engine 钩子）、策略模型热更通道（policy_manifest.json/policy_v3.json）、阵营字段（camp/winCamp/campWon）、身份场样本采集开关；
+- **后端 v6（D4）**：`backend/v6/`（来源认证/可信接收/训练契约/隔离测试），已并入 master；
+- **权重**：134 维 v2 重训（top1 0.6171 / bal 0.3678 / corr 0.4137）。
+
+### 合并方式
+
+以 master 为 ours、4.1.4.0 为 base、QA 包为 theirs 做三方合并（LF 归一后执行）：
+45 个文件自动合并通过；`cloudIngest.js` 采用 QA 重写版（回执 v1 + 来源信封，认证后端必需），
+4.1.5.x 的 `shadowPolicy` 上传通道随之让位（v3 影子记录仍在本地队列，不随上传）。
+
+### 验证
+
+- `test-regressions`：94 PASS / 0 FAIL（更新了上传成功桩以返回 `ingest-receipt-v1` 回执）
+- `test-policy-model-v3`：25 PASS；`test-policy-model-update`：22 PASS
+- `test-ingest-contract`：PASS；`test-weights`：636 PASS / 1 FAIL（已知 `dv=4<5` 断言，新权重 dv=5 已修复该问题）
+- 全量 46 个改动 JS 语法检查通过
+
+### 打包
+
+`wuming_ai_v4.4.0.zip`（根目录直接 extension.js/info.json），GitHub Release `v4.4.0` 资产同步更新。
+## 待发布 · v4.1.5.2 阵营字段与身份场采样（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/train/trainExport.js`、`js/config/configSchema.js`
+
+### 背景
+
+用户指出：标签里只有「胜/负」，没有「阵营胜负」。核库确认：
+- `m.identity` 在池子里几乎全为 null（斗地主为主），身份场样本仅 3,510 条；
+- `m.gameOutcome/outcomeTarget` 是**采样者个人**胜负，不是阵营；
+- `actionOutcome.deltas` 有逐玩家 camp（-1/1），但没有「采样者阵营 / 获胜阵营」字段；
+- **身份场样本此前被 `identityModelCompatibility` 硬暂停采集**（`sampleAllowed=false`）。
+
+### 本版改动
+
+- 新增阵营推导：身份场 `zhu/zhong→lord`、`fan→rebel`、`nei→nei`；其他模式 `landlord/farmer`；
+- 样本新增 `m.camp`（采样者阵营）、`m.winCamp`（获胜阵营，终局按各玩家 win 标记推导）、`m.campWon`（本阵营是否获胜）；
+- 新增配置 `identitySampling`（默认关）：打开后**只放行身份场训练样本**，身份场推理仍暂停（`allowed=false` 不变），用于积累身份场/阵营数据；
+- 版本号 4.1.5.2。
+
+### 明确未做
+
+- 未解除身份场推理暂停（语义兼容仍待验证）；
+- 未改训练脚本使用 campWon（下一轮接入 label policy）；
+- 未回填旧样本（历史池无 camp 字段）。
+## 待发布 · v4.1.5.1 重训权重包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/weights/defaultWeights.js`、`info.json`、`js/config/version.js`
+
+在 v4.1.5.0 接线基础上，用**全量已结算样本池**（merged_shards + ai_shards 共 30.4 万条，覆盖身份场/斗地主/国战等 12 种模式）重训 134 维主网默认权重。
+
+### 训练配方（v2 变体，扫描 3 组后胜出）
+
+- 教师 512/256 → 蒸馏学生 128/64 + QAT（沿用 S8 配方）
+- 类权重指数 0.5、负样本加权 1.0、**按 top1 选模**（v1 的 corr/bal 优先与 v3 的混合选模均未过 top1 门）
+- 130 维旧样本补零至 134；验证按 sessionId 整场留出（1,561 场 / 23,913 条）
+
+### 指标（会话级留出验证集）
+
+| 指标 | 在架权重 | 新权重 |
+| --- | --- | --- |
+| top1 准确率 | 0.5500 | **0.6171**（+0.067） |
+| 均衡召回 bal | 0.2756 | **0.3678**（+0.092） |
+| 价值相关 corr | 0.2181 | **0.4137**（+0.196） |
+| MSE | 0.0442 | 0.0383 |
+
+质量门（corr≥基线+0.005 / acc≥基线-0.015 / bal≥基线-0.03）三项全过。
+
+### 产物
+
+- `defaultWeights.js`（v=7 / dv=5 / dims=[134,128,64,6]，trained=1,657,410）
+- 热更 bundle：`main-actor-critic-w7d5-134-v2-*.json`（releaseSeq 1，待发布）
+- 测试包：`wuming_ai_v4.1.5.1.zip`
+
+### 明确未做
+
+- 未改动任何前端逻辑（仅权重与版本号）；
+- 未把新权重发布到线上 manifest（先经测试者验证）；
+- 未吸收 LLM 复判信号（7B 绝对打分试点未通过：corr −0.09，见开发者日志）。
+## 待发布 · v4.1.5.0 策略模型接线包（2026-10-25）
+贡献标识：[weique]　涉及模块：`score/model/net/policyModelV3.js`（新增）、`score/decision/engine/engine.js`、`score/foundation/cloud/cloudIngest.js`、`extension.js`、`tools/test-policy-model-v3.mjs`（新增）、`backend/sharded/server_sharded.py`
+
+本轮是「模型和权重接线」第一步：把 v3 蒸馏学生（slot17_student_v3，51KB）以**影子模式**接入引擎决策路径与数据上报链路，**不改变候选分与出牌行为**。
+
+### 接线内容
+
+- 新增 `score/model/net/policyModelV3.js` 适配层：懒加载 v3 权重（UMD `self.CLIENT_POLICY_V3`），提供 predict / shadow / apply / drain / stats / selfTest，自注册 `window.__DJSC.policyModelV3`。
+- 引擎接线（`engine.js` bestActionCore telemetry 阶段）：每次决策提交后调用 `policyModelV3.shadow(eligibleActs, best, ...)`，记录模型 top1/top3 与引擎最终槽位的一致性；`cfg('policyModelV3Shadow', true)` 可关，模型未加载完自动跳过（skipped++，不阻塞决策）。
+- 上报接线（`cloudIngest.js`）：新增 `shadowPolicy` 信封字段；数据源 `djsc_shadow_v3_pending`（上限 1500，单条 ~200B），decisionId 游标去重（FIFO 2000），随首批上传，全部成功后推进游标，失败自动重传。
+- 服务端（`backend/sharded/server_sharded.py`）：信封白名单新增 `shadowPolicy`，与 `shadowV5` 同口径按 decisionId 幂等去重后落盘。
+- 维度兼容：v3 只吃 f0-f129，130/134/142 维新客户端样本均可产出影子记录；<130 维拒绝。
+
+### 验证
+
+- 新增 `tools/test-policy-model-v3.mjs`：25 项断言全过（权重自检 / 17 类 / 维度适配 130-134-142 / 影子不改分 / 队列 drain-confirm / 自检统计）。
+- 回归：`test-policy-model-v2`（33 PASS）、`test-ingest-contract`（PASS）、`test-regressions`（94 PASS）全部通过；改动文件 `node --check` 全通过。
+- 未验证：真机安卓 WebView 懒加载时延、真实对局中的影子一致率（需内测包实测，面板 `policyModelV3.stats()` 可见）。
+
+### 模型热更通道（同轮补，服务端零改动）
+
+- 服务端复用既有 `/update/` 受限静态路由（仅 .zip/.json、防穿越、no-store），新增文件：
+  `update/model/manifest.json`（`djsc-policy-model-update-v1`）+ `update/model/policy_v3.json`（`{meta}` 纯数据，46,821 B）。
+- 新增 `js/update/policyModelUpdate.js`：拉清单 → 版本区间门（requiresExtension）→ releaseSeq 单调 → 下载 → size/SHA-256/meta 形状三重校验 → 写缓存；失败静默保留内置权重；开关 `cfg('policyModelHotUpdate', true)`。
+- `policyModelV3.js` 改为**缓存优先**：热更缓存校验通过则用纯数据重建模型（本地解码 + 前向，不执行远端脚本），否则回退随包内置 UMD 权重；`stats().source` 标识 'cache' / 'builtin'。
+- 新增 `tools/export-policy-model-json.mjs`：从内置 v3 权重导出 `policy_v3.json` 与 `manifest.json`（releaseSeq 自增、打印 SHA-256）。
+- 新增 `tools/test-policy-model-update.mjs`：22 项断言（清单状态机 / meta 校验 / 重建对拍 maxΔ<1e-12 / 下载缓存 / 坏 SHA 拒绝且不覆盖）。
+- 线上实测：`http://127.0.0.1:8787/update/model/manifest.json` 200；公网 `https://data.feiqiaoai.uno/update/model/manifest.json` 200 + CORS `*`；下载 SHA-256 与 size 与清单一致。
+
+### 明确未做
+
+- **未接 active 模式**：v3 软加分需 `cfg('policyModelV3Mode')==='active'` 且影子连续达标，本版默认 shadow。
+- **未动 v2 接线**：policyModelV2 仍为独立模块（未接引擎），后续按影子数据决定是否接 v2 对照。
+- **未做 v3 热更包的自动晋级**：热更只下发权重数据，仍受 shadow 默认门控。
+## 待发布 · v4.1.4.0 内测包（2026-10-25）
+贡献标识：[weique]　涉及模块：`tools/training/`、`score/model/net/`、`docs/training/`；线上后端 `Cloud_Inference_Server_v3.py`（服务端，不在本仓库内）
+
+本轮是 P0 专项：后端接口裁剪 + 图数据构建 + Attention/GNN 训练 + 知识蒸馏导出 v3 权重。**客户端出牌行为零改动**；本版随包新增 v3 学生权重与三个训练工具脚本，模型未接入引擎决策路径。
+
+### 合并进本版的分支 / PR
+
+| 分支 | 处理 | 说明 |
+| --- | --- | --- |
+| `feat/v4.1.4.0-p0-graph-distill`（PR #11） | 已合并 | 本轮 P0 全量改动：图数据构建器、FT-Transformer/GAT 训练脚本、蒸馏导出脚本、v3 学生权重、开发日志 |
+| `feature/backend-ingest-receipts` | 内容已在 master | 同一 patch 经 PR #7 以 `5033a77` 合入，远端分支本轮清理 |
+| `fix/client-align-142` | **仍未合并（方案已否决）** | 端云协同方案，134→142 维契约变更，远端分支保留不动 |
+
+已合入 `master` 的陈旧远端分支（`beta/v4.1.2.8-beta.2`、`beta/v4.1.2.8-beta.3`、`codex/doudizhu-cooperation-fixes`、`codex/doudizhu-review-boundaries`、`docs/weique-contributions-20261020`、`feat/beta4-internal-client`、`feat/v4.1.3.0-model-weights`、`fix/training-model-hardening-20261019`、`publish/ingest-receipts`）内容均已在 `master`，本轮统一删除远端分支，历史保留在提交记录中。
+
+### 后端接口裁剪（线上 `Cloud_Inference_Server_v3.py`）
+
+- 废除 `POST /api/v1/predict` 与 `POST /api/v1/arbitrate`，改为 **404** `{"error":"endpoint_removed"}`。
+- 仅保留 `GET /health`、`GET /selfcheck`、`GET /api/v1/model/latest`、`GET /api/v1/model/file`；后两者带 **ETag**，客户端带 `If-None-Match` 命中返回 **304 空体**。
+- 鉴权改为**静态 Token**（优先级 `NN_API_TOKEN` 环境变量 > `activation.json.token` > 内置默认常量）+ **离线激活**（`activation.json`，校验全程不联网）。
+- 不再导入 `Hybrid_Router`、不再加载 Critic，推理服务常驻算力下降。
+- 数据上报 8787（`server_sharded.py`）未改动。
+- 裁剪自检脚本 **24 项断言全部通过**（含两个已废端点返 404、ETag/304 生效、无 token 401、错 token 403、未激活 403、8787 仍可用、模型 sha256 与磁盘一致）。
+
+### 图数据构建与训练（`tools/training/`）
+
+- `Graph_Data_Convertor.py`：原始 JSON → PyG 图。全量 **194,338 张图**，**4 节点/图**（己方 / 目标 / 队友 / 敌方）、**节点维度 20**、**16 条有向边/图**、**边属性维度 4**；导出 **1000 个** PyG `Data` 样本。
+- `P0_Train_Attention_GNN.py`：114 维同口径训练 FT-Transformer 与 GAT。Top-1 / Top-5：LGBM **0.6440 / 0.9717**、FT-Transformer **0.6404 / 0.9695**、GAT **0.4366 / 0.8320**。
+- **防泄露设计**：剔除 f32~f47 共 16 维动作泄露维（该段直接编码所出牌种与目标阵营），训练与评估口径一致。实测 130 维全特征可达 Top-1 0.8190 / Top-5 1.0000，属读答案，本轮全部模型均不采用。
+- GAT 落后的原因：4 节点图只能容纳 57 维有效语义，其余特征被丢弃；且这些特征本身是聚合统计量，没有额外的结构化关系可供注意力利用。
+
+### 知识蒸馏与 v3 权重
+
+- Teacher = LGBM + FT-Transformer 概率平均，Top-1 **0.6468 / Top-5 0.9723**；蒸馏为 Student `MLP 114->32->17`（α=0.7、T=1.5、160 epoch），Student Top-1 **0.6228 / Top-5 0.9609**。
+- 导出 `score/model/net/client_policy_model_v3.js`（**51,634 B**，sha256 `9ee78420c5970158427e4c919f166ab9c77bcf29fb40d5f428fcdde7698603d5`，schema `slot17_student_v3`，17 类标签，114 维输入）。
+- Python-JS 对拍 1000 条：**Top-1 一致率 100%**，最大 logits 偏差 **0.000e+00**，最大概率偏差 5.551e-16。
+- 排查过程中定位并修复导出模板 `b64ToF64` 的边界缺陷：末组只剩 2 个有效字符时少写 1 字节，导致 `B1`/`B2` 偏置向量整体错位。仓库既有解码均使用原生 `atob`，不受影响。
+- **引擎未接线**：`engine.js` 对 v3 无引用，本版不改变任何出牌行为；v3 作为可热更的模型资产入库。
+
+### 文档
+
+- `docs/training/开发者日志_P0后端裁剪与图模型蒸馏_20261024.md`：本轮 P0 完整开发日志（后端裁剪、图构建、训练对比、65.04% 基线口径溯源、蒸馏导出与对拍）。
+- `docs/training/开发者日志_v4.1.4.0发布_20261025.md`：本次发布的分支融合、版本变更、测试与打包校验记录。
+
+### 验证
+
+- 仓库 24 个 Node 测试脚本：**23 PASS / 2 FAIL**。2 项失败为 `identity-real-host-smoke.mjs`、`trick-real-host-smoke.mjs`，原因是本机环境未安装 `playwright`（真实宿主浏览器冒烟测试），与本版改动无关；本版未修改任何既有运行时文件。
+- 打包前置校验通过：`info.json.version` 与 `js/config/version.js` 均为 `4.1.4.0`，版本号格式合规。
+
+## 待发布 · v4.1.3.0 内测包（2026-10-24）
+贡献标识：[weique]　涉及模块：`score/decision/`、`score/foundation/cloud/`、`score/model/net/`、`score/view/dashboard/`、`tools/`
+
+本轮把三批改动合入 `master` 并产出内测客户端整包。客户端原有 int8 MLP 内置权重（`model/v5_mixup_*.json`）未改动；**新增内置 17 类槽位策略模型 v2**（纯 JS，无运行时依赖），默认影子模式只记录不改决策；服务端训练产物（`.pkl` 等）不进入安装包。
+
+### 合并进本版的分支
+
+| 分支 | 处理 | 说明 |
+| --- | --- | --- |
+| `codex/doudizhu-review-boundaries` | 已合并 | 斗地主配合策略范围收窄 + 主动意图凭据要求，含 1 个新增测试脚本与 3 份验证记录 |
+| `feature/backend-ingest-receipts` | 内容已在 master | 同一 patch 经 PR #7 以 `5033a77` 合入，分支本身不再重复合并 |
+| `fix/client-align-142` | **未合并（方案已否决）** | 见下节「端云协同方案未采纳」 |
+
+### 端云协同方案未采纳
+
+- `fix/client-align-142`（`18f7204` 特征维度 134→142、`25cae88` 对齐 142 维并接入云端 API）**不并入 master**，该分支保留在远端但不予合并。
+- 该方案会把扩展端正式特征维度从 134 改为 142，并新增 `score/foundation/cloud/cloudInference.js` 接入云端推理。开发者与客户评审后确认不采纳，故本版保持 134 维契约与现有权重格式（`dims=[134,128,64,6]`）不变。
+- 线上推理服务的 142 维 `Hybrid_Router` 与本仓库扩展端是**两套独立体系**，不因本版发布而改变。
+
+### 客户端改动
+
+- **斗地主配合决策边界**：主动意图须有凭据才放宽，移除仅凭人类控制认定主动自伤的兜底；手动配合、共享友方拆顺收益、借刀组合及护栏权限统一限制在已启用经典斗地主的休闲／开黑／欢乐玩法，范围外保留旧有跨模式兵乐救援与原生评分。
+- **数据上报回执**：客户端区分样本已归档、进入合并池、重复及缺少结果标签；专项训练面板展示最近一局的采集漏斗与运行期拒绝原因。
+**模型权重入库（新增）**
+
+- `score/model/net/client_policy_model_v2.js`（7,038,938 B，sha256 前 16 位 `852bd0cd9cd11461`）：17 类槽位策略模型，schema `slot17_human_v2`，114 维输入，Top-1 0.6440 / Top-5 0.9717。与 `artifacts/submodels/` 下同名归档文件内容一致（同一份 sha），两处改动需同步。
+- `score/model/net/policyModelV2.js`：策略模型适配器，动态 `import()` 懒加载避免启动期解析 7 MB 文件阻塞主线程；默认 `mode='shadow'`，只记录模型 Top1 与引擎最终选择的一致性，**不改候选分**；`active` 模式需显式配置且要求影子数据连续达标才允许启用。
+- `score/decision/strategy/ruleGate.js` + `comboRulesData.js`：本地组合规则门（2 条 hard_force + 4 条 soft_boost，含样本量与经验概率证据），规则命中与否只作用于扩展端本地决策，**不发起任何云端请求**。
+- **维度适配**：`policyModelV2.js` 原以 `!==130` 判定特征长度，而仓库 `features.js` 现为 134 维（`f[130..133]` 是 fix7 追加的目标身份 one-hot，`f0-f129` 语义与 130 维一致），该判定会使影子链路恒不产出记录。现按仓库 `shadowCore.js` 既有口径改为 `>=130` / `<130`，并在 `toModelFeatures` 增加 `featureKeep` 索引边界校验。
+- **引擎未接线**：`engine.js` 对 `ruleGate` / `hardForce` / `shadowEvaluate` / `policyModelV2` 均无引用，本次发布不改变任何出牌行为，相关模块处于「已就位、待接线」状态。
+- **版本号**：`info.json` 与 `js/config/version.js` 同步为 `4.1.3.0`，`BUILD_DATE` 更新为 2026-10-24（打包脚本强制校验两者一致）。
+
+### 仓库内容整理
+
+- 服务端训练产物（`.pkl` 与对拍快照）从 `model/submodels/` 迁至 `artifacts/submodels/`：`model/` 会被 `manual-package.yml` 打进安装包，而这些产物**扩展端零引用**，留在原处会给每个安装包增加约 7 MB 冗余。`artifacts/` 不在打包白名单内。注：客户端运行时所需的前端 JS 推理产物另存于 `score/model/net/client_policy_model_v2.js`（随包发布），与 `artifacts/` 下归档件同 sha。
+- 新增 `.gitignore` 规则忽略 Python 字节码缓存。
+
+### 验证
+
+- 仓库 20 个 Node 测试脚本全部通过：`test-regressions` 94/94、`test-weights` 637/637、`test-cooperation-scope` 16/16、`test-identity` 44/44、`test-trick-cooperation` 25/25、`test-ai-boundaries` 12/12、`test-policy-model-v2` 33/33，其余脚本退出码均为 0。新增 `test-policy-model-v2.mjs` 覆盖规则数据契约、hard_force 命中、权重自检与概率归一、130/134 维影子记录可产出、129 维被拒绝，以及影子模式不改分。
+- 合并前先在 `master` 基线上跑通同一组 19 个脚本，确认合入分支未引入回归。
+- 打包前置校验（`info.json.version` 与 `js/config/version.js` 的 `VERSION` 一致、版本号格式合规）通过。
+
+## 待发布 · 子模型重训与 8787 接收端持久化改造（2026-10-24）
+
+贡献标识：[weique]　涉及模块：`artifacts/submodels/`、`tools/training/`、训练数据链路、8787 接收服务
+
+本轮完成三个离线子模型的全量重训、前端 JS 导出与对拍，以及 8787 接收端的 SQLite 持久化改造。**未发布客户端版本，未改动扩展端内置权重，未替换线上模型文件。**
+
+### 子模型重训（全量重训，数据源为服务端真人已结算样本池）
+
+- `Critic_WinLoss_v1.pkl`（胜率模型，114 维）：训练样本 194,338 行 / 12,255 局。行级 ROC-AUC **0.7870 → 0.8156**，局级 ROC-AUC **0.8766 → 0.8932**，Brier 分数 0.0744 → **0.0683**（概率更可校准）。
+- `SubModel_Critic_v1.pkl`（三池胜率模型，121 维）：232,959 样本（真人胜 175,522 / 真人负 18,816 / 强退 38,621），16,688 局。局级 ROC-AUC 0.7984，局级败局召回 0.8431。与上一模型互补：本口径把强退局计为负样本，绝对指标天然更低，但更贴近「这局没打好」的业务定义。
+- `SubModel_Policy_slot17.pkl`（17 类动作槽位模型，114 维）：194,338 行 / 12,255 局，Top-1 0.6440，Top-5 0.9717，装备召回（装备 vs 装备口径）0.918。
+- 三个模型均按 `sessionId` 分组做 80/20 切分，整局不跨训练集与测试集；特征统一取原始前 130 维并剔除 f32~f47 泄露维，Critic 额外剔除 9 维泄漏索引（130-9=121）。
+- **口径澄清**：子模型统一 114 维，与扩展端内置权重的 `FEATURE_DIM = 134` 是两套独立体系，模型产物格式亦不兼容 `weightBundle` 快照契约（`v=7` / `dims=[134,128,64,6]`），不可直接并入 `djsc_weights_v3`。
+- **指标边界**：离线 ROC-AUC / Top-1 / 召回衡量的是历史真人样本上的拟合与泛化能力，不等于真实胜率提升，也不代表已接入线上决策路径。
+
+### 前端 JS 导出与对拍
+
+- 新增 `tools/training/P2_Export_Slot17_JS.py`，把 `SubModel_Policy_slot17.pkl` 经 m2cgen 导出为纯 JS（无运行时依赖），对外封装面与既有 `client_policy_model.js` 一致（`predictProba` / `topK` / `selfTest`），元信息随文件头导出。
+- **对拍验证**：1000 条样本 JS 与 Python 的 Top-1 一致率 **100%**，最大概率偏差 1.11e-16；`selfTest()` 概率和为 1.0。对拍样本与 Python 侧概率一并落盘，可复现校验。
+- 导出的 `client_policy_model_v2.js` **未替换线上 `client_policy_model.js`**，是否部署到推理服务待单独决定。
+
+### 8787 接收端 SQLite 持久化改造
+
+- 线上分片式接收服务新增 `dedup.sqlite`（Python 标准库 `sqlite3`，无第三方依赖），持久化三张表：`sample_hashes`（样本 sha256）、`request_receipts`（请求哈希 → 回执）、`shadow_ids`（shadow 游标）。
+- **解决的问题**：去重哈希、请求回执与 shadow 游标此前仅存于进程内存，重启即丢，重启后重复样本会被当作新样本重新入库。现在重启后索引完整保留。
+- **设计取舍**：样本本体仍走分片 JSON，不迁入 SQLite——避免 20 万级存量样本迁移风险，行为与改造前完全等价；启动时从分片幂等灌库（`INSERT OR IGNORE`）。
+- **验证**：隔离单测、重启持久性单测、线上端到端（GET / 空样本校验 / 非法样本 400 / 限流 / 样本级去重 / 请求级去重）、真实杀进程重启后旧哈希命中、`PRAGMA integrity_check` 全部通过。
+- **注意**：改造版服务需由用户的计划任务或独立会话托管，受控执行环境中的后台进程会随会话回收而终止，不能作为长期托管方式；现有 `WumingAI-DataServer` 计划任务仍指向旧单文件 `server.py`，本次未切换。
+
+### 训练数据链路排查（诊断结论，未在本轮改动扩展端代码）
+
+- 定位到客户端「对局结束样本恒为 0、上传计数恒为 0」的根因：`trainExport.js` 声明的 `FEATURE_DIM` 与 `features.js` 实际产出的维度不一致，采样入口的维度校验把全部样本静默拒收；上传为 0 是同一根因的下游表现（样本池为空 → 待传样本为空 → `skipped: no-new-data`）。
+- 该问题在最新 master 上已修复（`trainExport.js` 改为从 `features.js` 导入维度，单一来源）；本地开发目录是尚未完成的实验分支，特征 schema 只改了一半。
+- 同时发现维度漂移自检存在盲区（未覆盖所有声明维度的模块），以及 9 处 130 维硬编码残留。本轮未改动，仅记录。
+
+### 验证
+
+- `python tools/training/P3_Critic_WinLoss_Train.py`、`P2_Critic_Train.py`、`P2_Human_Slot_Retrain.py`：三个模型重训成功，指标 JSON 已落盘。
+- `python tools/training/P2_Export_Slot17_JS.py`：JS 导出成功；`node` 侧对拍 1000 条 Top-1 一致率 100%。
+- 8787 接收端：线上端到端与真实重启验证通过；测试数据已清理，样本哈希数还原至改造前基线。
+- 仓库回归测试全绿：`node tools/test-regressions.mjs` 通过 94 / 失败 0；`node tools/test-weights.mjs` 全部通过 637；`backend` 契约测试通过 2 / 失败 0（`python -m unittest`）。
+## 待发布 · 斗地主评论边界修复（2026-10-23）
+
+针对 PR #6 的玩家意图凭据与跨模式影响建议继续修复，不新增版本号。
+
+- **主动意图有凭据才放宽。** 移除仅凭人类控制认定主动自伤的兜底；真实记录区分手动、非手动和未知。疑似玩家自伤而凭据缺失／过期时交还原生无懈回调，强制用牌按普通收益处理。正常手动火攻自己及已确认的其他配合继续有效。
+- **新增配合策略明确范围。** 手动配合、共享友方拆顺收益、借刀组合及相关护栏权限统一限制在已启用经典斗地主的休闲、开黑、欢乐玩法；响应与战术开关继续生效。范围外保留旧有跨模式兵乐救援、原生评分及通用缓存／响应材料等纠错。
+- **既有设置不变。** 不增减按钮，不改默认值、保存值或模型权重；模式条件复用现有上下文，原战术设置仍按原有规则捕获。
+- **验证：** 19 组 Node 工具全部通过（1037 项编号检查及 1 组回执契约）；无名杀 1.11.6 的 6 个固定结算、11 个手动／强制对照场景通过，宿主脚本异常为 0。其他模式为生产模块宿主桩回归，真实双客户端联机、移动端及胜率未验收。
+
+详细范围、回退规则和报告见 [评论边界修复](docs/doudizhu/评论边界修复.md)。
+
+---
+
 ## 2v2 调整（尚未随正式版本发布）
 
 这轮调整主要是让出牌和队友配合判断更贴近当前局面：

@@ -75,17 +75,21 @@ for(const submode of ['two','2v2']){
   assert(diagnostics.some(s=>s.includes('missing public player.side')));
  });
 }
-check('其他对决旧敌方集合不漏 false/0；不纳入异常字段或已死亡玩家',()=>{
+check('3v3保持v4.4.0既有友伤和敌方集合计算（不借2v2布尔side修复）',()=>{
  stub._status.mode='3v3';
  for(const [own,other] of [[true,false],[1,0]]){
   const {me,ally,enemy}=setup(own,other);
-  assert.equal(strategy.decisionBoost(me,act('sha',ally)),-1);
+  assert.equal(strategy.decisionBoost(me,act('sha',ally)),-2);
   enemy.alive=false;
   stub.game.players.push(player('invalid',undefined),player('empty',''),player('null',null));
   assert.equal(strategy.decisionBoost(me,act('sha',ally)),-2);
   enemy.alive=true;
-  assert.equal(strategy.decisionBoost(me,act('sha',ally)),-1);
+  assert.equal(strategy.decisionBoost(me,act('sha',ally)),-2);
  }
+ const {me,ally}=setup(false,true);
+ assert.equal(strategy.getCamp(ally),'unknown');
+ assert.equal(strategy.isSameCamp(me,ally),true); // 旧对决模式side=false交给attitude兜底。
+ assert.equal(strategy.decisionBoost(me,act('sha',ally)),.4);
  stub._status.mode='two';
 });
 check('普通2v2退出旧友伤公式，不随身份标记或敌方人数返回奖励',()=>{

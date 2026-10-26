@@ -1,0 +1,148 @@
+{
+ "file": "E:\\NoNameAI\\model\\SubModel_Policy_slot17.pkl",
+ "classes": [
+  "card:bingliang",
+  "card:guohe",
+  "card:huogong",
+  "card:jiu",
+  "card:juedou",
+  "card:lebu",
+  "card:nanman",
+  "card:sha",
+  "card:shunshou",
+  "card:tao",
+  "card:tiesuo",
+  "card:wanjian",
+  "card:wugu",
+  "card:wuzhong",
+  "equip:nonweapon",
+  "equip:weapon",
+  "other"
+ ],
+ "top1": 0.6439857288481141,
+ "top5": 0.9716870540265036,
+ "equip_recall": 0.5299773755656109,
+ "train_samples": 155098,
+ "test_samples": 39240,
+ "total_sessions": 12255,
+ "high_freq_cards": [
+  "card:sha",
+  "card:tao",
+  "card:tiesuo",
+  "card:guohe",
+  "card:shunshou",
+  "card:wuzhong",
+  "card:jiu",
+  "card:juedou",
+  "card:nanman",
+  "card:lebu",
+  "card:huogong",
+  "card:bingliang",
+  "card:wanjian",
+  "card:wugu"
+ ],
+ "class_report": {
+  "card:bingliang": {
+   "precision": 0.29646017699115046,
+   "recall": 0.11037891268533773,
+   "f1": 0.1608643457382953,
+   "support": 607
+  },
+  "card:guohe": {
+   "precision": 0.34577114427860695,
+   "recall": 0.18649373881932022,
+   "f1": 0.242300987797792,
+   "support": 2236
+  },
+  "card:huogong": {
+   "precision": 0.2282958199356913,
+   "recall": 0.07585470085470085,
+   "f1": 0.11387329591018444,
+   "support": 936
+  },
+  "card:jiu": {
+   "precision": 0.6361488481984643,
+   "recall": 0.6464585834333734,
+   "f1": 0.6412622804406073,
+   "support": 1666
+  },
+  "card:juedou": {
+   "precision": 0.5688385269121813,
+   "recall": 0.7145907473309608,
+   "f1": 0.6334384858044164,
+   "support": 1405
+  },
+  "card:lebu": {
+   "precision": 0.33210332103321033,
+   "recall": 0.24816176470588236,
+   "f1": 0.2840610205155181,
+   "support": 1088
+  },
+  "card:nanman": {
+   "precision": 0.45540796963946867,
+   "recall": 0.7482462977396727,
+   "f1": 0.5662046593925096,
+   "support": 1283
+  },
+  "card:sha": {
+   "precision": 0.8140066347217103,
+   "recall": 0.9147543699776324,
+   "f1": 0.8614448431892651,
+   "support": 12071
+  },
+  "card:shunshou": {
+   "precision": 0.2970421648835746,
+   "recall": 0.2203548085901027,
+   "f1": 0.2530152774055213,
+   "support": 2142
+  },
+  "card:tao": {
+   "precision": 0.8173550587343691,
+   "recall": 0.9229781771501926,
+   "f1": 0.8669614147909968,
+   "support": 2337
+  },
+  "card:tiesuo": {
+   "precision": 0.7424430641821946,
+   "recall": 0.823610473128158,
+   "f1": 0.7809233449477352,
+   "support": 2177
+  },
+  "card:wanjian": {
+   "precision": 0.27899686520376177,
+   "recall": 0.17148362235067438,
+   "f1": 0.21241050119331742,
+   "support": 519
+  },
+  "card:wugu": {
+   "precision": 0.46846846846846846,
+   "recall": 0.10699588477366255,
+   "f1": 0.17420435510887772,
+   "support": 486
+  },
+  "card:wuzhong": {
+   "precision": 0.7619047619047619,
+   "recall": 0.8084696823869105,
+   "f1": 0.7844968480037356,
+   "support": 2078
+  },
+  "equip:nonweapon": {
+   "precision": 0.5086054721977052,
+   "recall": 0.6059411146161935,
+   "f1": 0.5530230326295585,
+   "support": 3804
+  },
+  "equip:weapon": {
+   "precision": 0.47110675808031344,
+   "recall": 0.4415544675642595,
+   "f1": 0.45585215605749485,
+   "support": 3268
+  },
+  "other": {
+   "precision": 0.5455882352941176,
+   "recall": 0.32629727352682497,
+   "f1": 0.40836543753439736,
+   "support": 1137
+  }
+ }
+}

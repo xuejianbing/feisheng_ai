@@ -31,14 +31,17 @@ function reset(actor=0){
  stub.game.players=ps;stub.game.dead=[];stub.game.me=ps[(actor+1)%4];viewer=ps[actor];stub._status.currentPhase=viewer;stub._status.firstAct=ps[0];
  viewer.hand=['tao','shan','wuxie','sha'].map(name=>({name}));
  stub.lib.skill.convert={enable:['chooseToUse','chooseToRespond'],viewAs:{name:'sha'},filterCard:()=>true,check:()=>4};
- stub.lib.skill.exchange={enable:'phaseUse',filterCard:true,check:()=>4};
+ stub.lib.skill.exchange={enable:'phaseUse',filterCard:true,discard:true,check:()=>4};
  stub._status.event={name:'chooseToUse',type:'phase',player:viewer,skill:'convert',parent:{name:'phaseUse',player:viewer}};
  return ps;
 }
 function score(card,base=4){const result=stub.ai.basic.chooseCard(()=>base);return result.find(row=>row.card===card).score;}
 function withBridge(fn){const remove=installMaterialReserveBridge();try{fn();}finally{remove();}}
 check('14队最后桃转杀材料进入实际AI check，同分时更愿使用普通材料',()=>{
- const [me,,,ally]=reset();ally.hp=1;withBridge(()=>{assert.equal(score(me.hand[0]),2);assert.equal(score(me.hand[3]),4);});
+ const [me,,,ally]=reset();ally.hp=1;
+ assert(materialReserveContext(me,stub._status.event),'合法2v2主动转化技能应该进入材料窗口');
+ assert.equal(versusMaterialReserve(me,me.hand[0]).premium,2,'最后桃的材料保留压力');
+ withBridge(()=>{assert.equal(score(me.hand[0]),2);assert.equal(score(me.hand[3]),4);});
 });
 check('23队队友紧接行动，不因其低血量给最后桃虚构行动前威胁',()=>{
  const [,me,ally]=reset(1);ally.hp=1;withBridge(()=>assert.equal(score(me.hand[0]),4));

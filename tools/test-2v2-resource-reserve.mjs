@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import {register} from 'node:module';
 let mode='versus',viewer=null,checks=0;
 const errors=[];
+class GameEvent {
+ constructor(name,player=null,manager={}){Object.assign(this,{name,player,manager,after:[],handlers:[],ai:()=>-3});}
+ pushHandler(handler){this.handlers.push(handler);}
+ setContent(content){this.content=content;}
+ begin(){for(const handler of this.handlers)handler(this,{state:'begin'});}
+}
 class Player {
  constructor(id,side){Object.assign(this,{playerid:id,name:'same',side,hp:3,maxHp:4,alive:true,hand:[],range:1,skills:[]});}
  getCards(zone){if(zone==='h'||zone==='hs'){assert.equal(this,viewer,'不能读取其他玩家隐藏手牌');return this.hand;}return [];}
@@ -10,10 +16,20 @@ class Player {
  getAttackRange(){return this.range;}inRange(other){const n=stub.game.players.length,d=Math.abs(stub.game.players.indexOf(this)-stub.game.players.indexOf(other));return Math.min(d,n-d)<=this.range;}
  getEquip(){return null;}hasSkill(){return false;}hasSkillTag(){return false;}isTurnedOver(){return false;}isOnline2(){return false;}
  addSkill(id){this.skills.push(id);}removeSkill(id){this.skills=this.skills.filter(s=>s!==id);}
- chooseToDiscard(){return this.hand.map(c=>({card:c,score:stub._status.event.ai.check(c)}));}
- chooseToRespond(card){return stub._status.event.filterCard(card,this,stub._status.event);}
+ // Host constructor returns an event; the native engine asks its ai only after begin.
+ chooseToDiscard(){
+  const event=new GameEvent('chooseToDiscard',this);
+  event.parent=stub._status.event;
+  return event;
+ }
+ chooseToRespond(){
+  const event=new GameEvent('chooseToRespond',this);
+  event.parent=stub._status.event;
+  event.filterCard=event.parent.filterCard;
+  return event;
+ }
 }
-const stub={lib:{config:{},configOL:{},element:{Player},skill:{},card:{},filter:{targetEnabled2:()=>true}},
+const stub={lib:{config:{},configOL:{},element:{Player,GameEvent},skill:{},card:{},filter:{targetEnabled2:()=>true}},
  game:{players:[],dead:[]},get:{mode:()=>mode,config:k=>k==='versus_mode'?'two':false,name:c=>c?.name,
  value:()=>3,subtypes:()=>[],suit:c=>c.suit||'heart',type:()=> 'basic',tag:()=>0,attitude:(a,b)=>a.side===b.side?5:-5},
  _status:{mode:'two',roundNumber:1},ui:{selected:{cards:[]}},ai:{}};
@@ -108,12 +124,15 @@ check('真实弃牌接管消费同一保留偏好，不新增不可弃规则',()
  const [me,,,ally]=reset();ally.hp=1;discard.installDiscardOverride();
  try{
   stub._status.event={name:'phaseDiscard',player:me,ai:{}};
-  const rows=me.chooseToDiscard(),score=rows.find(r=>r.card===me.hand[0]).score;
+  const choice=me.chooseToDiscard();stub._status.event=choice;choice.begin();
+  const score=choice.ai(me.hand[0]);
   assert(Number.isFinite(score));
   stub.lib.config['extension_无名AI_tacticalOptimization']=false;
   stub._status.event={name:'phaseDiscard',player:me,ai:{}};
-  const base=me.chooseToDiscard().find(r=>r.card===me.hand[0]).score;
+  const native=me.chooseToDiscard();stub._status.event=native;native.begin();
+  const base=native.ai(me.hand[0]);
   assert.equal(score,base-2);
+  assert.equal(choice.after.length,1,'运行时应登记原生完成后的清理回调');
  }finally{discard.uninstallDiscardOverride();}
 });
 check('同回合手牌、队友血量、距离变化立即更新，不读其隐藏手牌',()=>{
@@ -156,7 +175,8 @@ check('真实响应接管：队友救援与自救不被brain目标识别挡住',
   for(const target of [ally,me,enemy]){
    target.hp=0;
    stub._status.event={name:'chooseToRespond',parent:{name:'_save',dying:target},filterCard:c=>c.name==='tao'};
-   assert.equal(me.chooseToRespond(me.hand[0]),target!==enemy);
+   const choice=me.chooseToRespond(me.hand[0]);choice.begin();
+   assert.equal(choice.filterCard(me.hand[0],me,choice),target!==enemy);
    target.hp=3;
   }
  }finally{respond.uninstallRespondOverride();}
@@ -166,7 +186,8 @@ check('低血和高血的当前合法闪响应不再被留闪逻辑一刀切过�
  try{
   for(const hp of [1,3]){
    me.hp=hp;stub._status.event={name:'chooseToRespond',parent:{_trigger:{card:{name:'sha'},target:me,player:enemy}},filterCard:c=>c.name==='shan'};
-   assert.equal(me.chooseToRespond(me.hand[1]),true);
+   const choice=me.chooseToRespond(me.hand[1]);choice.begin();
+   assert.equal(choice.filterCard(me.hand[1],me,choice),true);
   }
  }finally{respond.uninstallRespondOverride();}
 });
@@ -197,7 +218,8 @@ check('原生合法性过滤仍可拒绝禁桃，修复不强迫使用受禁牌'
  const [me,,,ally]=reset();ally.hp=0;respond.installRespondOverride();
  try{
   stub._status.event={name:'chooseToRespond',dying:ally,filterCard:()=>false};
-  assert.equal(me.chooseToRespond(me.hand[0]),false);
+  const choice=me.chooseToRespond(me.hand[0]);choice.begin();
+  assert.equal(choice.filterCard(me.hand[0],me,choice),false);
  }finally{respond.uninstallRespondOverride();}
 });
 check('纯函数保留偏好有界，不把无牌或多牌当最后一张',()=>{

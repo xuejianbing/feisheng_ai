@@ -32,7 +32,7 @@ export const CONFIG_SECTIONS = [
 	},
 	{
 		scope: 'developer', id: 'dev_model', title: 'D2 · 模型与学习', accent: 'blue',
-		entries: ['useTrainedModel', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'championBoost', 'openSharedPanel', 'decisionFeedback', 'skillFeedback', 'styleFeedback', 'crossGameMemory', 'playerMemory', 'openMemoryPanel'],
+		entries: ['useTrainedModel', 'identitySampling', 'showSampleCount', 'showModelStatus', 'autoFixModel', 'openChampionPanel', 'championBoost', 'openSharedPanel', 'decisionFeedback', 'skillFeedback', 'styleFeedback', 'crossGameMemory', 'playerMemory', 'openMemoryPanel'],
 	},
 	{
 		scope: 'developer', id: 'dev_guard', title: 'D3 · 护栏与安全', accent: 'blue',
@@ -51,6 +51,7 @@ export const CONFIG_SECTIONS = [
 ];
 
 export const CONFIG_ITEMS = {
+ identitySampling:{compact:true,type:'bool',default:false,label:'身份场样本采集',description:'身份场暂不推理，但采集对局样本用于训练（含阵营胜负字段）。下一局生效。'},
  versusStrategy:{compact:true,type:'bool',default:true,label:'2v2策略增强'},
  versusSeatProtection:{compact:true,type:'bool',default:true,label:'座次配合与队友保护'},
  versusReserve:{compact:true,type:'bool',default:true,label:'关键牌保留'},

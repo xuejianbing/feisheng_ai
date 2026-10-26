@@ -11,6 +11,8 @@ import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove, lsKeys a
 
 /* ================= 决策积分引擎 · 面板+调试桥（整合模块） ================= */
 import { lib, game, ui, get, _status } from '../../foundation/adapt/host.js?v=41a';
+import { createOwnedBindings } from '../../foundation/runtime/ownedBindings.js?v=41a';
+import { createRecoverableListener } from '../../foundation/runtime/recoverableListener.js?v=41a';
 import { buildConfigOverview, styleUtilityPanel, openUtilityHtml } from './panelTheme.js?v=41a';
 
 /* ★ 工具函数：所有显示数字都取整 */
@@ -3753,13 +3755,15 @@ function stopDialogGuard() {
 
 /* ================= 调试桥（window.__DJSC，供面板/外部调用） ================= */
 let _bridgeInstalled = false;
+const _bridgeBindings = createOwnedBindings();
+const _bridgeListener = createRecoverableListener(game, 'gameOver');
 function installDebugBridge() {
 	try {
 		if (_bridgeInstalled) return;
 		_bridgeInstalled = true;
 		/* ★ 修复：不要覆盖已有 __DJSC，而是合并 */
 		window.__DJSC = window.__DJSC || {};
-		Object.assign(window.__DJSC, {
+		_bridgeBindings.mount(window.__DJSC, {
 			round: function () { try { return JSON.parse(JSON.stringify(getRound())); } catch (e) { return {}; } },
 			log: function () { try { return JSON.parse(JSON.stringify(getScoreLog().slice(-30))); } catch (e) { return []; } },
 			conservation: function () { try { return getConservationLedger(); } catch (e) { return { err: String(e) }; } },
@@ -4673,14 +4677,15 @@ function installDebugBridge() {
 		/* ★ 挂载内部方法供 aiOverride 调用 */
 		try {
 			if (typeof window !== 'undefined') {
-				window.__DJSC_appendDecision = appendDecision;
+				_bridgeBindings.mount(window, {__DJSC_appendDecision:appendDecision});
 			}
 		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
 		/* ★ 游戏结束自动统计（从 engine.js 移过来，确保 game 已初始化） */
 		try {
 			if (typeof game !== 'undefined' && game.on) {
-				game.on("gameOver", function() {
+				const handler = function() {
+					if (!_bridgeInstalled) return;
 					try {
 						if (!game.me || !game.me.name1) return;
 						/* ★ 局末结算兜底：先跑引擎结算（胜负分/守恒审计/冠军库刷新/跨局记忆），战报才能反映完整积分；settleDone 幂等 */
@@ -4710,14 +4715,15 @@ function installDebugBridge() {
 						/* ★ 跨局积分清零：战报已生成、胜负分已入账，清空局内账本供下一局从零记账 */
 						try { if (typeof resetScoreForNewGame === 'function') resetScoreForNewGame(); } catch (eRn) { }
 					} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-				});
+				};
+				try { _bridgeListener.install(handler); }
+				catch(e) { _bridgeInstalled=false;_bridgeBindings.clear();throw e; }
 			}
 		} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 }
 function uninstallDebugBridge() {
-	try { delete window.__DJSC; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	try { delete window.__DJSC_appendDecision; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-	_bridgeInstalled = false;
+	try { _bridgeBindings.clear();_bridgeListener.uninstall(); }
+	finally { _bridgeInstalled = false; }
 }
 function importClearGainCache() { try { clearGainCache(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } }
 function importScanReset() {

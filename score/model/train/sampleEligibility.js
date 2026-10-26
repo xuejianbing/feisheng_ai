@@ -7,6 +7,7 @@
  * 为何进入或被排除训练集。
  */
 
+import {qualifyTrainingSample} from './trainingDataset.js?v=41a';
 export const SAMPLE_STATES = {
   RAW: 'raw',              // 原始记录，刚采集，未去重
   DEDUPED: 'deduped',      // 去重后，同一事务只保留一条
@@ -36,6 +37,12 @@ export const REJECT_REASONS = {
  * 不修改样本本身，只做判断
  */
 export function classifySample(sample, championEligibilityFn) {
+  const qualification=qualifyTrainingSample(sample);
+  if(!qualification.eligible)return {state:SAMPLE_STATES.REJECTED,reason:qualification.code,category:qualification.state};
+  const context=_legacyClassifySample(qualification.sample,championEligibilityFn);
+  return {...context,code:qualification.code,category:qualification.state};
+}
+function _legacyClassifySample(sample, championEligibilityFn) {
   if (!sample) {
     return { state: SAMPLE_STATES.REJECTED, reason: REJECT_REASONS.NULL_SAMPLE };
   }

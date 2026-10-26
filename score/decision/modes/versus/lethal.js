@@ -93,8 +93,9 @@ export function evaluateVersusAttackForId(player,id,target) {
     if(!readVersusMode().is2v2)return null;
     try {
         const cards=(player.getCards?.('h')||[]).filter(card=>idOf(card,player)===id);
-        const options=cards.map(card=>evaluateVersusAttack(player,card,target)).filter(plan=>plan?.legal);
-        if(!options.length)return empty();
+        const plans=cards.map(card=>evaluateVersusAttack(player,card,target));
+        const options=plans.filter(plan=>plan?.resolved&&plan.legal);
+        if(!options.length)return plans.some(plan=>plan?.resolved===false)?empty(false):empty();
         // 牌名候选尚未提交实体牌；只表示当前确有实体牌提供这一机会，不提升为必杀职责。
         const best=options.sort((a,b)=>b.evaluation.score-a.evaluation.score)[0];
         return {...best,materialUnbound:cards.length>1};

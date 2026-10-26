@@ -108,6 +108,18 @@ check('宿主接口异常保守返回，异常结束后不会留下重入锁',()
  const name=stub.get.name;stub.get.name=()=>{throw Error('host name');};assert.equal(plan(me,target).resolved,false);stub.get.name=name;
  assert(plan(me,target).killProbability>0);
 });
+check('实体评估异常不能变成已确认零收益，逐卡目标回退既有公开启发式',()=>{
+ const [me,target]=reset();target.hp=1;
+ const native=target.getEquip;target.getEquip=()=>{throw Error('host armor');};
+ try {
+  assert.equal(plan(me,target).resolved,false);
+  const grouped=evaluateVersusAttackForId(me,'sha',target);
+  assert.equal(grouped.resolved,false,'实体评估不确定时，牌名聚合也应保留未决状态');
+  const enhanced=ctx(me,[target]);
+  const fallback=ctx(me,[target]);delete fallback.attackStrategy;
+  assert.equal(pickTarget('sha',enhanced).index,pickTarget('sha',fallback).index);
+ }finally{target.getEquip=native;}
+});
 check('决斗同样区分进入濒死和获救，并保留杀响应消耗/失败自伤',()=>{
  const [me,target,rescuer]=reset();target.hp=1;const base=plan(me,target,'juedou');rescuer.publicHand=4;const rescue=plan(me,target,'juedou');assert(rescue.killProbability<base.killProbability);
  target.publicHand=4;me.hand=me.hand.filter(c=>c.name!=='sha');const risk=plan(me,target,'juedou');assert(risk.evaluation.risk<0);assert(risk.evaluation.resourceCost<=0);

@@ -234,7 +234,11 @@ function _applyDefault() {
 }
 
 /* ---------- 加载/保存 ---------- */
+let _loadState = 'uninitialized';
+let _loadError = '';
+export function getLoadStatus() { return {state:META.ready?'ready':_loadState==='ready'?'uninitialized':_loadState,error:_loadError}; }
 export function loadWeights() {
+    _loadState='loading';_loadError='';
     try {
         const raw = _lsGet(STORE_KEY);
         if (!raw) {
@@ -289,6 +293,9 @@ export function loadWeights() {
         const ok = _applyDefault();
         try { if (!ok) log.warn('weights', '存档解析失败且内置默认权重不可用（' + _defaultDiag + '）→ 模型未就绪'); } catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
         return false;
+    } finally {
+        _loadState=META.ready?'ready':'failed';
+        if(!META.ready)_loadError=String(_defaultDiag || '运行权重未就绪');
     }
 }
 export function saveWeights() {

@@ -640,7 +640,7 @@ const VERSUS_STRATEGY = Object.assign({}, DEFAULT_STRATEGY, {
         try {
             if (!player) return 'unknown';
             /* 队伍模式：side 字段 */
-            if (hasKnownSide(player)) return String(player.side);
+            if (readVersusMode().is2v2 ? hasKnownSide(player) : !!player.side) return String(player.side);
             /* 保留公共接口兼容兜底；2v2 专项敌我决策直接比较 side，不消费此结果。 */
             if (player.identity) return String(player.identity);
             /* 自己 */
@@ -652,14 +652,15 @@ const VERSUS_STRATEGY = Object.assign({}, DEFAULT_STRATEGY, {
     isSameCamp: function (a, b) {
         if (!a || !b) return false;
         try {
+            if (!readVersusMode().is2v2) {
+                // Retain the pre-2v2 side/attitude semantics for 3v3 and other versus modes.
+                if (a.side && b.side) return a.side === b.side;
+                return get.attitude(a, b) > 0;
+            }
             const same = sameTeamBySide(a, b);
             if (same !== null) return same;
-            if (readVersusMode().is2v2) {
-                reportMissingVersusSide();
-                return false; /* 布尔兼容接口；非同队不能直接推导为敌人。 */
-            }
-            /* 仅其他 versus 子模式缺失 side 时保留 attitude 兼容行为。 */
-            return get.attitude(a, b) > 0;
+            reportMissingVersusSide();
+            return false; /* 布尔兼容接口；非同队不能直接推导为敌人。 */
         } catch (e) { return false; }
     },
 
@@ -670,21 +671,23 @@ const VERSUS_STRATEGY = Object.assign({}, DEFAULT_STRATEGY, {
     decisionBoost: function (me, act) {
         let bonus = 0;
         try {
+            const versus2v2 = readVersusMode().is2v2;
+            const mySide = me.side || 'unknown';
             const tgt = getTarget(act);
             const isDmg = isAttackAct(act);
 
             /* 队伍协作 */
             if (tgt) {
-                const same = sameTeamBySide(me, tgt);
+                const same = versus2v2 ? sameTeamBySide(me, tgt) : tgt.side === mySide;
                 if (same === null) {
-                    if (readVersusMode().is2v2) reportMissingVersusSide();
+                    reportMissingVersusSide();
                     return bonus; /* 接入异常：不猜测敌我，不给予队伍专项加分。 */
                 }
                 const isAlly = same === true;
                 /* 普通2v2：友伤由 actionDirectionGuard 的上限及 AOE 的统一收益处理。
                  * 此处不再追加固定惩罚或把所谓“敌方奖励”返还给自己；自伤也不套队友惩罚。
                  * 其他 versus 子模式暂保留既有算式，避免扩大本次修复范围。 */
-                if (isAlly && isDmg && !readVersusMode().is2v2) {
+                if (isAlly && isDmg && !versus2v2) {
                     /* 其他对决模式的宿主身份标记兼容分支。 */
                     if (tgt.identityShown || tgt.identity) {
                         bonus -= 4.0;  /* 翻倍：-2.0 → -4.0 */
@@ -698,7 +701,7 @@ const VERSUS_STRATEGY = Object.assign({}, DEFAULT_STRATEGY, {
                     /* 把阵营分给敌方（其他阵营） */
                     try {
                         const enemies = (game.players || []).filter(function (p) {
-                            return p && p.alive !== false && sameTeamBySide(me, p) === false;
+                            return p && p.alive !== false && p.side && p.side !== mySide;
                         });
                         if (enemies.length > 0) {
                             /* 敌方获得奖励 */

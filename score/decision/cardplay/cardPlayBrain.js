@@ -186,9 +186,16 @@ export function pickTarget(id, ctx) {
 
 		if (['sha','huosha','leisha','juedou'].includes(id)&&typeof ctx.attackStrategy==='function') {
 			const plan=ctx.attackStrategy(id,t);
-			if(!plan?.resolved||!plan.legal)return;
-			// 使用同一攻击估值，不再叠加一份低血/击杀分。
-			s=plan.evaluation.score;
+			if(plan?.resolved) {
+				if(!plan.legal)return;
+				// 使用同一攻击估值，不再叠加一份低血/击杀分。
+				s=plan.evaluation.score;
+			} else if(id==='juedou') {
+				// 宿主信息异常或未决时，回退既有的公开信息估值。
+				s=(t.shaCount===0?4:(t.shaCount===1?2:0))+lowHp*2+threat*0.3;
+			} else {
+				s=lowHp*4+(1-shanProb)*2+threat*0.5-equip*0.3;
+			}
 		} else if (id === 'sha' || id === 'huosha' || id === 'leisha') {
 			s = lowHp * 4 + (1 - shanProb) * 2 + threat * 0.5 - equip * 0.3;
 		} else if (id === 'juedou') {

@@ -1,0 +1,182 @@
+{
+  "completedAt": "2026-10-23T12:14:49.004Z",
+  "status": "passed",
+  "scope": "真实斗地主宿主固定场景；非完整自动对局或胜率验证",
+  "setup": "隔离浏览器、只读宿主、映射工作区生产模块；原生Player/GameEvent和牌内容未替换",
+  "browserVersion": "156.0.8078.47",
+  "hostVersion": "1.11.6",
+  "mode": "doudizhu",
+  "submode": "normal",
+  "players": 3,
+  "settings": {
+    "enabled": true,
+    "fire": true,
+    "tiesuo": true,
+    "wuxie": true,
+    "guding": true,
+    "wine": true,
+    "strip": true,
+    "rescue": true,
+    "crossbow": true,
+    "diagnostic": false,
+    "delay": true
+  },
+  "scenes": [
+    {
+      "name": "duel-low-rank-sha",
+      "before": {
+        "lord": 5,
+        "holder": 4
+      },
+      "after": {
+        "lord": 4,
+        "holder": 4
+      }
+    },
+    {
+      "name": "borrow-converted-sha",
+      "before": 5,
+      "after": 4,
+      "keptWeapon": true,
+      "hand": 0,
+      "probe": {
+        "hasSha": true,
+        "skills": [
+          "wusheng",
+          "zhuge_skill"
+        ],
+        "materials": [
+          {
+            "skill": "wusheng",
+            "cards": [
+              "shan"
+            ]
+          }
+        ]
+      },
+      "trace": [
+        {
+          "item": "wusheng",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.2000000000000002
+        },
+        {
+          "item": "wusheng",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.2000000000000002
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "wusheng"
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "wusheng"
+        },
+        {
+          "item": "zhangba_skill",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.6666666666666665
+        },
+        {
+          "item": "zhangba_skill",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.6666666666666665
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "zhangba_skill"
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "zhangba_skill"
+        },
+        {
+          "item": "longdan_sha",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.2000000000000002
+        },
+        {
+          "item": "longdan_sha",
+          "score": 8,
+          "reason": "sha-better-than-transfer",
+          "action": "sha",
+          "sha": 24,
+          "transfer": -1.2000000000000002
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "longdan_sha"
+        },
+        {
+          "target": "428982512",
+          "score": 8,
+          "skill": "longdan_sha"
+        }
+      ]
+    },
+    {
+      "name": "borrow-zhangba",
+      "before": 5,
+      "after": 4,
+      "keptWeapon": true,
+      "hand": 0
+    },
+    {
+      "name": "borrow-longdan",
+      "before": 5,
+      "after": 4,
+      "keptWeapon": true,
+      "hand": 0
+    },
+    {
+      "name": "friendly-lion-selection",
+      "afterHp": 2,
+      "armor": null,
+      "weapon": "zhuge"
+    },
+    {
+      "name": "public-wugu-pool",
+      "picks": [
+        {
+          "target": "877318311",
+          "remaining": 3,
+          "resolved": true,
+          "value": 3.5
+        },
+        {
+          "target": "428982512",
+          "remaining": 2,
+          "resolved": true,
+          "value": -2.5
+        },
+        {
+          "target": "892334710",
+          "remaining": 1,
+          "resolved": true,
+          "value": 2.5
+        }
+      ]
+    }
+  ]
+}

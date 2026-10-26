@@ -14,7 +14,9 @@ export async function parseIngestHttpResponse(response) {
     let payload = null;
     try { payload = await response.json(); } catch (_) {}
     if (payload && typeof payload === 'object' && !Array.isArray(payload) && payload.ok === false) {
-      throw new Error(payload.error || '服务端拒绝接收');
+      const error = new Error(payload.error || '服务端拒绝接收');
+      error.kind = 'server-rejection';
+      throw error;
     }
     return payload && typeof payload === 'object'
       ? payload
@@ -23,9 +25,20 @@ export async function parseIngestHttpResponse(response) {
   if (response && response.status === 429) {
     const error = new Error('HTTP 429 触发服务端限流，请稍后自动重试，数据已保留待传，稍后自动重试');
     error.rateLimited = true;
+    error.kind = 'rate-limit';
+    const header = response.headers?.get?.('Retry-After');
+    const delay = /^\d+$/.test(header || '') ? Number(header) * 1000 : Date.parse(header || '') - Date.now();
+    if (Number.isFinite(delay) && delay > 0) error.retryAfterMs = delay;
     throw error;
   }
-  throw new Error('HTTP ' + (response ? response.status : '?'));
+  if(response && [400,401,403,404,413,426].includes(response.status)){
+    let payload;try{payload=await response.json();}catch{}
+    const code=/^[A-Z][A-Z0-9_]{0,99}$/.test(payload?.error||'')?payload.error:'E_HTTP_REJECTED';
+    const error=new Error(code);error.code=code;error.kind=[401,403].includes(response.status)?'source-auth':'protocol';error.permanent=true;throw error;
+  }
+  const error = new Error('HTTP ' + (response ? response.status : '?'));
+  error.kind = 'server-rejection';
+  throw error;
 }
 
 export function createIngestReceiptSummary() {
@@ -53,6 +66,8 @@ export function normalizeIngestReceipt(response) {
     schema: INGEST_RECEIPT_SCHEMA,
     duplicateRequest: response.duplicate_request === true,
     ...Object.fromEntries(COUNTERS.map(key => [key, receipt[key]])),
+    ...('qualifiedSamples' in receipt ? {qualifiedSamples:Number.isSafeInteger(receipt.qualifiedSamples)&&receipt.qualifiedSamples>=0?receipt.qualifiedSamples:null}:{}),
+    ...(receipt.sourceTrust ? {sourceTrust:receipt.sourceTrust}:{}),
   };
 }
 

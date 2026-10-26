@@ -7,6 +7,7 @@
  * ============================================
  */
 import { safeGet as _lsGet, safeSet as _lsSet, safeRemove as _lsRemove } from '../foundation/storage/storage.js?v=41a';  /* ★ P2-31：中央存储抽象，业务层禁止直触 localStorage */
+import {lib,game,ui,get} from '../foundation/adapt/host.js?v=41a';
 
 /* ================= 模块自检面板 =================
  * 常态显示所有模块的挂载状态
@@ -55,7 +56,7 @@ function runSelfCheck() {
                 detail = '（' + keys.length + '个属性）';
             }
             const isReal = (val !== undefined && val !== null);
-            const ok = isReal;
+            const ok = isReal && (type === 'any' || actual === type);
             const displayActual = actual + detail;
             results.push({ name: name, path: path, expect: type + ' [真功能]', actual: displayActual, ok: ok });
         } catch (e) {
@@ -267,7 +268,7 @@ function runSelfCheck() {
     /* ===== 4.9 v2.3.16 内奸判断 ===== */
     check('内奸判断', 'identity', 'object');
     check('内奸判断', 'identity.readIdentity', 'function');
-    check('内奸判断', 'identity.beliefOf', 'function');
+    check('内奸判断', 'identity.belief', 'function');
     check('内奸判断', 'identity.stats', 'function');
 
     /* ===== 4.10 v2.3.15 学习效率优化器 ===== */
@@ -455,7 +456,7 @@ function runSelfCheck() {
     checkModuleHealth('cost函数', 'cost', 'stats');
     checkModuleHealth('AI工具集', 'aiTools', 'stats');
     checkModuleHealth('Bandit', 'bandit', 'getStats');
-    checkModuleHealth('自动发现', 'discover', 'getRegretStats');
+    checkModuleHealth('自动发现', 'discover', 'getStats');
     /* modelState.getState() 返回字符串状态名（stable/training/candidate），不是对象 */
     try {
         const ms = J.modelState;

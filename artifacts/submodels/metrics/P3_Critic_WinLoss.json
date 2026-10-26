@@ -1,0 +1,125 @@
+{
+ "file": "E:\\NoNameAI\\model\\Critic_WinLoss_v1.pkl",
+ "rows": 194338,
+ "rows_win": 175522,
+ "rows_lose": 18816,
+ "sessions": 12255,
+ "sessions_win": 10725,
+ "sessions_lose": 1530,
+ "skipped": 2446,
+ "train_rows": 155098,
+ "test_rows": 39240,
+ "metrics": {
+  "row_roc_auc": 0.8155601559835447,
+  "row_pr_auc": 0.9780427859620358,
+  "brier": 0.0682633626827443,
+  "test_win_rate_baseline": 0.9135575942915393,
+  "session_count": 2451,
+  "session_roc_auc": 0.8931904396942042,
+  "session_pr_auc": 0.9815508290246904
+ },
+ "calibration": [
+  {
+   "bin": "0.0-0.1",
+   "n": 2,
+   "pred_win": 0.096,
+   "actual_win": 0.0
+  },
+  {
+   "bin": "0.1-0.2",
+   "n": 20,
+   "pred_win": 0.16,
+   "actual_win": 0.1
+  },
+  {
+   "bin": "0.2-0.3",
+   "n": 57,
+   "pred_win": 0.258,
+   "actual_win": 0.211
+  },
+  {
+   "bin": "0.3-0.4",
+   "n": 149,
+   "pred_win": 0.356,
+   "actual_win": 0.403
+  },
+  {
+   "bin": "0.4-0.5",
+   "n": 346,
+   "pred_win": 0.454,
+   "actual_win": 0.474
+  },
+  {
+   "bin": "0.5-0.6",
+   "n": 581,
+   "pred_win": 0.555,
+   "actual_win": 0.616
+  },
+  {
+   "bin": "0.6-0.7",
+   "n": 1055,
+   "pred_win": 0.656,
+   "actual_win": 0.69
+  },
+  {
+   "bin": "0.7-0.8",
+   "n": 3243,
+   "pred_win": 0.763,
+   "actual_win": 0.788
+  },
+  {
+   "bin": "0.8-0.9",
+   "n": 8024,
+   "pred_win": 0.852,
+   "actual_win": 0.87
+  },
+  {
+   "bin": "0.9-1.0",
+   "n": 25763,
+   "pred_win": 0.967,
+   "actual_win": 0.97
+  }
+ ],
+ "top_features": [
+  {
+   "keep_idx": 73,
+   "importance": 159
+  },
+  {
+   "keep_idx": 49,
+   "importance": 122
+  },
+  {
+   "keep_idx": 42,
+   "importance": 112
+  },
+  {
+   "keep_idx": 54,
+   "importance": 104
+  },
+  {
+   "keep_idx": 28,
+   "importance": 91
+  },
+  {
+   "keep_idx": 46,
+   "importance": 90
+  },
+  {
+   "keep_idx": 75,
+   "importance": 90
+  },
+  {
+   "keep_idx": 72,
+   "importance": 89
+  },
+  {
+   "keep_idx": 37,
+   "importance": 87
+  },
+  {
+   "keep_idx": 77,
+   "importance": 85
+  }
+ ]
+}

@@ -39,29 +39,30 @@ export function adaptToCurrentDim(sample) {
   if (!sample) return { sample: null, adapted: false, dim: 0, error: 'null-sample' };
 
   const dim = detectDim(sample);
-
+  const declared=[sample.featureDim,sample.m?.modeContext?.featureVersion].filter(v=>v!==undefined);
+  if (!SUPPORTED_DIMS.includes(dim)||declared.some(v=>!SUPPORTED_DIMS.includes(v))) {
+    return { sample: null, adapted: false, dim, error: 'unsupported-dim' };
+  }
+  const source=sample.f;
+  if(!Array.isArray(source)&&!(ArrayBuffer.isView(source)&&Number.isInteger(source.length)))
+    return {sample:null,adapted:false,dim,error:'missing-features'};
+  const values=Array.from(source);
+  if(values.length!==dim||values.some(v=>!Number.isFinite(v)))
+    return {sample:null,adapted:false,dim,error:'invalid-features'};
   if (dim === CURRENT_DIM) {
     return { sample, adapted: false, dim };
   }
 
-  if (!SUPPORTED_DIMS.includes(dim)) {
-    return { sample: null, adapted: false, dim, error: 'unsupported-dim' };
-  }
-
   // 130 → 134：前130维原样复制，后4维（目标身份）初始化为0并带标记
-  const srcLen = Math.min(dim, CURRENT_DIM);
-  const f = new Int8Array(CURRENT_DIM);
-  if (sample.f && sample.f.length >= srcLen) {
-    f.set(sample.f.subarray(0, srcLen));
-  } else if (Array.isArray(sample.f)) {
-    for (let i = 0; i < srcLen && i < sample.f.length; i++) f[i] = sample.f[i] | 0;
-  }
+  // 普通数组输出可无损JSON持久化；不把Float32历史值再量化为Int8。
+  const f = values.concat(Array(CURRENT_DIM-dim).fill(0));
 
   const adapted = {
     ...sample,
     f,
     [DIM_ADAPTED_MARKER]: true,
     [ORIGINAL_DIM_MARKER]: dim,
+    _missingFeatureIndices: Array.from({length:CURRENT_DIM-dim},(_,i)=>dim+i),
   };
 
   return { sample: adapted, adapted: true, dim };

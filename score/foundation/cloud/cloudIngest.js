@@ -9,112 +9,35 @@
  *   - 只上传不下载
  * v2 语义（客户端保留数据）：
  *   - 本地训练样本 / 连招 / 存储 / 配置 一律【不删除】
- *   - 训练样本按 ts 时间水印做【增量上传】：每次只传上次之后新增或更新的样本
+ *   - 训练样本按稳定身份及内容指纹同步修订；ts水印仅用于展示
  *   - 连招与 localStorage 快照按【分键内容指纹】判断：内容没变不重传
- *   - 上传成功后只丢弃内存中的待传组包（"删除备份"），并推进水印/指纹；
- *     失败则保留待传，下次自动重试（网关 7 天指纹去重兜底边界重传）
+ *   - 发送前持久化固定批次，明确归档回执后逐批确认；失败保留原请求续传
  * ============================================================ */
 
 import { cfg } from '../config/util.js?v=41a';
-import { getSamples, bufferSize, exportStats, getSampleDiagnostics } from '../../model/train/trainExport.js?v=41a';
+import { sha256Hex, _stableStringify, sampleValue, sampleDigest, isCloudArchived } from '../../model/train/cloudSampleState.js?v=41a';
+import { persistCloudConfirmations, persistLegacyReview, trainingSamplesReady } from '../../model/train/trainExport.js?v=41a';
+import { getSamples, getSampleStorageKey, bufferSize, exportStats, getSampleDiagnostics } from '../../model/train/trainExport.js?v=41a';
 import { getSkillCandDiag } from '../../decision/skills/activeSkillEligibility.js?v=41a';
 import { collectSkillBreakdownLite } from '../../decision/skills/skills.js?v=41a';   /* ★PR7 */
 import { learnedChains } from '../../decision/strategy/comboChain.js?v=41a';
 import { log } from '../diag/logger.js?v=41a';
 import { safeGet, safeSet } from '../storage/storage.js?v=41a';
-import { createIngestReceiptSummary, addIngestReceipt, describeIngestReceipt, parseIngestHttpResponse } from './ingestReceipt.js?v=41a';
+import { createIngestReceiptSummary, addIngestReceipt, describeIngestReceipt, parseIngestHttpResponse, normalizeIngestReceipt } from './ingestReceipt.js?v=41a';
+import { sourceIdentity } from './sourceIdentity.js?v=41a';
 
 const ENDPOINT = 'https://data.feiqiaoai.uno/';
 const LAST_KEY = 'djsc_ingest_last';      /* 游标：{ watermark, keyFp, lastOk, lastErr } */
-const FP_TTL = 7 * 24 * 3600 * 1000;      /* 与网关指纹过期一致 */
 const BATCH_LIMIT = 400   /* ★1015：大批 51KB→17KB，弱网/链路抖动下失败率与损失大降 */;                 /* 单批样本数上限（防 413/超时） */
 const PERIOD_MS = 3600 * 1000;            /* 教程：每小时自动上传 */
 
 let _timer = null;
 let _uploading = false;
+let _activeController = null, _cancelRequested = false;
 let _lastResult = null;   /* { at, ok, detail } 仅供面板显示，不持久化精确时间 */
 
 /* ---------------- SHA-256（纯 JS，无名杀 WebView 无 crypto.subtle 保障） ---------------- */
-function _utf8(str) {
-    const out = [];
-    for (let i = 0; i < str.length; i++) {
-        let c = str.charCodeAt(i);
-        if (c < 0x80) out.push(c);
-        else if (c < 0x800) { out.push(0xC0 | (c >> 6), 0x80 | (c & 63)); }
-        else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
-            const c2 = str.charCodeAt(i + 1);
-            if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
-                const cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
-                out.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
-                i++;
-            } else out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
-        } else out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
-    }
-    return Uint8Array.from(out);
-}
-function _rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
-function _sha256Bytes(bytes) {
-    const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
-    const K = [
-        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
-    const bitLen = bytes.length * 8;
-    const withPad = new Uint8Array((((bytes.length + 8) >> 6) + 1) << 6);
-    withPad.set(bytes);
-    withPad[bytes.length] = 0x80;
-    const dv = new DataView(withPad.buffer);
-    dv.setUint32(withPad.length - 4, bitLen >>> 0, false);
-    dv.setUint32(withPad.length - 8, Math.floor(bitLen / 0x100000000), false);
-    const w = new Uint32Array(64);
-    for (let off = 0; off < withPad.length; off += 64) {
-        for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4, false);
-        for (let i = 16; i < 64; i++) {
-            const s0 = _rotr(w[i - 15], 7) ^ _rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
-            const s1 = _rotr(w[i - 2], 17) ^ _rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
-            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
-        }
-        let [a, b, c, d, e, f, g, h] = H;
-        for (let i = 0; i < 64; i++) {
-            const S1 = _rotr(e, 6) ^ _rotr(e, 11) ^ _rotr(e, 25);
-            const ch = (e & f) ^ (~e & g);
-            const t1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
-            const S0 = _rotr(a, 2) ^ _rotr(a, 13) ^ _rotr(a, 22);
-            const mj = (a & b) ^ (a & c) ^ (b & c);
-            const t2 = (S0 + mj) >>> 0;
-            h = g; g = f; f = e; e = (d + t1) >>> 0;
-            d = c; c = b; b = a; a = (t1 + t2) >>> 0;
-        }
-        H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
-        H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
-    }
-    let hex = '';
-    for (let i = 0; i < 8; i++) hex += ('00000000' + H[i].toString(16)).slice(-8);
-    return hex;
-}
-function sha256Hex(str) { return _sha256Bytes(_utf8(str)); }
-
-/* ---------------- 稳定序列化（键排序，杜绝键序差异造成假指纹） ---------------- */
-function _stableStringify(v) {
-    if (v === null || typeof v !== 'object') return JSON.stringify(v);
-    if (Array.isArray(v)) return '[' + v.map(_stableStringify).join(',') + ']';
-    const keys = Object.keys(v).sort();
-    let out = '';
-    for (let i = 0; i < keys.length; i++) {
-        const k = keys[i];
-        if (k === '__fp' || k === '__fpKey') continue;   /* 指纹缓存字段不参与序列化/上传 */
-        if (out) out += ',';
-        out += JSON.stringify(k) + ':' + _stableStringify(v[k]);
-    }
-    return '{' + out + '}';
-}
-
-/* ---------------- 游标（水印 + 分键指纹） ---------------- */
+// Shared content hashing keeps retirement and upload confirmation on the same contract.
 function loadCursor() {
     try {
         /* ★PR4 修复：safeGet 返回原始字符串（storage.js 语义），旧版 typeof==='object' 恒 false
@@ -125,7 +48,10 @@ function loadCursor() {
     } catch (e) {}
     return { watermark: 0, keyFp: {}, lastOk: 0, lastErr: '', backoffUntil: 0 };   /* watermark=0 → 首次全量；backoffUntil=限流退避截止 ★fixPR2 */
 }
-function saveCursor(cur) { try { safeSet(LAST_KEY, JSON.stringify(cur)); } catch (e) {} }   /* ★PR4 修复：对象须显式序列化（safeSet 是 String(value) 语义） */
+function saveCursor(cur) {
+    const raw = JSON.stringify(cur);
+    if (!safeSet(LAST_KEY, raw) || safeGet(LAST_KEY) !== raw) throw new Error('上传检查点保存失败，停止发送并保留待传');
+}   /* ★PR4 修复：对象须显式序列化（safeSet 是 String(value) 语义） */
 
 /* ---------------- 数据收集 ---------------- */
 function collectChains() {
@@ -238,58 +164,55 @@ function collectConfig() {
 
 /* ---------------- 增量挑选 ---------------- */
 /* 样本级指纹：固定业务字段组包（剔除 _persisted 等会抖动的内部字段），16hex 截短 */
+// Only business fields are sent/hashed. Local DB and fingerprint caches never enter server dedup.
+const _sampleFingerprints = new WeakMap();
 function sampleFp(s) {
-    /* ★ 性能：缓存指纹于样本对象（BUFFER 同引用复用）。__fpKey 存指纹输入原文，
-     *   调用时先算轻量 stringify 并比对——输入任何字段变化（合并更新 count/ts）缓存自动失效重算，语义与无缓存完全一致；
-     *   命中时跳过 sha256（纯 JS 哈希是 1 万样本下的主要卡顿源），只剩轻量 stringify（便宜一个量级）。 */
-    const key = _stableStringify({
-        f: s.f, r: s.r, m: s.m || null, conf: s.conf, value_target: s.value_target,
-        fbAsync: s.fbAsync, count: s.count, ts: s.ts, scene: s.scene || null
-    });
-    if (s.__fpKey === key && typeof s.__fp === 'string') return s.__fp;
-    const fp = sha256Hex(key).slice(0, 16);
-    try { s.__fpKey = key; s.__fp = fp; } catch (e) {}
-    return fp;
+    const m=s.m||{}, ids=[m.sessionId,m.actorId,m.transactionId];
+    const identity=ids.every(v=>typeof v==='string'&&v.length)?ids:getSampleStorageKey(s);
+    const key=_stableStringify([identity,sampleValue(s)]), cached=_sampleFingerprints.get(s);
+    if (cached?.key===key) return cached.fp;
+    const fp=sha256Hex(key);_sampleFingerprints.set(s,{key,fp});return fp;
 }
-/* 样本挑选：ts >= watermark 预过滤 → 样本级指纹精确排除已传；
- * 合并更新（count/ts 变）与同毫秒新样本都会命中新指纹，边界已传样本不会重复组包。
- * 指纹表 7 天过期，与网关指纹过期对齐（过期后同内容重传一次，网关同样接受）。 */
+function wireSample(s, clientId) {
+    const value = sampleValue(s), m = s.m || {};
+    const complete = [m.sessionId,m.actorId,m.transactionId].every(v => typeof v === 'string' && v.length);
+    const revision = sampleFp(s);
+    // Missing transaction identity: isolate by content, never infer identity from time/card/hero.
+    value.sync = {schema:'sample-revision-v1', logicalId:complete ? 'tx:' + JSON.stringify([m.sessionId,m.actorId,m.transactionId]) : 'legacy:' + JSON.stringify([clientId,getSampleStorageKey(s)]),
+        revision, identity:complete ? 'transaction' : 'local-record-isolated'};
+    return value;
+}
 function pickNewSamples(samples, watermark, sentMap) {
-    const list = [], newFps = [];
-    let maxTs = watermark;
-    const sent = sentMap || {};
-    const now = Date.now();
-    /* ★ 性能快速路径：先 O(n) 数值扫描取 maxTs（零哈希），确定无新样本直接返回——
-     *   周期检查/局末钩子在增量稳定期零成本，不再阻塞主线程。maxTs<watermark 才短路；
-     *   ==watermark 不能短路（同毫秒新样本仍需指纹识别）。 */
-    let scanMax = 0;
-    for (let i = 0; i < samples.length; i++) {
-        const ts0 = samples[i] && samples[i].ts ? samples[i].ts : 0;
-        if (ts0 > scanMax) scanMax = ts0;
-    }
-    if (scanMax < watermark) return { list, maxTs: watermark, newFps };
-    for (let i = 0; i < samples.length; i++) {
-        const s = samples[i];
-        const ts = s && s.ts ? s.ts : 0;
-        if (ts < watermark) continue;
-        if (ts > maxTs) maxTs = ts;
+    const list = [], newFps = [], sent = sentMap || {};
+    let maxTs = watermark || 0;
+    for (const s of samples) {
+        if (!s || typeof s !== 'object') continue;
+        maxTs = Math.max(maxTs, s.ts || 0);
         const fp = sampleFp(s);
-        if (!sent[fp]) { list.push(s); newFps.push([fp, now]); }
+        const unknownLegacy = s._cloudLegacyReview === true && !s._cloudAck;
+        if (!isCloudArchived(s) && !sent[fp] && !unknownLegacy) { list.push(s); newFps.push([fp, Date.now()]); }
     }
-    return { list, maxTs, newFps };
+    return {list, maxTs, newFps};
 }
-/* 指纹表过期清理 + 溢出保护 */
+/* Confirmations do not expire with the server dedup window. Watermark is display-only. */
 function mergeSentFps(sentMap, newFps) {
-    const out = Object.assign({}, sentMap || {});
-    const now = Date.now();
-    for (let i = 0; i < (newFps || []).length; i++) out[newFps[i][0]] = newFps[i][1];
-    for (const k in out) if (now - out[k] > FP_TTL) delete out[k];
-    const keys = Object.keys(out);
-    if (keys.length > 20000) {   /* 1 万样本上限的双倍封顶，丢最旧 */
-        keys.sort((a, b) => out[a] - out[b]);
-        for (let i = 0; i < keys.length - 20000; i++) delete out[keys[i]];
+    // Latest confirmations live beside durable samples, not in an ever-growing cursor.
+    return {};
+}
+async function migrateSampleConfirmations(cur) {
+    const samples=getSamples(), sent=cur.keyFp?.samples||{};
+    if (cur.confirmationSchema===3 && !Object.keys(sent).length) return;
+    const entries=[], unknown=[];
+    for (const sample of samples) {
+        const fp=sampleFp(sample);
+        // Pre-750 cursors could advance on empty 200: their 16-hex entries are not durable receipts.
+        if (sent[fp]) entries.push({sample,fp});
+        else if (!sample._cloudAck && (cur.legacyWatermark??cur.watermark)>0 && (sample.ts||0)<=(cur.legacyWatermark??cur.watermark)) unknown.push(sample);
     }
-    return out;
+    if (entries.length && !await persistCloudConfirmations(entries)) throw new Error('历史确认迁移保存失败，原检查点保留');
+    if (unknown.length && !await persistLegacyReview(unknown)) throw new Error('历史待复核标记保存失败，原检查点保留');
+    const next={...cur,keyFp:{...cur.keyFp,samples:{}},confirmationSchema:3,legacyWatermark:cur.legacyWatermark??cur.watermark};
+    saveCursor(next);Object.assign(cur,next);
 }
 /* 连招/存储：分键内容指纹，返回变更载荷与替换后的指纹表 */
 function diffSnapshot(cur) {
@@ -368,26 +291,38 @@ function buildEnvelope(samples, chainsPayload, storagePayload, shadowV5, skbdPay
     const cfg = collectConfig();
     if (cfg) env.config = cfg;
     if (shadowV5 && shadowV5.length) env.shadowV5 = shadowV5;   /* ★PR4：v5 shadow 决策对比摘要 */
-    return env;
+    return sourceIdentity.envelope(env, ENDPOINT);
 }
-function postJSON(bodyObj) {
-    return fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },  /* 简单请求，免 OPTIONS 预检 */
-        body: _stableStringify(bodyObj)
-    }).then(parseIngestHttpResponse);
+async function postJSON(bodyObj) {
+    const controller = new AbortController();
+    _activeController = controller;
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+        const authorization=await sourceIdentity.request(bodyObj,ENDPOINT,controller.signal);
+        const response=await fetch(ENDPOINT, {method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8',...authorization},
+            body:_stableStringify(bodyObj), signal:controller.signal,redirect:'error',credentials:'omit'}).then(parseIngestHttpResponse);
+        sourceIdentity.verifyReceipt(bodyObj,response,ENDPOINT);
+        return response;
+    } catch (e) {
+        if (e.name === 'AbortError') { const error = new Error(_cancelRequested?'上传已中断，保留原批次待续传':'上传请求超时，服务端接收状态未知'); error.kind=_cancelRequested?'cancelled':'timeout'; throw error; }
+        if (!e.kind) e.kind = e.rateLimited ? 'rate-limit' : 'network';
+        throw e;
+    } finally { clearTimeout(timer); _activeController=null; }
 }
+function cancelUpload() { _cancelRequested=true; _activeController?.abort(); return {cancelled:_uploading}; }
 
 /* ---------------- 主流程 ---------------- */
 function uploadNow(force) {
     if (!force && !cfg('cloudAutoUpload', false)) return Promise.resolve({ skipped: 'disabled' });
     if (_uploading) return Promise.resolve({ skipped: 'busy' });
     const cur = loadCursor();
+    if(cur.permanentFailure && cur.permanentFailure.credentialId===sourceState().credentialId)return Promise.resolve({skipped:'source-auth-blocked',error:cur.lastErr,pendingRetained:!!cur.pending});
     /* ★P2 修复：退避（以及下面所有提前返回）必须在拿锁之前或经统一释放路径，
      *   原实现先置 _uploading = true 再判退避，命中退避直接 return → 锁永不释放，
      *   此后自动与手动上传都只能返回 busy，直到刷新页面。 */
-    if (!force && cur.backoffUntil && Date.now() < cur.backoffUntil) return Promise.resolve({ skipped: 'backoff', minLeft: Math.ceil((cur.backoffUntil - Date.now()) / 60000) });   /* ★fixPR2: 限流退避期内不再空耗配额 */
+    if (cur.backoffUntil && Date.now() < cur.backoffUntil) return Promise.resolve({ skipped: 'backoff', minLeft: Math.ceil((cur.backoffUntil - Date.now()) / 60000) });   /* ★fixPR2: 限流退避期内不再空耗配额 */
     _uploading = true;
+    _cancelRequested = false;
     const _release = r => { _uploading = false; return r; };
     const _releaseOnError = e => {
         _uploading = false;
@@ -402,68 +337,79 @@ function uploadNow(force) {
 }
 
 /* 上传主体：不含任务锁，由 uploadNow 统一拿锁与释放 */
-function _uploadRun(cur, force) {
-    const samples = getSamples ? getSamples() : [];
-    const pick = pickNewSamples(samples, cur.watermark, cur.keyFp && cur.keyFp.samples);
-    const snap = diffSnapshot(cur);
-    const shadowBatch = collectShadowV5();   /* ★PR4：v5 shadow 待传摘要 */
+async function _uploadRun(cur, force) {
+    await trainingSamplesReady();
+    await migrateSampleConfirmations(cur);
+    const upgradeReviewRequired=getSamples().filter(s=>!s._cloudAck && s._cloudLegacyReview===true).length;
+    // A write-ahead single-batch journal is the persistent queue head. Remaining records stay local.
+    // A restart always retries this immutable envelope before constructing any newer revision.
+    cur.clientId ||= Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    const resumeOnly = !!cur.pending;
+    const pick = pickNewSamples(getSamples ? getSamples() : [], cur.legacyWatermark||0, cur.keyFp?.samples);
+    const snap = diffSnapshot(cur), shadow = collectShadowV5();
     _skbdPending = null;
-    const skbdPend = collectSkillBreakdownPending();   /* ★PR7 */
-    const hasWork = pick.list.length > 0 || snap.changed || shadowBatch.items.length > 0 || (skbdPend && skbdPend.players.length > 0);   /* ★PR7 */
-    if (!hasWork && !force) {
-        return Promise.resolve({ skipped: 'no-new-data', pendingSamples: bufferSize() });
-    }
-    /* 样本分批：每批独立 POST，全部 2xx 才推进水印 */
+    const skbd = collectSkillBreakdownPending();
     const batches = [];
-    for (let i = 0; i < pick.list.length; i += BATCH_LIMIT) batches.push(pick.list.slice(i, i + BATCH_LIMIT));
-    if (!batches.length || (snap.changed || force)) batches.push(null);   /* 终批：携带快照/统计/配置 */
-    let idx = 0, sentSamples = 0, failed = false, failMsg = '', rateLimited = false;
-    let receiptSummary = createIngestReceiptSummary();
-    function step() {
-        if (idx >= batches.length) return Promise.resolve();
-        const list = batches[idx];
-        const env = buildEnvelope(list, idx === batches.length - 1 ? snap.chainsPayload : null,
-            idx === batches.length - 1 ? snap.storagePayload : null,
-            (idx === 0 && shadowBatch.items.length) ? shadowBatch.items : null,
-            (idx === 0) ? skbdPend : null);   /* ★PR7：首批携带 */   /* ★ 4.0.24：shadow 改随首批上传——首批成功即 commit，不再被终批限流拖死 */
-        return postJSON(env).then(response => {
-            receiptSummary = addIngestReceipt(receiptSummary, response);
-            if (list) sentSamples += list.length;
-            idx++;
-        }).catch(e => {
-            failed = true;
-            failMsg = String(e && e.message || e);
-            if (e && e.rateLimited) rateLimited = true;   /* ★P2 修复：限流标记透传（文案匹配不可靠） */
-        });
+    if (cur.pending) batches.push(cur.pending);
+    else {
+        for (let i=0;i<pick.list.length;i+=BATCH_LIMIT) {
+            const list=pick.list.slice(i,i+BATCH_LIMIT);
+            batches.push({env:buildEnvelope(list.map(s=>wireSample(s,cur.clientId)),null,null,null,null),
+                fps:list.map(s=>[sampleFp(s),Date.now()]), count:list.length});
+        }
+        if (snap.changed || force || shadow.items.length || skbd) batches.push({
+            env:buildEnvelope(null,snap.chainsPayload,snap.storagePayload,shadow.items,skbd),
+            fps:[],count:0,snapshotFp:snap.newFp,shadowIds:shadow.ids,skbd});
     }
-    function run() { return step().then(() => ((failed || idx >= batches.length) ? Promise.resolve() : run())); }
-    return run().then(() => {
-        if (failed) {
-            cur.lastErr = failMsg;
-            /* ★fixPR2: 服务端限流（429/rate_limit）→ 30 分钟退避；lastErr 落盘避免重启后无痕迹 */
-            if (rateLimited || /rate_limit|429/i.test(failMsg)) cur.backoffUntil = Date.now() + 30 * 60 * 1000;
+    if (!batches.length) return {skipped:upgradeReviewRequired?'upgrade-review-required':'no-new-data',upgradeReviewRequired};
+    let sentSamples=0, receiptSummary=createIngestReceiptSummary();
+    try {
+        for (const batch of JSON.parse(JSON.stringify(batches))) {
+            // Freeze before persisting: callbacks may revise original samples while HTTP is pending.
+            cur.pending = JSON.parse(JSON.stringify(batch));
             saveCursor(cur);
-            _lastResult = { at: Date.now(), ok: false, detail: failMsg };
-            try { log.warn('cloud', '上报失败（保留待传，本地数据未动）：' + failMsg); } catch (e) {}
-            return { ok: false, error: failMsg, sentSamples, serverReceipt: receiptSummary, receiptText: describeIngestReceipt(receiptSummary) };
+            const response = await postJSON(cur.pending.env);
+            receiptSummary = addIngestReceipt(receiptSummary,response);
+            // A legacy 2xx is an HTTP acknowledgement only; never invent durable archive counts.
+            if (!response || response.ok !== true || response.receiptUnavailable) {
+                const error=new Error('服务端未明确确认接收，保留原批次');error.kind='unconfirmed';throw error;
+            }
+            if (batch.count && (!normalizeIngestReceipt(response) ||
+                response.receipt.receivedSamples !== batch.count || response.receipt.archivedSamples !== batch.count)) {
+                const error=new Error('样本归档回执不完整，保留原批次');error.kind='unconfirmed';throw error;
+            }
+            const next=JSON.parse(JSON.stringify(cur));
+            const confirmed=new Set(batch.fps.map(pair=>pair[0]));
+            const entries=getSamples().filter(s=>confirmed.has(sampleFp(s))).map(sample=>({sample,fp:sampleFp(sample)}));
+            if (entries.length && !await persistCloudConfirmations(entries)) throw new Error('归档确认本地保存失败，保留批次重试');
+            next.keyFp=next.keyFp||{};
+            next.keyFp.samples=mergeSentFps(next.keyFp.samples,batch.fps);
+            if (batch.snapshotFp) next.keyFp={...batch.snapshotFp,samples:next.keyFp.samples};
+            next.uploadedTotal=(next.uploadedTotal||0)+batch.count;
+            next.watermark=Math.max(next.watermark||0,...(batch.env.samples||[]).map(s=>s.ts||0));
+            next.pending=null;next.lastErr='';next.backoffUntil=0;next.failures=0;delete next.permanentFailure;
+            saveCursor(next);Object.assign(cur,next); // only publish checkpoint after verified write
+            sentSamples+=batch.count;
+            if (batch.shadowIds) commitShadowV5(batch.shadowIds);
+            if (batch.skbd) commitSkillBreakdown(batch.skbd);
         }
-        /* 全部成功：只推进游标 + 记样本指纹 + 丢弃内存组包（"删除备份"），原始数据一律保留 */
-        cur.watermark = pick.maxTs || cur.watermark;
-        cur.keyFp = snap.newFp;
-        if (pick.newFps.length) {
-            cur.keyFp.samples = mergeSentFps(cur.keyFp.samples, pick.newFps);
-        }
-        cur.lastOk = Date.now(); cur.lastErr = ''; cur.backoffUntil = 0;
-        cur.uploadedTotal = (cur.uploadedTotal || 0) + sentSamples;   /* ★1015：累计已上传样本数（随游标持久化，供面板显示） */
-        saveCursor(cur);
-        commitShadowV5(shadowBatch.ids);
-        commitSkillBreakdown(skbdPend);   /* ★PR7：成功才推进去重集合 */   /* ★PR4：shadow 游标只在全部成功后推进，失败自动重传 */
-        const receiptText = describeIngestReceipt(receiptSummary);
-        const detail = sentSamples + ' 条样本' + (snap.changed ? ' + 快照变更' : '') + (shadowBatch.items.length ? ' + shadow' + shadowBatch.items.length : '');
-        _lastResult = { at: Date.now(), ok: true, detail: detail + (receiptText ? '；' + receiptText : ''), serverReceipt: receiptSummary, receiptText };
-        try { log.info('cloud', '上报成功：' + _lastResult.detail); } catch (e) {}
-        return { ok: true, sentSamples, snapshotChanged: snap.changed, serverReceipt: receiptSummary, receiptText };
-    });
+        cur.lastOk=Date.now();saveCursor(cur);
+        const receiptText=describeIngestReceipt(receiptSummary);
+        _lastResult={at:Date.now(),ok:true,detail:sentSamples+' 条样本；'+receiptText,serverReceipt:receiptSummary};
+        return {ok:true,sentSamples,resumed:resumeOnly,upgradeReviewRequired,serverReceipt:receiptSummary,receiptText};
+    } catch(e) {
+        cur.lastErr=String(e.message||e);cur.failures=(cur.failures||0)+1;
+        if(e.permanent)cur.permanentFailure={kind:e.kind||'protocol',code:e.code||'E_PERMANENT_REJECTION',credentialId:sourceState().credentialId};
+        const cap=e.rateLimited?3600000:900000;
+        const base=e.rateLimited?300000:30000;
+        const delay=e.kind==='cancelled'?0:Number.isFinite(e.retryAfterMs)&&e.retryAfterMs>0?e.retryAfterMs:
+            Math.min(cap,base*2**Math.min(cur.failures-1,8))*(0.75+Math.random()*0.25);
+        cur.backoffUntil=Date.now()+delay;
+        try { saveCursor(cur); } catch (_) {} // old write-ahead checkpoint remains authoritative
+        _lastResult={at:Date.now(),ok:false,detail:cur.lastErr,kind:e.kind||'storage'};
+        return {ok:false,error:cur.lastErr,kind:e.kind||'storage',sentSamples,serverReceipt:receiptSummary,
+            receiptText:describeIngestReceipt(receiptSummary)};
+    }
 }
 
 /* ---------------- 调度 ---------------- */
@@ -472,7 +418,7 @@ function dueForPeriodic(cur) {
 }
 function hasNewData(cur) {
     try {
-        const pick = pickNewSamples(getSamples ? getSamples() : [], cur.watermark, cur.keyFp && cur.keyFp.samples);
+        const pick = pickNewSamples(getSamples ? getSamples() : [], cur.legacyWatermark||0, cur.keyFp && cur.keyFp.samples);
         return pick.list.length > 0;
     } catch (e) {}
     return false;
@@ -538,6 +484,7 @@ function refreshCloudSettings() {
 }
 function installCloudIngest() { refreshCloudSettings(); }
 function feedbackToast(result) {
+    if (result?.upgradeReviewRequired) { _cloudToast('本次确认 '+(result.sentSamples||0)+' 条；另有 '+result.upgradeReviewRequired+' 条旧记录缺少可靠确认，已保留待后端联调复核'); return; }
     if (result && result.ok) _cloudToast('已上传 ' + (result.sentSamples || 0) + ' 条新样本，本地学习数据保留' + (result.receiptText ? '；' + result.receiptText : ''), true);
     else if (result && result.skipped === 'busy') _cloudToast('正在上传中，请稍候');
     else if (result && result.skipped === 'no-new-data') _cloudToast('暂无新增反馈数据');
@@ -555,7 +502,7 @@ function uninstallCloudIngest() {
 /* ---------------- 面板接口 ---------------- */
 function status() {
     const cur = loadCursor();
-    const pick = pickNewSamples(getSamples ? getSamples() : [], cur.watermark, cur.keyFp && cur.keyFp.samples);
+    const pick = pickNewSamples(getSamples ? getSamples() : [], cur.legacyWatermark||0, cur.keyFp && cur.keyFp.samples);
     const snap = diffSnapshot(cur);
     /* ★P2 修复：三个口径必须各自独立，禁止相加冒充"去重后的样本总数"——
      * 上传成功后本地样本仍然保留，本地数已包含已上传数，相加必然重复计数。 */
@@ -563,6 +510,11 @@ function status() {
     const pendingCount = pick.list.length;    /* 当前待上传样本数（水印之后的新样本） */
     const uploadedCount = cur.uploadedTotal || 0;   /* 历史累计成功上传样本数 */
     return {
+        source:sourceState(),permanentFailure:cur.permanentFailure||null,
+        pendingBatch: !!cur.pending,
+        upgradeReviewRequired: getSamples().filter(s=>!s._cloudAck && s._cloudLegacyReview===true).length,
+        backoffUntil: cur.backoffUntil || 0,
+        checkpointSchema: 1,
         endpoint: ENDPOINT,
         watermark: cur.watermark,
         watermarkText: cur.watermark ? new Date(cur.watermark).toLocaleString() : '（首次，将全量上传）',
@@ -577,12 +529,16 @@ function status() {
         lastResult: _lastResult
     };
 }
-if(typeof window!=='undefined'){window.__DJSC=window.__DJSC||{};window.__DJSC.cloudFeedback={refresh:refreshCloudSettings,upload:uploadFeedback,status};}
+function sourceState(){try{return sourceIdentity.status();}catch(e){return {credentialId:null,error:e.code||'E_SOURCE_STORAGE',authorization:'unavailable'};}}
+function retrySourceAuthorization(){const cur=loadCursor();if(cur.permanentFailure){delete cur.permanentFailure;cur.backoffUntil=0;saveCursor(cur);}return {pendingRetained:!!cur.pending};}
+function configureSourceCredential(value){sourceIdentity.install(value,ENDPOINT);retrySourceAuthorization();return sourceState();}
+if(typeof window!=='undefined'){window.__DJSC=window.__DJSC||{};window.__DJSC.cloudFeedback={refresh:refreshCloudSettings,upload:uploadFeedback,status,sourceStatus:sourceState,configureSourceCredential,retrySourceAuthorization};}
 const cloudCmd = {
+    cancelUpload,
     uploadNow: force => uploadNow(force !== false),
     status,
     help: () => 'cloudIngest: uploadNow [force] / status。增量上传：本地数据保留，只传新增样本与变更快照；网关按 SHA-256 去重 7 天。',
     set: () => 'v2 无可写配置；本地数据永不删除。'
 };
 
-export { cloudCmd as cmd, uploadNow, status, cloudCmd, onGameEndHook, installCloudIngest, uninstallCloudIngest, sha256Hex, _stableStringify, pickNewSamples, diffSnapshot, loadCursor };
+export { cloudCmd as cmd, uploadNow, cancelUpload, status, cloudCmd, onGameEndHook, installCloudIngest, uninstallCloudIngest, sha256Hex, _stableStringify, pickNewSamples, diffSnapshot, loadCursor,configureSourceCredential,retrySourceAuthorization };

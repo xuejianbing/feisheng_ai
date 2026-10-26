@@ -97,7 +97,7 @@ export function installPlugin(id) {
 						if (!before || before.indexOf(after[i]) < 0) added.push(after[i]);
 					}
 					if (!DEP_BOUND.has(id)) DEP_BOUND.set(id, []);
-					DEP_BOUND.get(id).push({ ns: k, keys: added, createdNs: !before });
+					DEP_BOUND.get(id).push({ ns: k, keys: added, target:D[k], values:added.map(key=>D[k][key]), createdNs: !before });
 				} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			});
 		}
@@ -157,9 +157,9 @@ export function uninstallPlugin(id) {
 			try {
 				const rec = bound[i];
 				const target = D[rec.ns];
-				if (target && typeof target === 'object') {
+				if (target && target === rec.target && typeof target === 'object') {
 					for (let j = 0; j < rec.keys.length; j++) {
-						try { delete target[rec.keys[j]]; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+						try { if(target[rec.keys[j]]===rec.values[j])delete target[rec.keys[j]]; } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 					}
 					/* 命名空间由本插件创建且已删空 → 整体移除，避免留下空壳 */
 					if (rec.createdNs && Object.keys(target).length === 0) {

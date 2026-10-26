@@ -1,0 +1,58 @@
+{
+ "file": "E:\\NoNameAI\\model\\SubModel_Critic_v1.pkl",
+ "feature_dim": 121,
+ "leak_idx": [
+  0,
+  17,
+  53,
+  64,
+  65,
+  68,
+  70,
+  71,
+  81
+ ],
+ "sample_auc": 0.6978030290609614,
+ "sample_f1": 0.8634520506672357,
+ "sample_cm": [
+  [
+   968,
+   10208
+  ],
+  [
+   669,
+   34390
+  ]
+ ],
+ "best_threshold": 0.7688763420697661,
+ "sample_f1_best": 0.6808341127160622,
+ "sample_cm_best": [
+  [
+   8152,
+   3024
+  ],
+  [
+   15404,
+   19655
+  ]
+ ],
+ "session_auc": 0.7984452280280218,
+ "session_f1": 0.7857011240095817,
+ "session_cm": [
+  [
+   43,
+   1155
+  ],
+  [
+   8,
+   2132
+  ]
+ ],
+ "counts": {
+  "win_samples": 175522,
+  "lose_samples": 18816,
+  "aborted_samples": 38621,
+  "win_sessions": 10725,
+  "lose_aborted_sessions": 5963
+ }
+}

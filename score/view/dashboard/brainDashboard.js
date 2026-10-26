@@ -104,10 +104,7 @@ function _openFullscreenPanel(title, html) {
     try {
         /* 关闭旧面板 */
         try {
-            if (window.__DJSC_PANEL) {
-                try { window.__DJSC_PANEL.remove(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-                window.__DJSC_PANEL = null;
-            }
+            _closeBrainPanel(document.getElementById('djsc-brain-panel'));
         } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
         if(!document.getElementById('djsc-brain-layout')){
@@ -123,10 +120,10 @@ function _openFullscreenPanel(title, html) {
         const header=document.createElement('header');header.className='djsc-popup-title';header.textContent=title;
         const body=document.createElement('div');body.className='djsc-brain-content';body.innerHTML=html;
         const closeBtn=document.createElement('button');closeBtn.type='button';
-        closeBtn.onclick=()=>{panel.remove();if(window.__DJSC_PANEL===panel)window.__DJSC_PANEL=null;};
+        closeBtn.onclick=()=>_closeBrainPanel(panel);
         panel.append(header,body,closeBtn);document.body.append(panel);
         styleUtilityPanel(panel,closeBtn);window.__DJSC_PANEL=panel;
-        setTimeout(_bindButtons, 50);
+        _bindButtons(panel); // DOM is attached; avoid stale delayed binds after close/reopen.
     } catch (e) {
         alert('打开面板失败：' + e.message);
     }
@@ -272,7 +269,7 @@ function _buildHtml() {
     /* 危险操作 */
     h += '<div style="text-align:center; margin-top:10px; padding-top:8px; border-top:1px dashed #a33;">';
     h += '<div style="font-size:14px; color:#a66; margin-bottom:4px;">⚠️ 危险操作（不可恢复）</div>';
-    h += '<button id="djsc-brain-reset-all" style="background:#c33; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:12px;">🗑️ 清空所有学习数据</button>';
+    h += '<button id="djsc-brain-reset-all" style="background:#c33; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:12px;">🗑️ 重置所列学习模块</button>';
     h += '<div style="font-size:14px; color:#688; margin-top:4px;">💡 导出/导入功能在扩展设置里</div>';
     h += '</div>';
 
@@ -286,21 +283,32 @@ function _card(label, val, color) {
         '<div style="font-size:14px; font-weight:600; color:' + color + ';">' + val + '</div></div>';
 }
 
-function _bindButtons() {
+function _closeBrainPanel(panel) {
+    if(!panel||panel.id!=='djsc-brain-panel')return;
+    panel.remove();
+    if(window.__DJSC_PANEL===panel)window.__DJSC_PANEL=null;
+}
+function _refreshBrainPanel(panel) {
+    if(!panel?.isConnected)return;
+    _closeBrainPanel(panel);openBrainDashboard();
+}
+function _bindButtons(panel) {
     try {
-        const btn = document.getElementById('djsc-brain-refresh');
+        if(!panel?.isConnected||panel.dataset.djscButtonsBound)return;
+        panel.dataset.djscButtonsBound='true';
+        const btn = panel.querySelector('#djsc-brain-refresh');
         if (btn) btn.addEventListener('click', function () {
-            const panels = document.querySelectorAll('.dialog.fullheight');
-            if (panels.length) panels[panels.length - 1].remove();
-            openBrainDashboard();
+            _refreshBrainPanel(panel);
         });
-        const featBtn = document.getElementById('djsc-brain-show-features');
+        const featBtn = panel.querySelector('#djsc-brain-show-features');
         if (featBtn) featBtn.addEventListener('click', function () {
+            if(!panel.isConnected)return;
             showFeatures();
         });
-        const resetBtn = document.getElementById('djsc-brain-reset-all');
+        const resetBtn = panel.querySelector('#djsc-brain-reset-all');
         if (resetBtn) resetBtn.addEventListener('click', function () {
-            if (!confirm('重置所有学习数据？\n将清空：校准器/认知日志/冲突/多档案/策略总线/护栏\n此操作不可恢复！')) return;
+            if(!panel.isConnected)return;
+            if (!confirm('重置所列学习模块？\n校准器/认知日志/冲突/多档案/策略总线/元认知/校准历史。\n不清除训练样本、模型权重或备份；不是仅清面板计数。\n此操作不可恢复！')) return;
             try { window.__DJSC.calibrator && window.__DJSC.calibrator.reset && window.__DJSC.calibrator.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
             try { window.__DJSC.cognitionLog && window.__DJSC.cognitionLog.reset && window.__DJSC.cognitionLog.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
             try { window.__DJSC.conflict && window.__DJSC.conflict.reset && window.__DJSC.conflict.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
@@ -308,14 +316,14 @@ function _bindButtons() {
             try { window.__DJSC.strategyBus && window.__DJSC.strategyBus.reset && window.__DJSC.strategyBus.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
             try { window.__DJSC.metaCognition && window.__DJSC.metaCognition.reset && window.__DJSC.metaCognition.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
             try { window.__DJSC.calibHistory && window.__DJSC.calibHistory.reset && window.__DJSC.calibHistory.reset(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
-            alert('✅ 已重置');
-            const panels = document.querySelectorAll('.dialog.fullheight');
-            if (panels.length) panels[panels.length - 1].remove();
+            alert('已发起所列模块重置。持久化结果需各模块确认；未挂载模块不会执行。');
+            _closeBrainPanel(panel);
         });
 
         /* ★ 导出按钮（统一路径 extension/无名AI/data，写盘失败回退下载） */
-        const exportBtn = document.getElementById('djsc-brain-export');
+        const exportBtn = panel.querySelector('#djsc-brain-export');
         if (exportBtn) exportBtn.addEventListener('click', function () {
+            if(!panel.isConnected)return;
             try {
                 const json = window.__DJSC.trainExport ? window.__DJSC.trainExport() : '{}';
                 const filename = '无名AI学习数据_' + Date.now() + '.json';
@@ -327,17 +335,16 @@ function _bindButtons() {
         });
 
         /* ★ 导入按钮 */
-        const importBtn = document.getElementById('djsc-brain-import');
+        const importBtn = panel.querySelector('#djsc-brain-import');
         if (importBtn) importBtn.addEventListener('click', function () {
+            if(!panel.isConnected)return;
             const input = prompt('请粘贴别人发给你的学习数据JSON：\n（太长可以分段粘贴，建议用文件）');
             if (!input) return;
             try {
                 const result = window.__DJSC.trainImport ? window.__DJSC.trainImport(input) : { ok: false, err: '功能未加载' };
                 if (result.ok) {
                     alert('✅ 导入成功！\n\n新增样本：' + result.added + ' 条\n合并样本：' + result.merged + ' 条\n跳过样本：' + result.skipped + ' 条\n\n当前总样本：' + result.total + ' 条');
-                    const panels = document.querySelectorAll('.dialog.fullheight');
-                    if (panels.length) panels[panels.length - 1].remove();
-                    openBrainDashboard();
+                    _refreshBrainPanel(panel);
                 } else {
                     alert('❌ 导入失败：' + result.err);
                 }

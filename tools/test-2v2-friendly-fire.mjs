@@ -88,15 +88,19 @@ check('旧公式退出属于正确性修复，关闭策略优化也不重新启�
 check('其他对决保留旧公式，包括有/无敌方与身份标记两分支',()=>{
  for(const submode of ['three','3v3','four','4v4','siguo']){
   const [me,b,c,ally]=reset(submode);
+  me.side=ally.side='red';b.side=c.side='blue';
   for(const mark of [{},{identityShown:true},{identity:'friend'}]){
    delete ally.identity;delete ally.identityShown;Object.assign(ally,mark);
    assert.equal(strategy.decisionBoost(me,action('sha',ally)),-1);
    stub.game.players=[me,ally];assert.equal(strategy.decisionBoost(me,action('sha',ally)),-2);stub.game.players=[me,b,c,ally];
   }
+  // v4.4.0 旧代码将 false side 视为无侧标识，不按同队处理；不能将 2v2 修复扩散到此处。
+  const [falseMe,,,falseAlly]=reset(submode,false);
+  assert.equal(strategy.decisionBoost(falseMe,action('sha',falseAlly)),.4);
  }
 });
 check('自定义乱斗不借普通2v2标识改变兼容行为',()=>{
- const [me,,,ally]=reset();stub._status.brawl={};assert.equal(strategy.decisionBoost(me,action('sha',ally)),-1);
+ const [me,,,ally]=reset();stub._status.brawl={};assert.equal(strategy.decisionBoost(me,action('sha',ally)),.4);
 });
 check('非伤害卡和技能候选不受旧友伤公式修复影响',()=>{
  const [me,,,ally]=reset();for(const id of ['tiesuo','guohe','lebu'])assert.equal(strategy.decisionBoost(me,action(id,ally)),0);

@@ -4,13 +4,16 @@ import {game,lib} from '../../foundation/adapt/host.js?v=41a';
 import {playerKey} from '../../foundation/adapt/playerIdentity.js?v=41a';
 import {dirOf,downloadText} from '../../foundation/storage/storagePaths.js?v=41a';
 import {getSamples,getSampleDiagnostics} from './trainExport.js?v=41a';
-import {selectClassicDataset,splitClassicByGame,sampleLabel} from './modeDataset.js?v=41a';
+import {selectClassicDataset,splitClassicByGame,classicHoldoutDataset,sampleLabel} from './modeDataset.js?v=41a';
 import {createIsolatedModelSession} from '../weights/weights.js?v=41a';
 import {saveClassicCandidateDurable,retryClassicModelRestore,modeModelsReady,classicModelStorageStatus,classicCandidateInfo,createClassicCandidateSession,createClassicActiveSession,loadClassicCandidate,loadClassicActive,classicActiveInfo,promoteClassicCandidateDurable,rollbackClassicActiveDurable} from '../weights/modeModelStore.js?v=41a';
 import {modeContext,modeSessionActive} from '../../foundation/runtime/modeContext.js?v=41a';
 import {cfg} from '../../foundation/config/util.js?v=41a';
 import {writeTrainingSnapshot} from './trainingExportFile.js?v=41a';
 import {FEATURE_DIM} from '../features/features.js?v=41a';
+import {buildDatasetManifest} from './trainingDataset.js?v=41a';
+import {_stableStringify as canonical} from './cloudSampleState.js?v=41a';
+import {captureClassicCandidateBinding} from '../weights/modeModelStore.js?v=41a';
 let busy=false,progress={phase:'未训练'},lastReport=null;
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
 function summarizeCollection(samples,context,qualified){
@@ -35,7 +38,8 @@ export async function trainClassicCandidate(){
  if(!classicModelStorageStatus().ready)await modeModelsReady;
  if(busy)return {ok:false,err:'专项训练正在进行'};
  if(modeSessionActive())return {ok:false,err:'请在对局结束后训练；当前对局继续使用稳定能力'};
- const dataset=selectClassicDataset(getSamples()),split=splitClassicByGame(dataset.samples);
+ const rawSamples=getSamples().map(s=>s?{...s,f:s.f?Array.from(s.f):s.f,m:s.m?JSON.parse(JSON.stringify(s.m)):s.m}:s);
+ const dataset=selectClassicDataset(rawSamples),split=splitClassicByGame(dataset.samples);
  if(dataset.stats.accepted<4500||dataset.stats.sessions<150||split.training.length<3000||split.validation.length<450)return {ok:false,err:'需至少 4500 条有效事务、150 局；训练集≥3000，整局留出验证集≥450（PR5e：门槛×15）',stats:dataset.stats};
  busy=true;const start=Date.now();let trained=0;
  try{
@@ -49,23 +53,42 @@ export async function trainClassicCandidate(){
   progress={phase:'整局留出验证',trained};await pause();
   const baselineResult=await evaluate(baseline,split.validation),candidateResult=await evaluate(candidate,split.validation);
   if(candidateResult.missing||baselineResult.missing)throw Error('验证推理失败，未保存候选');
-  const report={dataset:dataset.stats,training:split.training.length,validation:split.validation.length,holdoutSessions:split.holdoutSessions,
+  const splitMetadata={...split.metadata,holdoutSessions:split.metadata.holdoutSessions.slice()};
+  const datasetManifest=buildDatasetManifest(rawSamples,{generatedAt:new Date().toISOString(),classicPartition:split,modeGroup:'doudizhu-classic'}).manifest;
+  const report={dataset:dataset.stats,datasetManifest,training:split.training.length,validation:split.validation.length,holdoutSessions:splitMetadata.holdoutSessions,splitMetadata,
    baseline:baselineResult,candidate:candidateResult,quality:compareClassicMetrics(candidateResult,baselineResult),trainingMethod:{schema:'classic-float-batch-v1',parameterFormat:'float32-v1',batchSize:32,epochs:5,learningRate:lr,optimizerSteps:candidate.snapshot().adamT,holdoutUsedForTraining:false},trained,ms:Date.now()-start,datasetSignature:datasetSignature(dataset.samples),realGameAcceptance:false,note:'离线标签与价值误差，不是胜率；尚未启用专项模型'};
   const result=await saveClassicCandidateDurable({id:'DDZ-'+Date.now(),createdAt:Date.now(),snapshot:candidate.snapshot(),networkProfile,ruleKeys:[...new Set(dataset.samples.map(s=>s.m.modeContext.ruleKey))],report});
   if(!result.ok)throw Error(result.err);lastReport=report;progress={phase:report.quality.ok?'候选离线通过，可启用试用':'候选已保存，离线未通过',trained};return {...result,report,note:report.quality.ok?'保存成功，离线分组检查通过；启用后下一局参与选择，仍需实战核对。':'保存成功，但离线指标退步或分组样本不足；不能启用，继续使用原运行版本。'};
  }catch(e){progress={phase:'失败',reason:String(e.message||e)};return {ok:false,err:String(e.message||e)};}finally{busy=false;}
+}
+// Rebuild the entire proof, not just its caller-supplied digest string.
+function checkManifest(info){
+ if(info?.report?.datasetManifest?.rules!=='training-lineage-v1')return {ok:false,code:'E_MANIFEST_REQUIRED',err:'候选缺少当前训练血缘Manifest，请重新生成候选；稳定版本未切换'};
+ const dataset=selectClassicDataset(getSamples()),holdout=classicHoldoutDataset(dataset.samples,info.report,info.ruleKeys);
+ if(!holdout.ok)return holdout;
+ let rebuilt;
+ try{rebuilt=buildDatasetManifest(getSamples(),{generatedAt:info.report.datasetManifest.generatedAt,modeGroup:'doudizhu-classic',classicPartition:splitClassicByGame(dataset.samples)}).manifest;}
+ catch(e){return {ok:false,code:'E_MANIFEST_INVALID',err:'候选血缘Manifest无法重建：'+String(e.message||e)+'；稳定版本未切换'};}
+ if(canonical(rebuilt)!==canonical(info.report.datasetManifest))return {ok:false,code:'E_MANIFEST_CHANGED',err:'血缘Manifest正文、数据集或规则已变化，未切换候选'};
+ return {ok:true,dataset,holdout,binding:canonical(rebuilt)};
 }
 export async function validateClassicCandidate(){
  if(!classicModelStorageStatus().ready)await modeModelsReady;
  if(busy)return {ok:false,err:'请等待训练结束'};
  const storage=classicModelStorageStatus();if(storage.backend==='unavailable')return {ok:false,err:'模型恢复失败：'+storage.error};
   const info=classicCandidateInfo();if(!info)return {ok:false,err:'暂无专项候选'};
- const dataset=selectClassicDataset(getSamples()),holdout=new Set(info.report?.holdoutSessions||[]),rows=dataset.samples.filter(s=>holdout.has(s.m.sessionId)&&info.ruleKeys.includes(s.m.modeContext.ruleKey));
- if(!rows.length)return {ok:false,err:'原留出验证局的数据不在本地，请重新采集或导入原专项数据'};
- busy=true;try{const result=await evaluate(createClassicCandidateSession(),rows),baseline=await evaluate(createIsolatedModelSession(null,loadClassicCandidate().networkProfile),rows),quality=compareClassicMetrics(result,baseline),signature=datasetSignature(dataset.samples);if(signature!==info.report?.datasetSignature){quality.ok=false;quality.regressions.push('训练后有效样本或标签发生变化，需重新训练');}if(rows.length<30){quality.ok=false;quality.regressions.push('整局留出样本不足 30 条');}return {ok:!result.missing&&!baseline.missing,result,baseline,quality,datasetSignature:signature,note:quality.ok?'留出局质量检查通过；可尝试启用，启用时还会检查当前试用版。离线通过不代表胜率改善。':'留出局质量检查未通过；候选不能启用，保留原运行版本。'};}finally{busy=false;}
+ const candidateGuard=captureClassicCandidateBinding();const candidateCheck=candidateGuard();if(!candidateCheck.ok)return candidateCheck;
+ const proof=checkManifest(info);if(!proof.ok)return proof;
+ const {dataset,holdout}=proof;
+ const rows=holdout.rows;
+ busy=true;try{const result=await evaluate(createClassicCandidateSession(),rows),baseline=await evaluate(createIsolatedModelSession(null,loadClassicCandidate().networkProfile),rows),quality=compareClassicMetrics(result,baseline),signature=datasetSignature(dataset.samples);
+ const finalProof=checkManifest(info);if(!finalProof.ok)return finalProof;
+ const finalCandidate=candidateGuard();if(!finalCandidate.ok)return finalCandidate;
+ if(finalProof.binding!==proof.binding)return {ok:false,code:'E_MANIFEST_CHANGED',err:'验证期间Manifest变化，未切换候选'};
+ if(signature!==info.report?.datasetSignature){quality.ok=false;quality.regressions.push('训练后有效样本或标签发生变化，需重新训练');}return {ok:!result.missing&&!baseline.missing&&quality.ok,...(!quality.ok?{err:quality.regressions.join('；')}:{}),candidateGuard,result,baseline,quality,datasetSignature:signature,note:quality.ok?'留出局质量检查通过；可尝试启用，启用时还会检查当前试用版。离线通过不代表胜率改善。':'留出局质量检查未通过；候选不能启用，保留原运行版本。'};}finally{busy=false;}
 }
 export async function exportClassicData(){const dataset=selectClassicDataset(getSamples());const payload={schema:'classic-doudizhu-export-v1',createdAt:Date.now(),stats:dataset.stats,samples:dataset.samples,candidate:classicCandidateInfo(),active:classicActiveInfo()};return writeTrainingSnapshot(game,downloadText,dirOf('modes/doudizhu-classic/datasets'),'常规斗地主_'+Date.now()+'.json',JSON.stringify(payload,null,2));}
-let shadowSession=null,shadowId=null;
+let shadowSession=null,shadowId=null,shadowCandidate=null;
 export function classicCandidateShadow(best,acts,context){
  const base={domain:'classic-candidate-shadow',executionState:'suggested',changesSelection:false};
  try{
@@ -73,7 +96,9 @@ export function classicCandidateShadow(best,acts,context){
   const storage=classicModelStorageStatus();if(!storage.ready)return {...base,status:'storage-loading'};if(storage.backend==='unavailable')return {...base,status:'storage-error',reason:storage.error};
   const info=classicCandidateInfo();if(!info)return {...base,status:'no-candidate'};
   if(!info.ruleKeys.includes(context.ruleKey))return {...base,status:'rule-not-covered',candidateId:info.id};
-  if(shadowId!==info.id){shadowSession=createClassicCandidateSession();shadowId=info.id;}
+  // Saves/restores replace the owned record even when a legacy caller reuses its ID.
+  const candidate=loadClassicCandidate();
+  if(shadowId!==info.id||shadowCandidate!==candidate){shadowSession=createClassicCandidateSession();shadowId=info.id;shadowCandidate=candidate;}
   if(!best||best._feat?.length!==FEATURE_DIM)return {...base,status:'no-best-features',candidateId:info.id};
   for(const feature of best._feat)if(!Number.isFinite(feature))return {...base,status:'invalid-best-features',candidateId:info.id};
   const p=shadowSession.predict(best._feat),predictions=[{type:best.type,id:best.id,target:typeof best.target==='string'?best.target:playerKey(best.target)||null,value:p?.value??null,label:p?p.logits.indexOf(Math.max(...p.logits)):null}];
@@ -97,19 +122,29 @@ export function compareClassicMetrics(candidate,baseline){
 export async function activateClassicCandidate({enable=true}={}){
  if(!classicModelStorageStatus().ready)await modeModelsReady;
  if(busy||modeSessionActive())return {ok:false,err:'请在对局结束且训练完成后启用，下一局生效'};
- const info=classicCandidateInfo(),report=info?.report,current=loadClassicActive();if(!report||report.validation<450)return {ok:false,err:'候选缺少完整离线验证报告（验证≥450），请先训练'};
+ const info=classicCandidateInfo(),report=info?.report,current=loadClassicActive();if(!report||!Number.isSafeInteger(report.validation)||report.validation<450)return {ok:false,err:'候选缺少完整离线验证报告（验证≥450），请先训练'};
+ const binding=canonical(report.datasetManifest);
+ let candidateGuard=null;
+ const guard=()=>{
+  if(candidateGuard){const checked=candidateGuard();if(!checked.ok)return checked;}
+  if(modeSessionActive()||classicCandidateInfo()?.id!==info.id||loadClassicActive()?.id!==current?.id||canonical(classicCandidateInfo()?.report?.datasetManifest)!==binding)return {ok:false,code:'E_MANIFEST_CHANGED',err:'验证期间对局或候选证明变化，未切换版本'};
+  return checkManifest(classicCandidateInfo());
+ };
  const check=await validateClassicCandidate();if(!check.ok)return check;
+ candidateGuard=check.candidateGuard;
  if(modeSessionActive()||busy)return {ok:false,err:'验证期间已开始新对局或训练，未切换版本'};
  if(check.datasetSignature!==report.datasetSignature)return {ok:false,err:'有效样本或标签在训练后发生变化，请重新训练'};
  const publicCheck=compareClassicMetrics(check.result,report.baseline);if(!publicCheck.ok)return {ok:false,err:'留出局指标劣于公共基线或分组证据不足，保留原版本',comparison:publicCheck};
  busy=true;
  try{
-  const activationData=selectClassicDataset(getSamples()),activationHoldout=new Set(report.holdoutSessions),activationRows=activationData.samples.filter(s=>activationHoldout.has(s.m.sessionId)&&info.ruleKeys.includes(s.m.modeContext.ruleKey));
+  const activationData=selectClassicDataset(getSamples()),activationHoldout=classicHoldoutDataset(activationData.samples,report,info.ruleKeys);
+  if(!activationHoldout.ok)return activationHoldout;
+  const activationRows=activationHoldout.rows;
   const livePublicBaseline=await evaluate(createIsolatedModelSession(null,loadClassicCandidate().networkProfile),activationRows),livePublicCheck=compareClassicMetrics(check.result,livePublicBaseline);
   if(!livePublicCheck.ok)return {ok:false,err:'指标劣于当前公共基线，保留原版本',comparison:livePublicCheck};
   let previousComparison={status:'no-active-version'};
   if(current&&current.id!==info.id){
-   const dataset=selectClassicDataset(getSamples()),holdout=new Set(report.holdoutSessions),rows=dataset.samples.filter(s=>holdout.has(s.m.sessionId)&&current.ruleKeys.includes(s.m.modeContext.ruleKey));
+   const holdout=new Set(activationHoldout.holdoutSessions),rows=activationData.samples.filter(s=>holdout.has(s.m.sessionId)&&current.ruleKeys.includes(s.m.modeContext.ruleKey));
    if(rows.length){
     if(rows.length<30)return {ok:false,err:'与当前试用版共同适用的留出样本不足 30 条，保留原版本'};
     const candidateResult=await evaluate(createClassicCandidateSession(),rows),previousResult=await evaluate(createClassicActiveSession(current),rows),comparison=compareClassicMetrics(candidateResult,previousResult);
@@ -118,7 +153,8 @@ export async function activateClassicCandidate({enable=true}={}){
    }else previousComparison={status:'no-shared-rule',modelId:current.id,note:'规则无交集，不能宣称优于旧版本'};
   }
   if(modeSessionActive()||classicCandidateInfo()?.id!==info.id||loadClassicActive()?.id!==current?.id||datasetSignature(selectClassicDataset(getSamples()).samples)!==report.datasetSignature)return {ok:false,err:'验证期间对局、版本或样本发生变化，未切换版本'};
-  const result=await promoteClassicCandidateDurable({validation:{schema:'classic-activation-validation-v1',validatedAt:Date.now(),datasetSignature:report.datasetSignature,publicComparison:livePublicCheck,trainingBaselineComparison:publicCheck,candidate:check.result,publicBaseline:livePublicBaseline,previousComparison,realGameAcceptance:false}});if(result.ok&&enable){lib.config['extension_无名AI_classicModelEnabled']=true;game.saveExtensionConfig?.('无名AI','classicModelEnabled',true);}
+  const finalProof=guard();if(!finalProof.ok)return finalProof;
+  const result=await promoteClassicCandidateDurable({beforePromote:guard,validation:{schema:'classic-activation-validation-v1',validatedAt:Date.now(),datasetSignature:report.datasetSignature,publicComparison:livePublicCheck,trainingBaselineComparison:publicCheck,candidate:check.result,publicBaseline:livePublicBaseline,previousComparison,realGameAcceptance:false}});if(result.ok&&enable){lib.config['extension_无名AI_classicModelEnabled']=true;game.saveExtensionConfig?.('无名AI','classicModelEnabled',true);}
   const comparisonNote=previousComparison.status==='no-shared-rule'?'公共基线分组检查通过；与旧版没有共同规则，未比较优劣。':previousComparison.status==='no-active-version'?'公共基线分组检查通过；首次启用，无旧试用版可比较。':'公共基线与当前试用版分组检查通过。';
   return {...result,previousComparison,note:result.ok?'专项版本已保存；'+comparisonNote+'下一局生效。离线通过不代表实战提升。':'保存失败，原版本保留。'};
  }finally{busy=false;}
