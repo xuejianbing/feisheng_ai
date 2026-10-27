@@ -1,3 +1,25 @@
+## 4.4.2（2026-10-27 · 手机端卡顿修复）
+
+手机端「进游戏卡死、摸牌后卡顿」的性能修复，不改变任何决策结果与既有开关。
+
+### 根因
+
+- 每次 AI 决策在主线程同步跑整条 `bestAction` 管线，且同一决策里状态指纹被全量计算两遍：`checkStateChanged()` 算一次、`_decisionStateKey` 又算一次，`multiTurnCached()` 再算一次（O(玩家×手牌)，含手牌名/花色/点数/属性遍历）。
+- `journalStorage.js` 用模块顶层 `await` 等 IndexedDB 打开（最多 3s）；该文件经 `gameLogStore.js` 被打牌引擎静态 import，等于最多阻塞 3s 扩展启动。
+- 排除项：`client_policy_model_v2.js`（6.9MB）全仓库无 import、未接线；后台无 setInterval 风暴（定时器仅在弹窗/自动托管时活跃）。
+
+### 修复
+
+- `score/foundation/storage/cache.js`：新增 `lastStateKey()`，暴露 `checkStateChanged()` 刚算出的指纹。
+- `score/decision/engine/engine.js`：`_decisionStateKey` 与 `multiTurnCached()` 改用 `lastStateKey()`，一次决策只做一次全量指纹。
+- `score/foundation/storage/journalStorage.js`：顶层 `await` 改为非阻塞启动；写失败自动回退 localStorage，行为不变。
+
+### 验证
+
+- `test-decision-state-fingerprint` 13 PASS；`test-regressions` 94 PASS / 0 FAIL；`test-weights` 637 PASS；`test-policy-model-v3` 25 PASS；`test-response-lifecycle` 45 PASS；`test-decision-audit` 32 PASS；`test-ai-boundaries` 12 PASS；`test-jiedao-response` 17 PASS。
+
+开发记录见 [手机卡顿排查日志](docs/performance/开发者日志_手机卡顿排查_20261027.md)。
+
 ## 4.4.1（2026-10-27 · 合并 PR #13 2v2 与 PR #12 响应修复）
 
 本版把两条并列开发线合并进 4.4.0 统一版基线，双方功能保持原样，仅做兼容接线。

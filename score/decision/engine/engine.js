@@ -51,7 +51,7 @@ import { evaluateTiesuoActions, tiesuoUtilityToEngineRaw, hostTiesuoDecision, ho
 import { evaluateActionTransitionPenalty, beginStrategicAction, reconcileStrategicTransitions, beginStrategicTurn } from '../state/turnStrategicState.js?v=41a';   /* ★ 回合内战略状态转移唯一权威源 */
 import { buildPlayerSnapshot, buildTargetCandidate } from '../state/playerSnapshot.js?v=41a';   /* ★ 指令 05 Stage A+C：统一 Player State Snapshot + 目标候选契约（禁止再猜宿主字段） */
 import { codeGainOf, skillRuleOf, skillProfileOf, skillBranchesOf, checkBranch, skillStagesOf, skillInteractionOf, skillTagsOf } from '../skills/skills.js?v=41a';
-import { cacheGet, cacheSet, checkStateChanged, initStateWatcher, stateKey } from '../../foundation/storage/cache.js?v=41a';
+import { cacheGet, cacheSet, checkStateChanged, initStateWatcher, lastStateKey, stateKey } from '../../foundation/storage/cache.js?v=41a';
 import { enemiesOf, isEnemyOf, isAllyOf, dispositionOf, situationFactor, targetScore, probHasBagua, probHasShan, hasVengeanceSkill, cardValueOf, clearThreatCache, seatPressure, forecastSummary, burstThreatOf, maxBurstThreat, threatOf, linkedChainValue } from '../threat/threat.js?v=41a';
 import { isPlayerLinked } from '../state/playerState.js?v=41a';   /* ★ 指令 02：唯一横置状态读取入口 */
 import { miniPredict, cardIdOf, MINI_W } from '../../model/net/mini-model.js?v=41a';
@@ -2834,7 +2834,7 @@ let _mtVal = null, _mtHero = null, _mtAt = 0, _mtState = '';
 function multiTurnCached(me) {
     try {
         const now = Date.now();
-        const currentState = stateKey() + '::' + relationStateKey(me);
+        const currentState = lastStateKey() + '::' + relationStateKey(me);
         if (_mtHero === me && _mtState === currentState && _mtVal && (now - _mtAt) < 1200) return _mtVal;
         _mtVal = multiTurnForecast(me);
         _mtHero = me;
@@ -3484,7 +3484,8 @@ function bestActionCore() {
 	 * TTL 仅是安全上限，不再是决定缓存正确性的主要依据。 */
 	let _decisionStateKey = '';
 	try {
-		_decisionStateKey = stateKey() + '::REL=' + _currentRelationKey;
+		/* checkStateChanged() 刚同步算出当前完整指纹（缓存在 _lastStateKey），这里直接复用；等价于再调一次 stateKey()，省一次 O(玩家×手牌) 全量重算。 */
+		_decisionStateKey = lastStateKey() + '::REL=' + _currentRelationKey;
 	} catch (eStateKey) {
 		_decisionStateKey = '';
 	}

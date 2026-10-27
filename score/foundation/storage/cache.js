@@ -233,6 +233,15 @@ export function stateKey() {
 }
 
 /**
+ * 返回最近一次 makeStateKey() 的结果（checkStateChanged 刚更新过）。
+ * 供决策引擎在一次决策里只计算一次完整状态指纹：checkStateChanged() 已
+ * 算出当前 key 并存入 _lastStateKey，随后直接复用，避免全量重算两次。
+ */
+export function lastStateKey() {
+    return _lastStateKey;
+}
+
+/**
  * 检查状态是否变化，变化了才清缓存
  */
 export function checkStateChanged() {

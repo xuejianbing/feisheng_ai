@@ -17,6 +17,22 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-27 · 手机端卡顿修复（性能）",
+    "date": "2026-10-27",
+    "changes": [
+        {
+            "file": "score/foundation/storage/cache.js / score/decision/engine/engine.js",
+            "lines": "lastStateKey（240-242）/ bestActionCore 指纹复用（6946-6948）/ multiTurnCached（5650）",
+            "desc": "一次决策只算一次全量状态指纹：checkStateChanged() 的 key 存于 _lastStateKey，bestAction 与多回合预测缓存直接复用，省掉每次决策两次 O(玩家×手牌) 重算。"
+        },
+        {
+            "file": "score/foundation/storage/journalStorage.js",
+            "lines": "模块顶层初始化（20-22）",
+            "desc": "顶层 await 改为非阻塞 void 启动：原先 IndexedDB 打开最多阻塞 import 链 3s（手机端进游戏卡死嫌疑）；write() 未就绪时返回 false，调用方回退 localStorage。"
+        }
+    ]
+},
+{
     "phase": "2026-10-25 · 斗地主无懈与托管修复",
     "date": "2026-10-25",
     "changes": [

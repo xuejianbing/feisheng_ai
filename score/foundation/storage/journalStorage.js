@@ -17,7 +17,9 @@ export const journalStorage = {
     },
     error: '',
 };
-await new Promise(resolve => {
+/* 非阻塞初始化：原先模块顶层 await 会在手机上把整条 import 链阻塞最多 3s（IndexedDB 打开等待）。
+ * write() 在 db 未就绪时返回 false，调用方自动回退 localStorage；_load() 在 initial 未就绪时回退 getJSON。 */
+void new Promise(resolve => {
     if (typeof indexedDB === 'undefined') { resolve(); return; }
     let finished = false;
     const timer = setTimeout(() => { finished = true; resolve(); }, 3000);
