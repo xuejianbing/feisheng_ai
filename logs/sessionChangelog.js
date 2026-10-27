@@ -17,6 +17,27 @@
 
 export const SESSION_CHANGELOG = [
 {
+    "phase": "2026-10-27 · 手机端诊断版 4.4.3（启动轨迹 + 瘦包）",
+    "date": "2026-10-27",
+    "changes": [
+        {
+            "file": "score/foundation/diag/bootTrace.js（新增）",
+            "lines": "全文件（≈120 行）",
+            "desc": "只读启动轨迹：bootMark(name, extra) 打印 [DJSC] 名称 t=毫秒（相对扩展开始执行），保留最近 160 条；bootReport() 汇总轨迹 + perfStats + 权重元信息 + 决策次数；installPerfReport() 幂等挂到 __DJSC.perfReport/bootTrace/bootMark。"
+        },
+        {
+            "file": "extension.js / score/index.js / score/decision/engine/engine.js / score/model/weights/weights.js / score/model/net/policyModelV3.js / shadow/decodeV5.js",
+            "lines": "6 文件、+45 行埋点",
+            "desc": "启动链埋点：ext:start → panels:start/ready → update:install → content:start/native/models → engine:install-begin → engine:start/storage-guard/hooks/plugins/settle-watch；installHooks 内部 hooks:start/mem/store/archive/feedback/matchArchive；weights:begin、v5:start/ready、v3:loaded、decision:first（含耗时）。全部用 window.__DJSC.bootMark 守卫，不新增 import 依赖。"
+        },
+        {
+            "file": "E:\\NoNameAI\\distill\\build_package.py",
+            "lines": "EXCLUDE_FILES + 2.4 排除逻辑",
+            "desc": "打包排除 score/model/net/client_policy_model_v2.js（≈6.9MB，全仓库无 import 的 v2 死文件）；构建时打印排除项与体积。"
+        }
+    ]
+},
+{
     "phase": "2026-10-27 · 手机端卡顿修复（性能）",
     "date": "2026-10-27",
     "changes": [

@@ -31,9 +31,14 @@ import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
 import { installModelUpdate, uninstallModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
 import { installPolicyModelUpdate } from './js/update/policyModelUpdate.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 热更检查（纯数据 JSON，失败静默） */
 import './score/model/net/policyModelV3.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 接线（自注册 window.__DJSC.policyModelV3，影子评估默认开） */
+import { bootMark, installPerfReport } from './score/foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动/首次决策耗时轨迹（手机端卡死定位，只读） */
 window.__DJSC = window.__DJSC || {};
+bootMark('ext:start');   /* ★ 4.4.3：模块开始执行；控制台看不到这条 = 卡在宿主解析/加载阶段 */
+installPerfReport();
 // Inspectable readiness promise for browser/host release checks.
+bootMark('panels:start');
 window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
+    bootMark('panels:ready', { total: report.total, loaded: report.loaded, ok: !!report.ok });
     window.__DJSC.panelLoadStatus = report;
     if (report.ok) console.log('[无名AI] 所有' + report.total + '个面板挂载完成');
     else console.warn('[无名AI] 面板挂载 ' + report.loaded + '/' + report.total + '：', report.panels.filter(p => !p.ok));
@@ -43,6 +48,7 @@ window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
 // ===== 模型权重在线更新（整包下载 / 解压安装已移除，实现见 js/update/）=====
 installModelUpdate();
 installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */
+bootMark('update:install');
 // ===== 模型权重在线更新结束 =====
 
 /* ===== 目标合理性校验（前置校验，不拦截，仅日志） =====
@@ -141,10 +147,14 @@ let extensionPackage = {
 /* ★ 整合：原 content 钩子后初始化决策积分引擎（可配置开关） */
 const _content = extensionPackage.content;
 extensionPackage.content = async function (config, pack) {
+	bootMark('content:start');
 	try { if (typeof _content === 'function') await _content(config, pack); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	bootMark('content:native');
 	await modeModelsReady;
+	bootMark('content:models');
 	try {
 		if (isScoreEngineEnabled()) {
+			bootMark('engine:install-begin');
 			installScoreEngine();
 		}
 	} catch (e) {

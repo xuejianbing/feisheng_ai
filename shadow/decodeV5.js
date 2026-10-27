@@ -45,11 +45,14 @@ async function loadOne(url) {
 }
 
 export async function loadV5All(assetURL) {
+    const _v5t0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
+    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('v5:start');
     let base = assetURL || ((typeof lib !== 'undefined' && lib.assetURL) || '');
     if (base && base.charAt(base.length - 1) !== '/') base += '/';
     v5Models.s42 = await loadOne(base + 'extension/无名AI/model/v5_mixup_s42.json');
     v5Models.s456 = await loadOne(base + 'extension/无名AI/model/v5_mixup_s456.json');
     v5Ready = true;
+    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('v5:ready', { ms: Math.round(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _v5t0) });
     console.log('[V5] 2种子模型加载完成');
 }
 

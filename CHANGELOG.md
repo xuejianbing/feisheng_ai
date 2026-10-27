@@ -1,3 +1,24 @@
+## 4.4.3（2026-10-27 · 手机端诊断版：启动轨迹 + 瘦包）
+
+4.4.2 的卡顿修复发布后，手机端仍反馈「一加载模型直接卡死」。本版不改任何决策逻辑，只做「可定位」与「减负」两件事。
+
+### 新增诊断（只读：不写存储、不发网络、不改游戏状态）
+
+- `score/foundation/diag/bootTrace.js`：启动/首次决策耗时轨迹。关键步骤调用 `bootMark(name)`，控制台立即打印 `[DJSC] <名称> t=<毫秒>`（相对扩展模块开始执行）；轨迹保留最近 160 条，`window.__DJSC.perfReport()` 一次性取回（含 perf 统计、权重元信息、决策次数）。
+- 埋点位置：扩展开始执行 → 面板挂载 → 热更检查 → content 钩子（原生 content 前后 / 模式模型就绪 / 引擎安装开始）→ 引擎安装（存储守护 / installHooks / 插件 / 结算监视）→ installHooks 内部（记忆 / 跨局记忆 / 战报归档 / 反馈 / 归档开始 / 选择审计）→ 权重载入 → v5 阴影模型载入 → v3 策略模型载入 → 首次 bestAction 耗时。
+- 手机端定位：进游戏复现卡死后打开「设置 → 其他 → 控制台」，最后一条 `[DJSC] ...` 就是卡住的位置；或执行 `console.log(JSON.stringify(window.__DJSC.perfReport(), null, 2))`。
+
+### 瘦包
+
+- 打包排除 `score/model/net/client_policy_model_v2.js`（≈6.9MB；4.4.x 全仓库无任何 import 的 v2 时代死文件）。安装包体积明显下降，减少手机端安装/读盘成本。
+
+### 验证
+
+- `test-regressions` 94 PASS / 0 FAIL；`test-weights` 637 PASS；`test-policy-model-v3` 25 PASS；`test-policy-model-update` 22 PASS；`test-response-lifecycle` 45 PASS；`test-decision-state-fingerprint` 与 `test-decision-audit` 通过。
+- 全部改动只增埋点与打包白名单，未触碰决策路径。
+
+开发记录见 [手机卡顿排查日志](docs/performance/开发者日志_手机卡顿排查_20261027.md)。
+
 ## 4.4.2（2026-10-27 · 手机端卡顿修复）
 
 手机端「进游戏卡死、摸牌后卡顿」的性能修复，不改变任何决策结果与既有开关。

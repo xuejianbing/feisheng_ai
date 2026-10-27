@@ -147,6 +147,7 @@ export function startLoading() {
                 const built = buildModelFromMeta(cached);
                 if (built && built.selfTest && built.selfTest().ok) {
                     _model = built; _source = 'cache';
+                    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('v3:loaded', { source: 'cache' });
                     _loadMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
                     return _model;
                 }
@@ -161,6 +162,7 @@ export function startLoading() {
                         || (ns && (ns.CLIENT_POLICY_V3 || (ns.default && ns.default.classes ? ns.default : null)))
                         || null;
                     _source = 'builtin';
+                    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('v3:loaded', { source: 'builtin' });
                     _loadMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0;
                 } catch (e) { _model = null; }
                 return _model;

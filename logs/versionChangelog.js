@@ -1,6 +1,18 @@
 /* 版本摘要依据 CHANGELOG.md 的独立版本记录；缺失版本不推测补写。 */
 export const VERSION_CHANGELOG = [
     {
+        "version": "4.4.3",
+        "date": "2026-10-27",
+        "title": "手机端诊断版：启动轨迹埋点 + 瘦包（排除 6.9MB 死文件）",
+        "changes": [
+            "新增 score/foundation/diag/bootTrace.js：bootMark 启动轨迹 + window.__DJSC.perfReport()（只读，不写存储不发网络）",
+            "全链路埋点：扩展入口 / 面板 / 热更 / content / 引擎安装 / installHooks 各步 / 权重 / v5 / v3 载入 / 首次 bestAction 耗时",
+            "打包排除 score/model/net/client_policy_model_v2.js（≈6.9MB，全仓库无 import 的死文件），安装包显著变小",
+            "验证：regressions 94、weights 637、policy-model-v3 25、policy-model-update 22、response-lifecycle 45 全部通过"
+        ]
+    },
+
+    {
         "version": "4.4.2",
         "date": "2026-10-27",
         "title": "手机端卡顿修复：状态指纹复用 + 对局日志库非阻塞初始化",

@@ -37,16 +37,19 @@ export function isScoreEngineEnabled() {
 
 export function installScoreEngine() {
     installClassicChoiceHooks();
+	if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('engine:start');
 	if (_installed) return;
 	const myGen = ++_gen;   /* 本次安装代际 */
 
 	/* ★ 存储配额守护：先释放扩展占用的重键，避免 localStorage 耗尽导致主程序 QuotaExceededError */
 	try { safeStorageGuard(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('engine:storage-guard');
 
 	/* installHooks 是关键路径：失败则不置 _installed，允许下次重试
 	 * （原代码先置 true 再 try，任何异常都会被吞掉且永远无法恢复）
 	 */
 	try { installHooks(); } catch (e) { return; }
+	if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('engine:hooks');
 	_installed = true;
 
 	/* ★ 标准插件框架：登记并按依赖拓扑序统一安装全部插件（★ P0-02：注册/安装分离，
@@ -63,7 +66,9 @@ export function installScoreEngine() {
 		log.info('init', '插件系统已装载 ' + (overview && overview.total) + ' 个（已安装 ' + (overview && overview.installed) + '）');
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 
+	if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('engine:plugins');
 	try { startSettleWatch(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('engine:settle-watch');
 	/* ★ P2-33：事件总线业务订阅（此前 eventBus 仅被挂到 __DJSC，无任何业务发布/订阅） */
 	try {
 		/* 对局结束：强制把防抖写队列落盘，保证跨局记忆/校准/反馈不丢最后一写 */

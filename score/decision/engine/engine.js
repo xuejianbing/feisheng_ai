@@ -1,4 +1,5 @@
 import {decisionCacheMatches} from '../state/decisionCache.js?v=41a';
+import {bootMark} from '../../foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动轨迹（只读） */
 import {createEvaluationAudit} from '../analysis/decisionAudit.js?v=41a';
 import {observeCooperativeTrickUse,finishCooperativeTrickUse,resetCooperativeTrickIntents,cooperativeTrickEpoch} from '../state/cooperativeTrickIntent.js?v=41a';
 import {commonSuggestionFusionFor} from '../utility/suggestionFusion.js?v=41a';
@@ -1668,8 +1669,10 @@ function installHooks() {
 		try { uninstallHooks(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	}
 
+	bootMark('hooks:start');   /* ★ 4.4.3 */
 	playerDemonstrations.reset();
 	memLoad();   // 上一局记忆载入
+	bootMark('hooks:mem');   /* ★ 4.4.3 */
 	try { deckAutoDetect(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   // ★ 自动识别牌堆模式
 	try { trainStartGame(game.me, get.mode ? get.mode() : 'identity'); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }  // ★ 开始训练局
 	/* ★ 热更新 A/B 分组：若有候选模型，按交替分组在本局换入候选或保持基线（P1-16） */
@@ -1679,9 +1682,12 @@ function installHooks() {
 		}
 	} catch (eHSG) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eHSG); }
 	try { loadStore(); } catch (eMem) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eMem); }   // 跨局记忆载入
+	bootMark('hooks:store');   /* ★ 4.4.3 */
 	try { loadArchive(); } catch (eArc) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eArc); }  // 战报归档载入
+	bootMark('hooks:archive');   /* ★ 4.4.3 */
 	try { loadFeedback(); } catch (eFb) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eFb); }  // 技能反馈载入
 	try { loadStyleFeedback(); } catch (eSf) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eSf); } // 风格反馈载入
+	bootMark('hooks:feedback');   /* ★ 4.4.3 */
 	/* ★ 决策回放：局开始 */
 	try {
 		if (window.__DJSC && window.__DJSC.replay && window.__DJSC.replay.start) {
@@ -1698,6 +1704,7 @@ function installHooks() {
 		settings: Object.fromEntries(['testDecisionLog', 'riskProfile', 'aiStrength', 'personalityAggression', 'personalityRisk', 'personalityTeam'].map(k => [k, cfg(k, null)])),
 		players: (game.players || []).map(p => ({ id: p.playerid, name: p.name1 || p.name })),
 	});
+	bootMark('hooks:matchArchive');   /* ★ 4.4.3 */
 	choiceAuditCleanup?.();
  choiceAuditCleanup=installChoiceAudit(data=>matchArchive.record('choiceAudit',data,{playerId:data.actorId,round:_getRoundNumber()}),()=>modeContext().sessionId);
 	matchReplay = null;
@@ -3417,7 +3424,23 @@ function pickKillTarget(me, tsMap, cur) {
 	} catch (e) { return cur; }
 }
 
-function bestAction() { return profile('bestAction', bestActionCore); }
+function bestAction() {
+	const _bt0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
+	try {
+		return profile('bestAction', bestActionCore);
+	} finally {
+		try {
+			const _bms = Math.round(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0);
+			if (typeof window !== 'undefined' && window.__DJSC) {
+				window.__DJSC._djscDecisionCount = (window.__DJSC._djscDecisionCount || 0) + 1;
+				if (!window.__DJSC._djscFirstDecision) {
+					window.__DJSC._djscFirstDecision = true;
+					bootMark('decision:first', { wrapperMs: _bms });
+				}
+			}
+		} catch (eDiag) { /* 诊断不阻断 */ }
+	}
+}
 function bestActionCore() {
 	const _perfT0 = performance.now();
 	const _perfPhases = {};

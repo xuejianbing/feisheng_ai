@@ -238,6 +238,7 @@ let _loadState = 'uninitialized';
 let _loadError = '';
 export function getLoadStatus() { return {state:META.ready?'ready':_loadState==='ready'?'uninitialized':_loadState,error:_loadError}; }
 export function loadWeights() {
+    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('weights:begin');
     _loadState='loading';_loadError='';
     try {
         const raw = _lsGet(STORE_KEY);
