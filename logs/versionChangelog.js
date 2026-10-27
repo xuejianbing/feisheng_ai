@@ -1,6 +1,41 @@
 /* 版本摘要依据 CHANGELOG.md 的独立版本记录；缺失版本不推测补写。 */
 export const VERSION_CHANGELOG = [
     {
+        "version": "4.4.2",
+        "date": "2026-10-27",
+        "title": "手机端卡顿修复：状态指纹复用 + 对局日志库非阻塞初始化",
+        "changes": [
+            "一次决策只算一次全量状态指纹：cache.js 新增 lastStateKey()，engine.js 的 _decisionStateKey 与 multiTurnCached() 复用它，省掉每次决策两次 O(玩家×手牌) 重算",
+            "journalStorage.js 模块顶层 await 改为非阻塞启动：原先 IndexedDB 打开最多阻塞扩展 import 链 3 秒；写入未就绪时自动回退 localStorage，行为不变",
+            "排除项：6.9MB 的 client_policy_model_v2.js 全仓库无 import、未接线，不是卡顿原因；后台无 setInterval 风暴（定时器仅在弹窗/自动托管时活跃）",
+            "验证：regressions 94、weights 637、policy-model-v3 25、state-fingerprint 13、response-lifecycle 45、decision-audit 32、ai-boundaries 12、jiedao-response 17 全部通过"
+        ]
+    },
+
+    {
+        "version": "4.4.1",
+        "date": "2026-10-27",
+        "title": "合并 PR #13 2v2 完整版与 PR #12 响应窗口修复",
+        "changes": [
+            "微雀线 2v2：策略增强、座次配合与队友保护、关键牌保留三项开关（默认开启）+ openVersusStatus 专项面板 + 实体选牌/目标桥、AOE 风险与方向桥、致死机会、技能材料保留、误伤检查",
+            "子右线：修复关闭 AI 响应/切回手动/换局后仍沿用上一次无懈判断；关闭无懈优化时按当前局面重新判断；借刀杀人的选牌不再受旧判断影响；停用扩展后选牌辅助正确退出",
+            "两条线均为功能原样合并，只做兼容接线；test-2v2-* 10 个套件与 response-lifecycle 45 项全部通过"
+        ]
+    },
+
+    {
+        "version": "4.4.0",
+        "date": "2026-10-25",
+        "title": "统一版：QA 稳定性线 + 4.1.5.x 特性线 + 后端 v6（D4）+ 134 维 v2 权重",
+        "changes": [
+            "QA 线（46 文件）：有界写事务、诊断绑定、selfCheck 宿主契约、数据来源认证（sourceIdentity）、训练血缘、候选生命周期、自动特征证据",
+            "4.1.5.x 线：策略模型 v3 影子接线（policyModelV3 + engine 钩子）、策略模型热更通道（policy_manifest.json）、阵营字段（camp/winCamp/campWon）、身份场样本采集开关",
+            "后端 v6（D4）并入 backend/v6/：来源认证 / 可信接收 / 训练契约 / 隔离测试",
+            "权重升级：134 维 v2 重训（top1 0.6171 / bal 0.3678 / corr 0.4137）；cloudIngest 采用 QA 重写版（回执 v1 + 来源信封）"
+        ]
+    },
+
+    {
         "version": "4.1",
         "date": "2026-10-14",
         "title": "合并第三方优化版：铁索重铸 / 无懈优化 / 隐藏农民手牌；模型冠名升级飞雀V2",
