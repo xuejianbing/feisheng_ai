@@ -74,7 +74,7 @@ function readActiveState(){
  return activeState;
 }
 export function loadClassicActive(version=null){const s=readActiveState();if(!version||s?.current.id===version)return s?.current||null;return s?.previous?.id===version?s.previous:null;}
-export function classicActiveInfo(){const s=readActiveState();return s?{id:s.current.id,previousId:s.previous?.id||null,ruleKeys:s.current.ruleKeys,state:'已启用试用版本',activatedAt:s.activatedAt,validation:s.current.activationValidation||null}:null;}
+export function classicActiveInfo(){if(!storageStatus.ready||storageStatus.backend==='unavailable')return null;const s=readActiveState();return s?{id:s.current.id,previousId:s.previous?.id||null,ruleKeys:s.current.ruleKeys,state:'已启用试用版本',activatedAt:s.activatedAt,validation:s.current.activationValidation||null}:null;}
 function writeActiveState(next){const error=activeError(next);if(error)return {ok:false,err:error};try{if(safeSet(ACTIVE_KEY,JSON.stringify(next))===false)return {ok:false,err:'专项版本保存失败；原运行版本保留'};activeState=next;revision++;return {ok:true,id:next.current.id};}catch(e){return {ok:false,err:String(e)};}}
 export function promoteClassicCandidate({validation=null}={}){const candidate=loadClassicCandidate();if(!candidate)return {ok:false,err:'暂无候选'};const s=readActiveState();if(s?.current.id===candidate.id)return {ok:true,id:candidate.id};return writeActiveState({schema:'classic-active-v1',current:validation?{...candidate,activationValidation:validation}:candidate,previous:s?.current||null,activatedAt:Date.now()});}
 export function rollbackClassicActive(){const s=readActiveState();if(!s?.previous)return {ok:false,err:'没有上一专项版本；可关闭专项模型回退公共引擎'};return writeActiveState({...s,current:s.previous,previous:s.current,activatedAt:Date.now()});}

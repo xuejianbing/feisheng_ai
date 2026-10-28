@@ -150,8 +150,8 @@ extensionPackage.content = async function (config, pack) {
 	bootMark('content:start');
 	try { if (typeof _content === 'function') await _content(config, pack); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	bootMark('content:native');
-	await modeModelsReady;
-	bootMark('content:models');
+	// Optional specialist restore never gates public engine installation.
+	modeModelsReady.then(function (status) { bootMark('content:models', { backend: status.backend, error: !!status.error }); });
 	try {
 		if (isScoreEngineEnabled()) {
 			bootMark('engine:install-begin');
