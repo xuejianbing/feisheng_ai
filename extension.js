@@ -177,7 +177,7 @@ installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（�
 	/* ★P2 修复：卸载前把 shadow 防抖窗口内未落盘的日志同步写掉（模块已加载时同一微任务内完成），并停掉退出兜底监听 */
 	try {
 		import('./shadow/shadowCore.js?v=41a').then(function (mShadow) {
-			try { mShadow.flushShadowLog(true); } catch (eF) {}
+			try { mShadow.stopShadowRuntime(); mShadow.flushShadowLog(true); } catch (eF) {}
 			try { mShadow.dropExitFlush(); } catch (eD) {}
 		}).catch(function () {});
 	} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
@@ -254,6 +254,7 @@ import('./score/decision/safety/guardRecorder.js?v=41a').then(function (m) {
 
 /* ===== v5 shadow 评估模块（不接管决策，仅后台记录对比；__AI_REASON.cmd.shadow('stats'|'export'|'clear')）===== */
 import('./shadow/shadowCore.js?v=41a').then(function (mShadow) {
+    if (_extensionDisposed) return;
     window.__AI_REASON = window.__AI_REASON || {};
     window.__AI_REASON.cmd = window.__AI_REASON.cmd || {};
     window.__AI_REASON.cmd.shadow = mShadow.shadowCmd;

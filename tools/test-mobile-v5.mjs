@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import fs from 'node:fs/promises';
+const m=await import('../shadow/decodeV5.js');let reads=0;
+globalThis.lib={init:{promises:{json:async url=>{reads++;return JSON.parse(await fs.readFile(url.replace('extension/无名AI/',''),'utf8'));}}}};
+assert.equal(m.v5Predict([]),null);
+await Promise.all([m.loadV5All(),m.loadV5All()]);
+assert.equal(reads,2,'concurrent loads must share both models');
+await m.loadV5All();assert.equal(reads,2,'loaded arrays must not be constructed again');
+for(const {input,output}of JSON.parse(await fs.readFile('docs/performance/evidence/v5-golden.json','utf8')))assert.deepEqual(m.v5Predict(input),output);
+assert.equal(m.v5Predict(null),null);assert.equal(m.v5Predict(Array(129)),null);
+assert(Number.isNaN(m.v5Predict(Array(130).fill(NaN)).ensemble));
+m.setV5Enabled(false);assert.equal(m.v5Predict(Array(130).fill(0)),null);m.setV5Enabled(true);
+console.log('PASS v5 concurrent/repeated loading, 13 exact ensemble/seed predictions, invalid input and disabled fallback');

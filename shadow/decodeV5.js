@@ -9,16 +9,27 @@
 
 let v5Models = { s42: null, s456: null };
 let v5Ready = false;
+let loadPromise = null;
+let enabled = true;
+try { enabled = !localStorage.getItem('__ai_reason_shadow_off'); } catch (_) {}
+export function setV5Enabled(value) { enabled = !!value; }
+const yieldTask = () => new Promise(resolve => setTimeout(resolve, 0));
+function mark(name, extra) { try { if (typeof window !== 'undefined' && window.__DJSC?.bootMark) window.__DJSC.bootMark(name, extra); } catch (_) {} }
 
-function deqAll(data) {
-    function deq(w) {
+
+async function deqAll(data) {
+    async function deq(w) {
         const arr = new Float32Array(w.data.length);
-        for (let i = 0; i < w.data.length; i++) arr[i] = w.data[i] * w.scale;
+        for (let start = 0; start < w.data.length; start += 16384) {
+            if (start) await yieldTask();
+            const end = Math.min(start + 16384, w.data.length);
+            for (let i = start; i < end; i++) arr[i] = w.data[i] * w.scale;
+        }
         return arr;
     }
     const W = {};
     for (const name in data.weights) {
-        W[name] = { flat: deq(data.weights[name]), shape: data.weights[name].shape };
+        W[name] = { flat: await deq(data.weights[name]), shape: data.weights[name].shape };
     }
     return W;
 }
@@ -40,11 +51,19 @@ async function fetchJson(url) {
 }
 
 async function loadOne(url) {
+    const t = Date.now();
     const data = await fetchJson(url);
-    return deqAll(data);
+    mark('v5:read-json', { ms: Date.now() - t });
+    const d = Date.now(), weights = await deqAll(data);
+    mark('v5:decode', { ms: Date.now() - d });
+    return weights;
 }
 
-export async function loadV5All(assetURL) {
+export function loadV5All(assetURL) {
+    if (!loadPromise) loadPromise = loadModels(assetURL);
+    return loadPromise;
+}
+async function loadModels(assetURL) {
     const _v5t0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
     if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.bootMark) window.__DJSC.bootMark('v5:start');
     let base = assetURL || ((typeof lib !== 'undefined' && lib.assetURL) || '');
@@ -119,7 +138,7 @@ function predictOne(W, features) {
 
 export function v5Predict(features) {
     /* v2: 兼容 fixPR 主扩展 134 维 _feat（fix7 目标身份在尾部，取前 130 语义不变） */
-    if (!v5Ready || !features || features.length < 130) return null;
+    if (!enabled || !v5Ready || !features || features.length < 130) return null;
 
     const p42 = predictOne(v5Models.s42, features);
     const p456 = predictOne(v5Models.s456, features);

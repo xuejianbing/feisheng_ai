@@ -1,7 +1,7 @@
 // shadow/shadowCore.js
 // Shadow模式：记录团队决策 vs v5集成决策，不接管实际决策
 
-import { loadV5All, v5Predict, isV5Ready } from './decodeV5.js?v=41a';
+import { setV5Enabled, loadV5All, v5Predict, isV5Ready } from './decodeV5.js?v=41a';
 import { isEnemyOf as relIsEnemyOf } from '../score/decision/relations/relations.js?v=41a';   /* ★ PR6-2：shadow 敌我判定接入统一关系系统 */
 
 /* ===== ★ PR6-5：对局归属（matchId/matchResult）——外审 patch 落地 =====
@@ -29,6 +29,12 @@ const STORAGE_KEY = '__ai_reason_shadow_v5';
 let _timer = null;
 let _lastKey = '';
 let _started = false;
+let _shadowGeneration = 0;
+export function stopShadowRuntime() {
+    _shadowGeneration++; _started = false; DIAG.started = false;
+    if (_timer) clearInterval(_timer); _timer = null;
+    setV5Enabled(false); flushShadowLog(true); dropExitFlush();
+}
 const MAX_RECORDS = 300;   /* PR5：localStorage 是主扩展共享池（约5MB 配额），大日志会把主扩展其他 setItem 挤到 QuotaExceeded（被各模块静默吞掉→决策状态异常）。本地只留 300 条调试窗口（约600KB），全量分析数据以服务端 shadowV5 入库为准 */
 
 let _logMem = null;          /* ★ 4.1.2.5：内存日志缓存——读一次常驻，记录/回填只改内存，防抖刷盘 */
@@ -248,7 +254,9 @@ try { (window.__AI_REASON = window.__AI_REASON || {}).v5Diag = DIAG; } catch (eD
 export async function startShadow() {
     if (_started) return;
     _started = true;
+    const generation = ++_shadowGeneration;
     try { if (localStorage.getItem(OFF_KEY)) { _started = false; console.log('[Shadow] 已通过 shadow(\'off\') 关闭'); return; } } catch (eOff) {}
+    setV5Enabled(true);
     DIAG.started = true;
     ensureFlushTimer();   /* ★ 4.1.2.5：防抖刷盘定时器（5s，脏了才写） */
 
@@ -260,6 +268,8 @@ export async function startShadow() {
         return;
     }
 
+    if (generation !== _shadowGeneration || !_started) return;
+
     /* PR5d：加载特征工程（绝对路径，手机端已验证可 import） */
     try {
         const fm = await import('/extension/无名AI/score/model/features/features.js');
@@ -270,6 +280,7 @@ export async function startShadow() {
         }
     } catch (eFeat) { DIAG.err(eFeat); }
 
+    if (generation !== _shadowGeneration || !_started) return;
     _timer = setInterval(() => {
         try { if (localStorage.getItem(OFF_KEY)) { clearInterval(_timer); _timer = null; _started = false; return; } } catch (eOff2) {}
         DIAG.polls++;
@@ -358,6 +369,7 @@ export function shadowCmd(action = 'stats') {
     }
 
     if (action === 'off') {
+        stopShadowRuntime();
         try { localStorage.setItem(OFF_KEY, '1'); } catch (e) {}
         if (_timer) { clearInterval(_timer); _timer = null; }
         _started = false; _lastKey = '';
