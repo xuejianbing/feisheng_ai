@@ -35,12 +35,15 @@ import { bootMark, installPerfReport } from './score/foundation/diag/bootTrace.j
 window.__DJSC = window.__DJSC || {};
 bootMark('ext:start');   /* ★ 4.4.3：模块开始执行；控制台看不到这条 = 卡在宿主解析/加载阶段 */
 installPerfReport();
+let _extensionDisposed = false, _panelReport = null;
 // Inspectable readiness promise for browser/host release checks.
 bootMark('panels:start');
-window.__DJSC.panelsReady = mountPanels(window.__DJSC).then(function (report) {
+window.__DJSC.panelsReady = mountPanels(window.__DJSC, undefined, { lazy: true }).then(function (report) {
+    _panelReport = report;
+    if (_extensionDisposed) { report.dispose(); return report; }
     bootMark('panels:ready', { total: report.total, loaded: report.loaded, ok: !!report.ok });
     window.__DJSC.panelLoadStatus = report;
-    if (report.ok) console.log('[无名AI] 所有' + report.total + '个面板挂载完成');
+    if (report.ok) console.log('[无名AI] 所有' + report.total + '个面板入口已注册（按需加载）');
     else console.warn('[无名AI] 面板挂载 ' + report.loaded + '/' + report.total + '：', report.panels.filter(p => !p.ok));
     return report;
 });
@@ -166,6 +169,8 @@ extensionPackage.content = async function (config, pack) {
 /* ★ 卸载时清理决策积分引擎 + 还原 useCard 猴补丁（P1-25） */
 const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
+    _extensionDisposed = true;
+    if (_panelReport) _panelReport.dispose();
 	try { uninstallModelUpdate();
 installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */ } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
 	try { uninstallScoreEngine(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
