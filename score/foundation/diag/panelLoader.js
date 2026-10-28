@@ -16,7 +16,11 @@ function mountLazyPanels(target, load) {
  let disposed=false;
  const pending=new Map(), owned=new Map(), notices=new Set();
  const panels=PANEL_MODULES.map(([name,path])=>({name,path,ok:true,state:'idle',error:null,ms:null}));
- const report={schema:'extension-panel-load-v1',ok:true,total:panels.length,loaded:0,panels,mode:'lazy',dispose(){
+ const report={repairRegistration(module,path){
+  for(const [key,modulePath]of PANEL_MODULES)if(modulePath===path&&target[key]===module[key]){
+   if(!disposed&&owned.has(key))target[key]=owned.get(key);else delete target[key];
+  }
+ },schema:'extension-panel-load-v1',ok:true,total:panels.length,loaded:0,panels,mode:'lazy',dispose(){
   disposed=true;
   for(const notice of notices)notice.remove();notices.clear();
   for(const [name,fn]of owned)if(target[name]===fn)delete target[name];
@@ -40,8 +44,8 @@ function mountLazyPanels(target, load) {
    if(!pending.has(path))pending.set(path,Promise.resolve().then(()=>load(path)));
    const start=Date.now(),receiver=this;
    return pending.get(path).then(module=>{
-    if(disposed){
-     if(panelOwners.get(target)===report)for(const [key,modulePath]of PANEL_MODULES)if(modulePath===path&&target[key]===module[key])delete target[key];
+    if(disposed||panelOwners.get(target)!==report){
+     panelOwners.get(target)?.repairRegistration(module,path);
      throw Error('面板已卸载 disposed');
     }
 

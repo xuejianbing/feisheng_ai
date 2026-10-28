@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';import fs from 'node:fs/promises';import vm from 'node:vm';
+const source=await fs.readFile(new URL('../score/model/weights/modeModelDB.js',import.meta.url),'utf8');
+async function fixture(present=true){let request,tx,readRequest,closed=0;const timers=new Map();let id=0;const db={objectStoreNames:{contains:()=>true},close(){closed++;},transaction(){tx={objectStore:()=>({getAll(){readRequest={};return readRequest;}}),abort(){}};return tx;}};
+const context=vm.createContext({indexedDB:present?{open(){request={result:db};return request;}}:undefined,setTimeout:fn=>{timers.set(++id,fn);return id;},clearTimeout:id=>timers.delete(id)});const m=new vm.SourceTextModule(source,{context});await m.link(()=>{});await m.evaluate();return {m:m.namespace,get req(){return request;},get tx(){return tx;},get read(){return readRequest;},get closed(){return closed;},timeout(){for(const fn of [...timers.values()])fn();}};}
+let f=await fixture(false);assert.equal((await f.m.readModeModels()).unavailable,true);
+f=await fixture();let p=f.m.readModeModels();f.req.onblocked();await assert.rejects(p,/占用/);p=f.m.readModeModels();f.req.onsuccess();await Promise.resolve();await Promise.resolve();f.read.result=[{key:'candidate'}];f.read.onsuccess();f.tx.oncomplete();assert.equal((await p).rows.length,1);
+f=await fixture();p=f.m.readModeModels();f.timeout();await assert.rejects(p,/超时/);f.req.onsuccess();assert.equal(f.closed,1,'late DB connection must close after timeout');
+console.log('PASS unavailable, blocked/retry, real transaction completion, timeout and abandoned late connection');

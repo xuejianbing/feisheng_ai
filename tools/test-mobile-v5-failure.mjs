@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';
+let reads=0;globalThis.lib={init:{promises:{json:async()=>{reads++;throw Error('corrupt JSON');}}}};globalThis.fetch=async()=>{reads++;throw Error('missing file');};
+const m=await import('../shadow/decodeV5.js');const results=await Promise.allSettled([m.loadV5All(),m.loadV5All()]);assert(results.every(r=>r.status==='rejected'));assert.equal(reads,4);await assert.rejects(m.loadV5All());assert.equal(reads,4);assert.equal(m.isV5Ready(),false);assert.equal(m.v5Predict(Array(130).fill(0)),null);console.log('PASS malformed/unavailable model has bounded attempts and safe fallback');
