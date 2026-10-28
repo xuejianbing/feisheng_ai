@@ -176,7 +176,7 @@ export function startLoading() {
 try {
     if (typeof window !== 'undefined') {
         const ric = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1500); };
-        ric(function () { if (cfg('policyModelV3Mode', 'shadow') !== 'off') startLoading(); }, { timeout: 8000 });
+        ric(function () { if (cfg('policyModelV3Mode', 'shadow') !== 'off' && (cfg('policyModelV3Mode', 'shadow') === 'active' || cfg('policyModelV3Shadow', true) !== false)) startLoading(); }, { timeout: 8000 });
     }
 } catch (e) { /* 忽略 */ }
 
@@ -282,7 +282,9 @@ export function confirmDrainShadowV3(n) {
 const _shadow = { calls: 0, top1Agree: 0, equipTop1: 0, skipped: 0, last: null };
 export function shadowEvaluate(acts, winner, featOf, meta) {
     try {
+        if (cfg('policyModelV3Mode', 'shadow') === 'off' || cfg('policyModelV3Shadow', true) === false) return null;
         const m = _modelReady();
+        if (!m) startLoading();
         if (!m) { _shadow.skipped++; return null; }   /* 模型未加载完，跳过本次 */
         if (!Array.isArray(acts) || !acts.length) return null;
         const src = (function () {
@@ -324,7 +326,9 @@ export function shadowEvaluate(acts, winner, featOf, meta) {
  * 默认不启用；需 cfg('policyModelV3Mode')==='active' 且影子连续达标。 */
 export function applyPolicyModel(acts, featOf) {
     try {
+        if (cfg('policyModelV3Mode', 'shadow') === 'off') return { status: 'skip' };
         const m = _modelReady();
+        if (!m) startLoading();
         if (!m || !Array.isArray(acts) || acts.length < 2) return { status: 'skip' };
         const target = acts.find(function (a) { return a && a._feat && a._feat.length >= 130; });
         if (!target) return { status: 'no-features' };
