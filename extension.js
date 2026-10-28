@@ -152,9 +152,10 @@ const _content = extensionPackage.content;
 extensionPackage.content = async function (config, pack) {
 	bootMark('content:start');
 	try { if (typeof _content === 'function') await _content(config, pack); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	if (_extensionDisposed) return;
 	bootMark('content:native');
 	// Optional specialist restore never gates public engine installation.
-	modeModelsReady.then(function (status) { bootMark('content:models', { backend: status.backend, error: !!status.error }); });
+	modeModelsReady.then(function (status) { if (_extensionDisposed) return; bootMark('content:models', { backend: status.backend, error: !!status.error }); });
 	try {
 		if (isScoreEngineEnabled()) {
 			bootMark('engine:install-begin');
