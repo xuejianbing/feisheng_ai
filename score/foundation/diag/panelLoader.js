@@ -11,30 +11,48 @@ export async function mountPanels(target, load=path=>import(/* webpackIgnore: tr
 }
 
 // Existing eager callers keep their readiness contract. The extension opts in explicitly.
+const panelOwners = new WeakMap();
 function mountLazyPanels(target, load) {
  let disposed=false;
- const pending=new Map(), owned=new Map();
+ const pending=new Map(), owned=new Map(), notices=new Set();
  const panels=PANEL_MODULES.map(([name,path])=>({name,path,ok:true,state:'idle',error:null,ms:null}));
  const report={schema:'extension-panel-load-v1',ok:true,total:panels.length,loaded:0,panels,mode:'lazy',dispose(){
   disposed=true;
+  for(const notice of notices)notice.remove();notices.clear();
   for(const [name,fn]of owned)if(target[name]===fn)delete target[name];
  }};
+ panelOwners.set(target,report);
  for(const row of panels){
   const {name,path}=row;
-  let actual=null;
+  let actual=typeof target[name]==='function'?target[name]:null;
   const wrapper=function(...args){
    if(disposed)return Promise.reject(Error('面板已卸载 disposed'));
    if(actual)return actual.apply(this,args);
    row.state='loading';
+   let notice=null;
+   try { if(typeof document!=='undefined' && document.body){
+    notice=document.createElement('div');notice.setAttribute('role','status');
+    notice.textContent='正在加载面板…';
+    notice.style.cssText='position:fixed;bottom:24px;left:24px;z-index:99999;padding:12px;background:#222;color:#fff;max-width:80vw';
+    document.body.appendChild(notice);notices.add(notice);
+   }}catch(_){}
+
    if(!pending.has(path))pending.set(path,Promise.resolve().then(()=>load(path)));
    const start=Date.now(),receiver=this;
    return pending.get(path).then(module=>{
-    if(disposed)throw Error('面板已卸载 disposed');
+    if(disposed){
+     if(panelOwners.get(target)===report)for(const [key,modulePath]of PANEL_MODULES)if(modulePath===path&&target[key]===module[key])delete target[key];
+     throw Error('面板已卸载 disposed');
+    }
+
     if(typeof module[name]!=='function')throw Error('导出缺失：'+name);
     if(!actual){actual=module[name];row.state='ready';row.ms=Date.now()-start;report.loaded++;}
+    if(panelOwners.get(target)===report)target[name]=wrapper;
+    if(notice){notice.remove();notices.delete(notice);}
     return actual.apply(receiver,args);
    }).catch(error=>{
     row.state=disposed?'disposed':'error';row.ok=false;row.error=String(error.message||error);report.ok=false;
+    if(notice){if(disposed){notice.remove();notices.delete(notice);}else{notice.textContent='面板加载失败：'+row.error;notice.onclick=()=>{notice.remove();notices.delete(notice);};}}
     if(!disposed&&typeof console!=='undefined')console.warn('[无名AI] 面板加载失败 '+name+': '+row.error);
     throw error;
    });
