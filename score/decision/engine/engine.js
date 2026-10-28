@@ -3424,6 +3424,7 @@ function pickKillTarget(me, tsMap, cur) {
 	} catch (e) { return cur; }
 }
 
+let _lastPerfRecordedResult = null;
 function bestAction() {
 	const _bt0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
 	let perfResult;
@@ -3432,7 +3433,8 @@ function bestAction() {
 		return perfResult;
 	} finally {
 		try {
-			recordDecisionPerf(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0, perfResult?.phaseMs);
+			recordDecisionPerf(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0, perfResult === _lastPerfRecordedResult ? null : perfResult?.phaseMs, !!perfResult && perfResult === _lastPerfRecordedResult);
+			_lastPerfRecordedResult = perfResult;
 			const _bms = Math.round(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0);
 			if (typeof window !== 'undefined' && window.__DJSC) {
 				window.__DJSC._djscDecisionCount = (window.__DJSC._djscDecisionCount || 0) + 1;
