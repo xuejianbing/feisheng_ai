@@ -62,7 +62,7 @@ const { sha256Hex } = await import('../js/update/weightBundle.js');
 /* ---- 内置模型（Node CJS 分支） ---- */
 const wmod = await import('../score/model/net/client_policy_model_v3.js');
 const builtin = (wmod['module.exports'] && wmod['module.exports'].classes) ? wmod['module.exports']
-    : (wmod.default && wmod.default.classes) ? wmod.default : null;
+    : (wmod.default && wmod.default.classes) ? wmod.default : globalThis.CLIENT_POLICY_V3 || null;
 ok('内置 v3 模型可加载', !!builtin);
 const meta = builtin.meta;
 

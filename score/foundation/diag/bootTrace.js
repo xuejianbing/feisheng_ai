@@ -15,6 +15,16 @@ const MAX_MARKS = 160;
 const TRACE_VERSION = 2;
 let _observer = null;
 const _longTasks = [];
+const _recentDecisions = [];
+export function recordDecisionPerf(ms, phases) {
+ try {
+  const row = { ms: _round(ms), phases: {} };
+  for (const key of ['preflight','context','targets','candidates','planner','model','observability','guard','telemetry']) if (Number.isFinite(phases?.[key])) row.phases[key] = phases[key];
+  _recentDecisions.push(row);
+  if (_recentDecisions.length > 60) _recentDecisions.shift();
+ } catch (_) {}
+}
+
 let _printed = 0;
 export function uninstallPerfReport() { try { if (_observer) _observer.disconnect(); } catch (_) {} _observer = null; }
 function observeLongTasks() {
@@ -80,6 +90,7 @@ export function bootReport() {
 		now: Date.now(),
 		marks: bootTrace(),
         longTasks: _longTasks.slice(),
+        recentDecisions: _recentDecisions.map(r=>({ms:r.ms,phases:{...r.phases}})),
         observationBoundary: 'ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.',
 
 	};

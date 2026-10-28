@@ -1,5 +1,5 @@
 import {decisionCacheMatches} from '../state/decisionCache.js?v=41a';
-import {bootMark} from '../../foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动轨迹（只读） */
+import {bootMark,recordDecisionPerf} from '../../foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动轨迹（只读） */
 import {createEvaluationAudit} from '../analysis/decisionAudit.js?v=41a';
 import {observeCooperativeTrickUse,finishCooperativeTrickUse,resetCooperativeTrickIntents,cooperativeTrickEpoch} from '../state/cooperativeTrickIntent.js?v=41a';
 import {commonSuggestionFusionFor} from '../utility/suggestionFusion.js?v=41a';
@@ -3426,10 +3426,13 @@ function pickKillTarget(me, tsMap, cur) {
 
 function bestAction() {
 	const _bt0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
+	let perfResult;
 	try {
-		return profile('bestAction', bestActionCore);
+		perfResult = profile('bestAction', bestActionCore);
+		return perfResult;
 	} finally {
 		try {
+			recordDecisionPerf(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0, perfResult?.phaseMs);
 			const _bms = Math.round(((typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now()) - _bt0);
 			if (typeof window !== 'undefined' && window.__DJSC) {
 				window.__DJSC._djscDecisionCount = (window.__DJSC._djscDecisionCount || 0) + 1;
