@@ -1,0 +1,71 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:55393/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:55393/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[requestfailed] http://127.0.0.1:55393/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:55393/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:55393/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:55393/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[browser-console] info Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: http://127.0.0.1:55393/font/xinwei.woff2
+[browser-console] info Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: http://127.0.0.1:55393/font/huangcao.woff2
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: normal
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=2.2ms
+[browser-console] log [DJSC] update:install t=9.4ms
+[browser-console] log [DJSC] panels:ready t=16.1ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=44.1ms
+[browser-console] log [DJSC] content:native t=78ms
+[browser-console] log [DJSC] engine:install-begin t=82.3ms
+[browser-console] log [DJSC] engine:start t=90.5ms
+[browser-console] log [DJSC] engine:storage-guard t=109.2ms
+[browser-console] log [DJSC] hooks:start t=119.6ms
+[browser-console] log [DJSC] hooks:mem t=132.7ms
+[browser-console] log [DJSC] hooks:store t=173.7ms
+[browser-console] log [DJSC] hooks:archive t=175.1ms
+[browser-console] log [DJSC] hooks:feedback t=176.1ms
+[browser-console] log [DJSC] hooks:matchArchive t=179.7ms
+[browser-console] log [DJSC] engine:hooks t=188ms
+[browser-console] log [DJSC] engine:plugins t=200.3ms
+[browser-console] log [DJSC] engine:settle-watch t=201.5ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] log [DJSC] content:models t=569.5ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] log [DJSC] v3:loaded t=1186.3ms
+{"importMs":5005.4000000059605,"contentMs":209.39999999850988,"totalMs":5214.80000000447,"resources":408}

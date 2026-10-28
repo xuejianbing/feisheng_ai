@@ -1,0 +1,37 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:62445/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:62445/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:62445/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: Execution context was destroyed, most likely because of a navigation.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:62445/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:62445/preload.js net::ERR_ABORTED
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Error: Not Found
+    at XMLHttpRequest.<anonymous> (http://127.0.0.1:62445/noname/library/init/index.js:300:21)
+[smoke] retry startup after page.evaluate: Error: host-config-not-ready
+    at eval (eval at evaluate (:311:30), <anonymous>:5:30)
+    at async <ano
+[smoke] retry startup after page.evaluate: Error: host-config-not-ready
+    at eval (eval at evaluate (:311:30), <anonymous>:5:30)
+    at async <ano
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Error: host-config-not-ready
+    at eval (eval at evaluate (:311:30), <anonymous>:5:30)
+    at async <anonymous>:337:30
+    at C:\Users\32360\.codex\worktrees\mobile-performance-443-3480\无名AI\docs\performance\chrome-bench.mjs:80:16 {
+  log: []
+}
+
+Node.js v24.14.0

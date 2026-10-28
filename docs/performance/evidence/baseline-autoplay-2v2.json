@@ -1,0 +1,144 @@
+{
+  "done": false,
+  "startedAt": 1793200385525,
+  "phases": 2,
+  "uses": 6,
+  "hostVersion": "1.11.7",
+  "mode": "versus",
+  "submode": "two",
+  "perf": {
+    "traceVersion": 1,
+    "startedAt": 1793200385451,
+    "now": 1793200565560,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.2
+      },
+      {
+        "name": "update:install",
+        "t": 2.6
+      },
+      {
+        "name": "content:start",
+        "t": 4.7
+      },
+      {
+        "name": "content:native",
+        "t": 5.5
+      },
+      {
+        "name": "content:models",
+        "t": 62
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 62.2
+      },
+      {
+        "name": "engine:start",
+        "t": 62.5
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 63
+      },
+      {
+        "name": "hooks:start",
+        "t": 63.4
+      },
+      {
+        "name": "hooks:mem",
+        "t": 64.1
+      },
+      {
+        "name": "hooks:store",
+        "t": 66.6
+      },
+      {
+        "name": "hooks:archive",
+        "t": 66.7
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 66.7
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 67.4
+      },
+      {
+        "name": "engine:hooks",
+        "t": 68.4
+      },
+      {
+        "name": "engine:plugins",
+        "t": 69.8
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 70
+      },
+      {
+        "name": "panels:ready",
+        "t": 324.9,
+        "total": 25,
+        "loaded": 25,
+        "ok": true
+      },
+      {
+        "name": "decision:first",
+        "t": 417.3,
+        "wrapperMs": 87
+      },
+      {
+        "name": "v3:loaded",
+        "t": 583.8,
+        "source": "builtin"
+      }
+    ],
+    "decisions": 8420,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 12.200000002980232
+    }
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 2,
+      "stagedChoice": 2,
+      "pass": 2,
+      "allyGuard": 3,
+      "selected": 6,
+      "executed": 5,
+      "timeout": 6
+    },
+    "respond": {},
+    "discard": {
+      "check": 9
+    },
+    "compare": {},
+    "soft": {
+      "hit": 8
+    }
+  },
+  "alive": 4,
+  "dead": 0,
+  "errors": [
+    "page.waitForFunction: Timeout 180000ms exceeded."
+  ],
+  "browser": "156.0.8078.73",
+  "status": "incomplete"
+}

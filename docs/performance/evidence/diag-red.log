@@ -1,0 +1,15 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: longtask observer installed
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-diagnostics.mjs:5:85 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

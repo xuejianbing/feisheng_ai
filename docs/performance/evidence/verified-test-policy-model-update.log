@@ -1,0 +1,37 @@
+PASS 内置 v3 模型可加载
+
+--- classifyPolicyManifest 状态机 ---
+PASS 协议不符 → unsupported
+PASS 缺字段 → invalid
+PASS 扩展版本过低 → needsExtensionUpdate
+PASS 新 seq → available
+PASS 同 seq → latest
+PASS 旧 seq → latest
+
+--- validatePolicyMeta ---
+PASS 内置 meta 通过校验
+PASS 坏 schema 被拒
+PASS 坏类别数被拒
+PASS featureKeep 长度不符被拒
+PASS 缺 w1 被拒
+
+--- buildModelFromMeta 与内置权重预测一致 ---
+PASS 可从 meta 重建模型
+PASS 重建模型与内置模型预测一致（maxΔ<1e-12）
+PASS 重建模型 selfTest 通过
+
+--- 端到端下载缓存 ---
+PASS 下载并缓存成功
+PASS 缓存 meta 可取回
+PASS 缓存 seq=1
+[无名AI·模型热更] 检查失败（保留内置权重）：SHA-256 不匹配（内容与清单不一致）
+PASS 坏 sha256 被拒绝
+PASS 坏包不覆盖旧缓存（seq 仍为 1）
+PASS 同 seq 不重复下载
+
+--- 全局入口 ---
+PASS window.__DJSC.policyModelUpdate 已挂载
+
+========================================
+PASS 22  FAIL 0
+========================================

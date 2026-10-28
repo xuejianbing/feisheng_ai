@@ -1,0 +1,142 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:51332/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:51332/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[requestfailed] http://127.0.0.1:51332/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:51332/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:51332/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:51332/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character sp:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 打你个措手不及！ 
+character.sp.translate.#xiaoxi_hansui1 两军交战，勇者为胜！
+[browser-console] log duplicated translate in character sp:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 两军交战，勇者为胜！ 
+character.sp.translate.#xiaoxi_hansui2 打你个措手不及！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.2ms
+[browser-console] log [DJSC] update:install t=2.6ms
+[browser-console] log [DJSC] content:start t=4.7ms
+[browser-console] log [DJSC] content:native t=5.5ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [DJSC] content:models t=62ms
+[browser-console] log [DJSC] engine:install-begin t=62.2ms
+[browser-console] log [DJSC] engine:start t=62.5ms
+[browser-console] log [DJSC] engine:storage-guard t=63ms
+[browser-console] log [DJSC] hooks:start t=63.4ms
+[browser-console] log [DJSC] hooks:mem t=64.1ms
+[browser-console] log [DJSC] hooks:store t=66.6ms
+[browser-console] log [DJSC] hooks:archive t=66.7ms
+[browser-console] log [DJSC] hooks:feedback t=66.7ms
+[browser-console] log [DJSC] hooks:matchArchive t=67.4ms
+[browser-console] log [DJSC] engine:hooks t=68.4ms
+[browser-console] log [DJSC] engine:plugins t=69.8ms
+[browser-console] log [DJSC] engine:settle-watch t=70ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] log [DJSC] panels:ready t=324.9ms
+[browser-console] log [无名AI] 所有25个面板挂载完成
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=417.3ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] log [DJSC] v3:loaded t=583.8ms
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+{"done":false,"startedAt":1793200385525,"phases":2,"uses":6,"hostVersion":"1.11.7","mode":"versus","submode":"two","perf":{"traceVersion":1,"startedAt":1793200385451,"now":1793200565560,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.2},{"name":"update:install","t":2.6},{"name":"content:start","t":4.7},{"name":"content:native","t":5.5},{"name":"content:models","t":62},{"name":"engine:install-begin","t":62.2},{"name":"engine:start","t":62.5},{"name":"engine:storage-guard","t":63},{"name":"hooks:start","t":63.4},{"name":"hooks:mem","t":64.1},{"name":"hooks:store","t":66.6},{"name":"hooks:archive","t":66.7},{"name":"hooks:feedback","t":66.7},{"name":"hooks:matchArchive","t":67.4},{"name":"engine:hooks","t":68.4},{"name":"engine:plugins","t":69.8},{"name":"engine:settle-watch","t":70},{"name":"panels:ready","t":324.9,"total":25,"loaded":25,"ok":true},{"name":"decision:first","t":417.3,"wrapperMs":87},{"name":"v3:loaded","t":583.8,"source":"builtin"}],"decisions":8420,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":12.200000002980232}},"overrideStats":{"use":{"suggested":2,"stagedChoice":2,"pass":2,"allyGuard":3,"selected":6,"executed":5,"timeout":6},"respond":{},"discard":{"check":9},"compare":{},"soft":{"hit":8}},"alive":4,"dead":0,"errors":["page.waitForFunction: Timeout 180000ms exceeded."],"browser":"156.0.8078.73","status":"incomplete"}

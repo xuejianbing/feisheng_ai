@@ -1,0 +1,29 @@
+PASS 仁王盾实际选择红杀，黑杀不能借红杀伤害评分
+PASS 藤甲优先实际火杀，支持宿主公开属性修改
+PASS 实际目标以已选实体牌重算，不能借另一张红杀
+PASS 防具、距离与目标合法性变化实时复核
+PASS 卡牌离手或宿主筛选失败时不保留旧估值
+PASS 普通决斗逐实体使用同一评估
+PASS 原生负分、零分、非有限分与this参数保持
+PASS 转化技能材料与虚拟牌保留宿主评分
+PASS 多张牌与多目标需求保持宿主评分
+PASS 响应、强制用牌及技能插入窗口不接管
+PASS 手动玩家、远端玩家与其他模式保持原生
+PASS 完成、换事件与局次变化后旧评分回退
+PASS 评估异常保持原生评分，后续可恢复
+PASS 宿主默认目标范围按当前实体牌及修正检查，多目标技能回退
+PASS 异常选择范围和未确认自定义目标函数不接管
+PASS 嵌套安装不重复包装同一check，卸载恢复原方法
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: two
+[DJSC] hooks:start t=0ms
+[DJSC] hooks:mem t=0.1ms
+[DJSC] hooks:store t=1.4ms
+[DJSC] hooks:archive t=1.5ms
+[DJSC] hooks:feedback t=1.5ms
+[DJSC] hooks:matchArchive t=2ms
+PASS 真实引擎安装卸载接通实体选牌和目标桥
+2v2 attack choice: 17 passed

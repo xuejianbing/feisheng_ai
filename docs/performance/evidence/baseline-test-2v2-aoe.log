@@ -1,0 +1,41 @@
+PASS 两名健康敌人对一血队友：不再仅凭掉血人数判正收益
+PASS 有可救普通桃时减少额外伤亡风险，但记录救援成本且不保证获救
+PASS 两桃不会对同一次普通一伤虚构额外救援收益
+PASS 禁用桃、禁救和没有可用性接口均不预支普通救援
+PASS 作为当前转化材料和已选材料的桃不当成后续救援库存
+PASS 队友两血或公开护甲可承受一伤，不增加普通濒死风险
+PASS 公开藤甲免疫与目标不可用过滤后不计算受击/救援
+PASS 公开南蛮免疫技能不延伸为万箭免疫
+PASS 健康队友和没有队友的残局仍可使用有利群体牌
+PASS 友方濒死风险进入同一个AOE来源，账本与实际分数一致
+PASS 一血队友受击风险随公开响应概率降低而减小
+PASS 14队先敌后友方向仅作机会提示，不抵扣一血友方风险
+PASS 23队反向可先结算两名敌方，方向随当前座次变化
+PASS 敌方不都在普通一伤斩杀线，不假定先打敌方就能提前结束
+PASS 替补开启/规则未就绪不假定本轮打倒敌方就能结束
+PASS 免疫、排除或不在实际目标中的敌人不虚报提前结束机会
+PASS 损坏座次环与自定义contentBefore不猜方向
+PASS 其他模式、乱斗和关闭优化保持公共AOE评估及原方向
+PASS 联机2v2与false/0队伍均使用公开队伍，不读取隐藏牌
+PASS 真实chooseControl桥只改AI回调，保留目标数组与宿主结果
+PASS 人类手动选择、远端玩家、结束事件及卸载后均回退原生AI
+PASS 其他同名方向菜单、其他牌与非当前回合不被AOE桥接管
+PASS 换局与父事件结束后旧AI回调失效
+PASS 同回合血线、桃与免疫变化立即更新，不沿用旧风险
+PASS 技能改变行动指针时仍按公开座次排序，不把行动环当结算顺序
+PASS 读取己方资源异常时保留队友风险，不因异常变回乐观评估
+PASS 时机倍率只是现有接口，不额外写入第二份风险收益
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: two
+[DJSC] hooks:start t=0ms
+[DJSC] hooks:mem t=0.1ms
+[DJSC] hooks:store t=1.4ms
+[DJSC] hooks:archive t=1.6ms
+[DJSC] hooks:feedback t=1.7ms
+[DJSC] hooks:matchArchive t=2.2ms
+PASS 实际引擎安装卸载接通方向桥，卸载后恢复原方法与旧回调
+28 checks passed (host stubs; real games remain unverified)
+PASS [weique][2026-10-20] 2v2 AOE risk and native direction bridge

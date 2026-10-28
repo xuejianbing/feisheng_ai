@@ -1,0 +1,41 @@
+PASS content completes before eight-second model restore and installs only once
+(node:12136) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS active identity is unavailable while restore is pending
+PASS late restore preserves new candidate and activation including same ID replacement
+PASS restore errors are settled failures rather than successful reads
+PASS panels load only on first open, coalesce shared paths, retain loaded synchronous return
+PASS unmount during panel load suppresses stale invocation and mounting
+[无名AI] 面板加载失败 openScorePanel: bad file
+[无名AI] 面板加载失败 openScorePanel: bad file
+PASS failed lazy panel reports error without breaking other panels or automatic retry
+FAIL already mounted synchronous panel keeps synchronous return AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ Promise {
++   <pending>
++ }
+- 42
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:34:209
+    at async test (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:6:47)
+    at async file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:34:1
+[无名AI] 面板加载失败 openScorePanel: unexpected load
+FAIL module self registration cannot survive disposed pending load AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ [Function: fn]
+- undefined
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:35:351
+    at async test (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:6:47)
+    at async file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:35:1
+file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:34
+await test('already mounted synchronous panel keeps synchronous return',async()=>{const target={openScorePanel:()=>42};await panel.mountPanels(target,()=>{throw Error('unexpected load');},{lazy:true});assert.equal(target.openScorePanel(),42);});
+                                                                                                                                                                 ^
+
+Error: unexpected load
+    at panel.mountPanels.lazy (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:34:162)
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/score/foundation/diag/panelLoader.js:29:70
+
+Node.js v24.14.0

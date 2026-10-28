@@ -1,0 +1,19 @@
+[Shadow] v5集成模型加载完成
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: unload must clear flush timer and suppress late poll timer
+
+1 !== 0
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-shadow.mjs:8:123 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

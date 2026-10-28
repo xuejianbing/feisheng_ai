@@ -1,0 +1,197 @@
+[
+  {
+    "test": "test-2v2-aoe.mjs",
+    "exit": 0,
+    "ms": 502
+  },
+  {
+    "test": "test-2v2-attack-choice.mjs",
+    "exit": 0,
+    "ms": 481
+  },
+  {
+    "test": "test-2v2-context.mjs",
+    "exit": 0,
+    "ms": 145
+  },
+  {
+    "test": "test-2v2-friendly-fire.mjs",
+    "exit": 0,
+    "ms": 165
+  },
+  {
+    "test": "test-2v2-lethal.mjs",
+    "exit": 0,
+    "ms": 182
+  },
+  {
+    "test": "test-2v2-material-reserve.mjs",
+    "exit": 0,
+    "ms": 488
+  },
+  {
+    "test": "test-2v2-resource-reserve.mjs",
+    "exit": 0,
+    "ms": 210
+  },
+  {
+    "test": "test-2v2-seat-tactics.mjs",
+    "exit": 0,
+    "ms": 186
+  },
+  {
+    "test": "test-2v2-settings.mjs",
+    "exit": 0,
+    "ms": 143
+  },
+  {
+    "test": "test-2v2-team.mjs",
+    "exit": 0,
+    "ms": 125
+  },
+  {
+    "test": "test-ai-boundaries.mjs",
+    "exit": 0,
+    "ms": 476
+  },
+  {
+    "test": "test-cooperation-scope.mjs",
+    "exit": 0,
+    "ms": 180
+  },
+  {
+    "test": "test-decision-audit.mjs",
+    "exit": 0,
+    "ms": 196
+  },
+  {
+    "test": "test-decision-state-fingerprint.mjs",
+    "exit": 0,
+    "ms": 87
+  },
+  {
+    "test": "test-friendly-strip-plan.mjs",
+    "exit": 0,
+    "ms": 163
+  },
+  {
+    "test": "test-identity.mjs",
+    "exit": 0,
+    "ms": 513
+  },
+  {
+    "test": "test-ingest-contract.mjs",
+    "exit": 0,
+    "ms": 49
+  },
+  {
+    "test": "test-jiedao-pair.mjs",
+    "exit": 0,
+    "ms": 192
+  },
+  {
+    "test": "test-jiedao-response.mjs",
+    "exit": 0,
+    "ms": 176
+  },
+  {
+    "test": "test-manual-fire-control.mjs",
+    "exit": 0,
+    "ms": 150
+  },
+  {
+    "test": "test-mobile-db.mjs",
+    "exit": 0,
+    "ms": 54
+  },
+  {
+    "test": "test-mobile-diagnostics.mjs",
+    "exit": 0,
+    "ms": 53
+  },
+  {
+    "test": "test-mobile-performance.mjs",
+    "exit": 0,
+    "ms": 119
+  },
+  {
+    "test": "test-mobile-shadow.mjs",
+    "exit": 0,
+    "ms": 52
+  },
+  {
+    "test": "test-mobile-v5-failure.mjs",
+    "exit": 0,
+    "ms": 48
+  },
+  {
+    "test": "test-mobile-v5.mjs",
+    "exit": 0,
+    "ms": 120
+  },
+  {
+    "test": "test-policy-model-update.mjs",
+    "exit": 0,
+    "ms": 130
+  },
+  {
+    "test": "test-policy-model-v2.mjs",
+    "exit": 0,
+    "ms": 428
+  },
+  {
+    "test": "test-policy-model-v3.mjs",
+    "exit": 0,
+    "ms": 106
+  },
+  {
+    "test": "test-regressions.mjs",
+    "exit": 0,
+    "ms": 1123
+  },
+  {
+    "test": "test-removal-cooperation.mjs",
+    "exit": 0,
+    "ms": 168
+  },
+  {
+    "test": "test-response-lifecycle.mjs",
+    "exit": 0,
+    "ms": 506
+  },
+  {
+    "test": "test-response-material-packing.mjs",
+    "exit": 0,
+    "ms": 655
+  },
+  {
+    "test": "test-suggestion-fusion.mjs",
+    "exit": 0,
+    "ms": 186
+  },
+  {
+    "test": "test-trick-boundaries.mjs",
+    "exit": 0,
+    "ms": 170
+  },
+  {
+    "test": "test-trick-cooperation.mjs",
+    "exit": 0,
+    "ms": 503
+  },
+  {
+    "test": "test-utility-boundaries.mjs",
+    "exit": 0,
+    "ms": 98
+  },
+  {
+    "test": "test-weights.mjs",
+    "exit": 0,
+    "ms": 1373
+  },
+  {
+    "test": "test-wuxie-player-intent.mjs",
+    "exit": 0,
+    "ms": 168
+  }
+]

@@ -1,0 +1,20 @@
+[V5] 2种子模型加载完成
+[V5] 2种子模型加载完成
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: concurrent loads must share both models
+
+4 !== 2
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-v5.mjs:6:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 4,
+  expected: 2,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

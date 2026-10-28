@@ -1,0 +1,715 @@
+
+--- SHA-256 ---
+PASS sha256 长度 0 与 crypto 一致
+PASS sha256 长度 1 与 crypto 一致
+PASS sha256 长度 3 与 crypto 一致
+PASS sha256 长度 55 与 crypto 一致
+PASS sha256 长度 56 与 crypto 一致
+PASS sha256 长度 63 与 crypto 一致
+PASS sha256 长度 64 与 crypto 一致
+PASS sha256 长度 65 与 crypto 一致
+PASS sha256 长度 127 与 crypto 一致
+PASS sha256 长度 1000 与 crypto 一致
+PASS sha256 长度 17152 与 crypto 一致
+PASS sha256 长度 51534 与 crypto 一致
+
+--- 参数契约 vs 真实产物 ---
+PASS 共 10 项（含 Critic 头与残差投影）
+PASS 顺序与 PARAM_ORDER 一致
+PASS 内置权重 w1 字节数 = 17152
+PASS 内置权重 b1 字节数 = 256
+PASS 内置权重 w2 字节数 = 8192
+PASS 内置权重 b2 字节数 = 128
+PASS 内置权重 w3 字节数 = 384
+PASS 内置权重 b3 字节数 = 12
+PASS 内置权重 w4 字节数 = 64
+PASS 内置权重 b4 字节数 = 2
+PASS 内置权重 pr1 字节数 = 17152
+PASS 内置权重 pr2 字节数 = 8192
+PASS 内置权重体积合计 51534
+
+--- 权重包校验 ---
+PASS 合法包通过
+PASS 篡改 1 字节 → SHA-256 拒绝
+PASS 截断参数 → 长度拒绝
+PASS 删除残差投影 pr2 → 拒绝
+PASS 维度不符 → 拒绝
+PASS 数据纪元过旧 → 拒绝
+PASS 结构版本不符 → 拒绝
+PASS 模型标识不符 → 拒绝
+PASS 体积不符 → 拒绝
+PASS 非 JSON 对象 → 拒绝
+PASS 探针维度不符 → 拒绝
+PASS 激活函数不符 → 拒绝
+PASS 归一化方式不符 → 拒绝
+PASS 残差连接约定不符 → 拒绝
+PASS Critic 头约定不符 → 拒绝
+PASS 缺少 architecture 元数据 → 拒绝
+PASS 缺少 dtype 元数据 → 拒绝
+PASS 权重数据类型不符 → 拒绝
+PASS 偏置数据类型不符 → 拒绝
+PASS 未提供语义期望时保持向后兼容（旧包可校验）
+
+--- 版本判断 ---
+PASS compareVersion 4.1>4.0
+PASS compareVersion 3.9<4.0
+PASS 区间 min 命中
+PASS 区间 max 拒绝
+PASS releaseSeq 更新
+PASS releaseSeq 非法值回退基线
+
+--- 本地训练成果判定 ---
+PASS 等于内置默认 → 非用户模型
+PASS 等于上次官方 → 非用户模型
+PASS 既非默认也非官方 → 判为用户模型
+PASS 即使 META.trained=0 也能识别（不依赖 trained）
+
+--- 备份 / 写入 / 读回校验 / 回滚 ---
+PASS 正常路径 ok
+PASS 摘要等于包 sha256
+PASS 在线权重已换为新权重
+PASS 持久化存档与新权重一致
+PASS 优化器动量已清零
+PASS AdamW 时间步已重置
+PASS META 已更新为新权重精度
+PASS 已写入本地备份
+PASS 备份内容 = 更新前模型
+PASS 落盘损坏 → 判定失败
+PASS 失败后已确认回滚
+PASS 回滚后在线 = 更新前模型
+PASS 回滚后存档 = 更新前模型
+PASS 失败原因包含存档校验
+PASS 备份写入 false → 拒绝应用
+PASS 备份写入 false → 在备份阶段中止
+PASS 备份写入 false → 模型完全未改动
+PASS 备份写入 false → 不谎报已备份
+PASS 探针不符 → 拒绝
+PASS 探针不符 → 已回滚
+PASS 待生效快照含全部 10 项权重
+PASS 待生效快照全部动量为零
+PASS 待生效快照 adamT=0 且 ready
+PASS 参数键↔快照键映射一致
+
+--- 清单状态机 ---
+PASS 实测服务器响应 → unsupported（安全降级，不影响扩展使用）
+PASS null 清单 → unsupported
+PASS protocol 不符 → unsupported
+PASS modelId 不符 → unsupported
+PASS 缺 url → invalid
+PASS releaseSeq 非法 → invalid
+PASS 要求更高扩展版本 → needsExtensionUpdate（提示领取整包）
+PASS 更高 releaseSeq → available
+PASS 相同 releaseSeq 且健康 → latest
+PASS 相同 releaseSeq 但内容损坏 → broken（可重新获取修复）
+
+--- 重启后仍生效 ---
+PASS 应用成功
+PASS 存档结构版本 = 运行时 v7
+PASS 存档数据纪元 >= DATA_EPOCH(5)（不会被 loadWeights 拒载）
+PASS 存档含全部 10 项参数
+PASS 重启后加载到的权重 = 本次官方权重
+
+--- 离线可用 / 内置默认权重 ---
+PASS 内置默认权重结构版本 = 运行时 v7
+PASS 内置默认权重维度 = 运行时 dims
+PASS 内置默认权重 ready = true（离线开箱可用）
+PASS 内置默认权重数据纪元 >= 当前 DATA_EPOCH（可离线加载）
+
+--- 备份安全（P0-1 / P2-1） ---
+PASS 备份抛异常 → 拒绝应用
+PASS 备份抛异常 → 在备份阶段中止
+PASS 备份抛异常 → 模型未改动
+PASS 备份抛异常 → 不谎报已备份
+PASS 备份读回失败 → 拒绝应用
+PASS 备份读回失败 → 模型未改动
+PASS 备份读回内容损坏 → 拒绝应用
+PASS 备份损坏 → 错误信息指出不一致
+PASS 备份损坏 → 模型未改动
+PASS 备份记录含结构版本/维度/摘要
+PASS 备份记录 kind = model-params-backup
+PASS 备份记录如实标注不含优化器状态
+PASS 备份记录 version = 2
+PASS 备份读回校验：一致 → 无错误
+PASS 备份读回校验：摘要被改 → 报错
+PASS 备份读回校验：参数被改 → 报错
+PASS 安装成功
+PASS 返回 backupWritten=true
+PASS 成功后长期备份已轮换
+PASS 长期备份内容 = 更新前模型
+PASS 长期备份摘要字段与内容一致
+PASS 长期备份保存了原模型元数据
+PASS 成功后暂存备份已清除
+PASS 暂存写入失败 → 中止
+PASS 暂存写入失败 → 原恢复点 A 完好
+PASS 最终复核不通过 → 中止
+PASS 最终复核不通过 → 原恢复点 A 完好
+PASS 最终复核不通过 → 暂存备份被清除
+PASS 最终复核不通过 → 模型未改动
+PASS 校验失败 → 判定失败并回滚
+PASS 校验失败 → 原恢复点 A 完好
+PASS 校验失败 → 暂存备份被清除
+PASS 轮换失败 → 判定失败（不再报完整成功）
+PASS 轮换失败 → 已回滚到本次更新前的模型
+PASS 轮换失败 → 原恢复点 A 未被销毁
+PASS 轮换失败 → 回滚完整后清理暂存备份
+PASS 轮换失败 → 事务日志已清理
+
+--- 恢复事务（P0-2） ---
+PASS A→B 安装成功
+PASS 安装后备份 = 用户模型 A
+PASS 安装后在线 = 官方 B
+PASS 恢复源校验通过
+PASS 恢复 A 成功
+PASS 恢复后在线 = A
+PASS 恢复不写备份（writeBackup 未被调用）
+PASS 恢复返回 backupWritten=false
+PASS 恢复后原备份 A 依然存在（未被自我覆盖）
+PASS 重复恢复仍成功
+PASS 重复恢复后备份仍为 A
+PASS 重复恢复后在线仍为 A
+PASS 恢复落盘损坏 → 判定失败
+PASS 恢复失败 → 已回滚
+PASS 恢复失败 → 当前模型回到 B
+PASS 恢复失败 → 原备份 A 未被修改
+PASS 恢复失败 → 未写入备份
+PASS 旧结构版本备份 → 拒绝恢复
+PASS 维度不符备份 → 拒绝恢复
+PASS 参数缺失备份 → 拒绝恢复
+PASS 摘要不符备份 → 拒绝恢复
+
+--- 待生效判定（P0-3） ---
+PASS 待生效记录含版本/摘要/授权状态
+PASS 基线一致且空闲 → apply
+PASS 当前模型已变化 → reprompt（不静默覆盖）
+PASS 对局中 → wait
+PASS 已安装同版本 → drop
+PASS 被更新版本取代 → drop
+PASS 目标已生效 → drop
+PASS 结构版本不符 → drop
+PASS 数据纪元过旧 → drop
+PASS 缺少基线摘要 → reprompt（保守）
+PASS 当前摘要不可读 → reprompt（保守）
+PASS 旧格式 v1 记录 → drop
+PASS 重启后摘要变化 → reprompt（同一套检查）
+PASS 用户已明确授权且模型未变 → apply
+
+--- 事务锁（P1-1） ---
+PASS 初始未加锁
+PASS 首次获取成功
+PASS 二次获取被拒（同一时刻只允许一个事务）
+PASS 释放后可再次获取
+PASS 异常路径仍释放锁
+
+--- 应用闸门（P0 / P1-2） ---
+PASS 状态机 stable + 未训练 + 无候选 → 放行
+PASS 状态机 training → 拒绝
+PASS 状态机 candidate → 拒绝
+PASS 真实训练器 isTraining=true → 拒绝
+PASS 存在 A/B 候选 → 拒绝
+PASS 模型状态不可知 → 保守拒绝
+PASS 训练状态不可知 → 保守拒绝
+PASS 对局中（缓存）→ 拒绝
+PASS 对局已知结束（缓存）→ 放行
+PASS 存在活动事件链 → 拒绝
+PASS 宿主 gameStarted 且未结束 → 拒绝（即使缓存说不在对局）
+PASS 宿主 gameStarted 且已结束 → 放行
+PASS 第二局已开始（缓存残留"不在对局"）→ 仍拒绝
+PASS 活动事件链优先于缓存"不在对局" → 拒绝
+PASS 上局结束标记残留但本局已开始 → 拒绝（over 不得凌驾 gameStarted）
+PASS 菜单/营地（未开局、无活动事件、无缓存）→ 放行
+PASS 非对局界面不得被永久阻塞（无任何对局信号）→ 放行
+
+--- 官方记录事务（P1-4） ---
+PASS 记录含版本/摘要/体积/结构版本
+PASS 记录形状合法
+PASS 读回一致 → 无错误
+PASS 读回摘要不符 → 报错
+PASS 读回版本不符 → 报错
+PASS 读回体积不符 → 报错
+PASS 读回为空 → 报错
+PASS modelId 不符 → 形状非法
+
+--- 导出工具兼容性（P1-5） ---
+PASS 结构版本一致 + 纪元一致 → 放行
+PASS 结构版本不符 → 拒绝
+PASS 数据纪元过旧（非默认）→ 拒绝
+PASS 数据纪元过旧 + 显式迁移 + 依据 → 放行并记录
+PASS 数据纪元过旧 + 允许迁移但缺依据 → 拒绝
+PASS 内置默认权重（dv 陈旧）→ 按基线放行
+PASS 内置默认权重但结构版本不符 → 仍拒绝
+PASS 无版本字段（未知来源）→ 放行
+PASS 导出：合法同纪元输入 → 退出码 0
+PASS 导出：结构版本不符 → 退出码 1（拒绝）
+PASS 导出：数据纪元过旧 → 退出码 1（拒绝）
+PASS 导出：显式纪元迁移 + 说明 → 退出码 0
+PASS 导出：允许迁移但缺说明 → 退出码 1
+PASS 导出：内置默认权重仍可导出（不破坏合法场景）
+PASS 导出：结构不符时不产出权重文件
+
+--- 存档完整性分类（P2-1） ---
+PASS 无官方记录 → none
+PASS 契约不可用 → unknown
+PASS 存档缺失 → broken
+PASS 存档无法解析 → broken
+PASS 结构版本不符 → broken
+PASS 数据纪元过旧 → broken
+PASS 参数缺失 → broken
+PASS 内容 = 官方权重 → ok
+PASS 摘要不同 + 无训练证据 → mismatch（保守，不自动覆盖）
+PASS 摘要不同 + 有训练证据 → superseded（正常）
+PASS 内容 = 内置默认 → broken（官方权重丢失）
+PASS 不得仅凭摘要不同就认定用户训练
+
+--- 下载超时与体积限制（P2-2 / P2-3） ---
+PASS 正文读取悬挂 → 超时被中断（不会永久卡住）
+PASS HTTP 非 2xx → 抛错
+PASS Content-Length 超限 → 提前拒绝
+PASS 正文长度超限 → 拒绝
+PASS 失败重试后可成功
+PASS 非法 JSON → 调用方可识别（解析抛错）
+PASS 体积上限 ≥ 512KB（不会过小误拒）
+PASS 体积上限远大于合法权重包
+PASS 体积上限随维度增长
+PASS 清单上限为 256KB
+
+--- 弹窗降级安全（P2-4） ---
+PASS DOM 不可用 + 危险操作 → 默认取消（绝不默认确认）
+PASS DOM 不可用 + 危险操作（取消为主按钮）→ 取非主按钮
+PASS DOM 不可用 + 显式 defaultValue → 用指定安全值
+PASS DOM 不可用 + 只读提示 → 安全降级为确定
+PASS DOM 不可用 + 危险且无按钮 → 返回 null（取消）
+
+--- 连续对局状态门禁（P0） ---
+PASS ① 首次进入主菜单（未开局）→ 放行
+PASS ② 第一局正在进行 → 拒绝
+PASS ③ 第一局正常结算（over=true）→ 放行
+PASS ④ 不重启直接第二局已开始 → 拒绝
+PASS ⑤ 第二局尚未结束 → 拒绝
+PASS ⑥ 第二局结束 → 放行
+PASS 连续第 1 局进行中 → 拒绝
+PASS 连续第 2 局进行中 → 拒绝
+PASS 连续第 3 局进行中 → 拒绝
+PASS 上局 over 残留 + 本局已开始 → 拒绝
+PASS 扩展重新启用（菜单态）→ 放行
+PASS 局内发起安装 → 拒绝（走延迟）
+PASS 局末延迟应用 → 放行
+PASS 重复判定一致（幂等）
+
+--- 手动安装最终摘要复核（P1-1） ---
+PASS 确认期间模型未变（A）→ 可继续安装
+PASS 确认期间模型 A→B → 必须重新询问（reprompt）
+PASS 确认期间模型被重置为内置默认 → 重新询问
+PASS 确认期间模型已变为官方目标 → 安全跳过（drop）
+PASS 状态恢复 stable 但模型已变化 → 仍必须重新询问
+PASS 未重新授权时判定不为 apply
+
+--- 写入失败的部分修改回滚（P1-2） ---
+PASS 完全拒绝 → 判定失败
+PASS 完全拒绝 → 未标记部分修改
+PASS 完全拒绝 → 模型未改动
+PASS 写一半抛异常 → 判定失败
+PASS 写一半抛异常 → 标记已部分修改
+PASS 写一半抛异常 → 已完整回滚
+PASS 写一半抛异常 → 参数回到原模型
+PASS 写一半抛异常 → 优化器状态回到原模型
+PASS 写一半抛异常 → 错误信息指出部分修改
+PASS 全写入后返回 false → 标记部分修改
+PASS 全写入后返回 false → 已完整回滚
+PASS 全写入后返回 false → 参数回到原模型
+PASS 回滚再次抛异常 → 不得报告已回滚
+PASS 回滚再次抛异常 → rollbackStatus=failed
+PASS 回滚再次抛异常 → 错误信息明确告知未确认
+PASS 内存恢复但持久化失败 → 不得报告完整回滚
+PASS 内存恢复但持久化失败 → 指出存档问题
+PASS 优化器恢复不完整 → 检出并报告
+PASS runtimeStateDiff 一致 → 无差异
+PASS 优化器被改 → 检出
+PASS 时间步被改 → 检出
+PASS 参数被改 → 检出
+PASS 元数据被改 → 检出
+
+--- 版本记录回滚（P1-3） ---
+PASS 旧记录写入并读回一致 → ok
+PASS 恢复后当前记录 = 旧记录 A
+PASS 旧记录写入返回 false → 失败
+PASS 旧记录写入抛异常 → 失败
+PASS 旧记录写入后读回不一致 → 失败
+PASS 旧记录写入后无法读回 → 失败
+PASS 无旧记录且删除成功 → ok
+PASS 无旧记录但新记录删不掉 → 失败
+PASS 模型+记录都回滚 → complete
+PASS 仅模型回滚 → partial（不得报成完整成功）
+PASS 模型未回滚 → failed
+
+--- 训练证据判定（P1-4） ---
+PASS trained>0 但等于官方训练步数 → 无训练证据
+PASS trained>0 且低于官方 → 无训练证据
+PASS trained 高于官方 → 有训练证据
+PASS 官方记录无 trained 字段（旧记录）→ 保守：无训练证据
+PASS 候选晋升计数 > 0 → 有训练证据
+PASS 无任何来源 → 无训练证据
+PASS 官方权重 trained>0 被篡改 → mismatch（不是 superseded）
+PASS 官方权重被本地继续训练替换 → superseded
+PASS 有效但来源未知（旧记录无基线）→ mismatch
+PASS 参数缺失/长度损坏 → broken
+PASS 模型与内置默认一致 → broken（官方权重丢失）
+PASS 无官方记录的历史用户模型 → none（不触碰）
+PASS mismatch 不进入"可修复"状态
+
+--- 流式下载体积限制（P2-2） ---
+PASS 流式读取：正常拼接正文
+PASS 无 Content-Length：流式仍可正常读取
+PASS 流式超限 → 拒绝
+PASS fetch 链路：流式超限 → 拒绝并取消请求
+PASS 下载途中中断 → 抛错（不返回半截正文）
+PASS 流式正文悬挂 → 超时中断
+PASS 多字节 UTF-8 跨块正确解码
+PASS 旧环境退回 text() 可用
+PASS 旧环境按 UTF-8 字节数拒绝（非字符数）
+PASS 绝对硬上限存在（不允许无限制缓冲）
+PASS 体积上限远大于合法权重包（不误拒）
+
+--- 安装事务一致性（P0-1） ---
+PASS 26a 轮换失败 → 判定失败
+PASS 26a 回滚到 A（本次事务基线），而不是历史 X
+PASS 26a 长期恢复点 X 未被覆盖/销毁
+PASS 26a 事务日志已清理
+PASS 26a 暂存备份已清理（回滚完整）
+PASS 26b 记录失败 → 判定失败
+PASS 26b 已回滚到 A
+PASS 26b 已调用记录回滚
+PASS 26b 长期备份未被轮换（仍是 X）
+PASS 26b 事务日志已清理
+PASS 26c 记录已提交但轮换失败 → 判定失败
+PASS 26c 记录提交与记录回滚都被调用
+PASS 26c 已回滚到 A
+PASS 26c 长期备份仍是 X
+PASS 26d 成功
+PASS 26d 长期备份轮换为 A
+PASS 26d 暂存备份与事务日志已清理
+PASS 26d 事务标识写入暂存记录
+PASS 26e 事务标识不匹配 → 拒绝
+PASS 26e 摘要字段错误 → 拒绝
+PASS 26e 内容与事务基线摘要不符 → 拒绝
+PASS 26e 缺失暂存备份 → 拒绝
+PASS 26f 旧备份损坏不影响本次回滚结果
+PASS 26f 损坏的旧备份未被用于回滚（未被覆盖成 A）
+PASS 26g 日志写入失败 → 拒绝安装（不再警告后继续）
+PASS 26g 日志写入失败 → 如实反馈 journalWritten=false
+PASS 26g 模型未被写入触碰
+PASS 26g 官方记录未被提交
+PASS 26g 暂存与日志无残留
+
+--- 崩溃 / 重启恢复（P0-1） ---
+PASS 27a 无未完成事务 → none
+PASS 27a 长期备份未被触碰
+PASS 27b prepared → cleanup
+PASS 27b 清理后无暂存与日志
+PASS 27b 模型未改动
+PASS 27b 长期备份未变
+PASS 27c weights-written → restore
+PASS 27c 已恢复到 A（不是历史 X）
+PASS 27c 官方记录保持"未提交"状态（仍无记录）
+PASS 27c 长期备份 X 未被覆盖
+PASS 27c 清理暂存与日志
+PASS 27d record-committed → finish-rotation
+PASS 27d 长期备份被补做轮换为 A
+PASS 27d 模型保持新权重（不回滚）
+PASS 27d 官方记录仍指向目标
+PASS 27d 清理暂存与日志
+PASS 27e backup-rotated → cleanup
+PASS 27e 模型保持新权重
+PASS 27e 长期备份保持 A
+PASS 27e 清理暂存与日志
+PASS 27f 暂存与日志不匹配 → manual
+PASS 27f 保留暂存与日志（不清除唯一恢复数据）
+PASS 27f 长期备份未被触碰
+PASS 27f 模型未被回滚（无可靠恢复源）
+PASS 27g needsManual → manual
+PASS 27g 数据保留
+PASS 27h 持久化异常 → 恢复未完成
+PASS 27h 标记 needsManual 并保留日志
+PASS 27h 暂存备份保留
+PASS 27i 未知阶段 → manual
+PASS 27i 无 txId（结构无效）→ manual（不再误放行）
+PASS 27i 确实不存在（null/undefined）→ none
+PASS 27i 非对象内容（字符串/数组）→ manual
+
+--- 重新授权期间的事务基线（P0-2） ---
+PASS 28a 安装成功
+PASS 28a 长期备份 = A
+PASS 28a 当前模型 = C
+PASS 28b 用户拒绝 → 中止
+PASS 28b 模型保持 B（未被安装覆盖）
+PASS 28b 长期备份未变
+PASS 28b 暂存与日志已清理
+PASS 28c 安装成功
+PASS 28c 当前模型 = C
+PASS 28c 长期备份 = B（实际被覆盖的模型），不是 A
+PASS 28c 长期备份不是过期基线 A
+PASS 28d 反复变化超过上限 → 中止
+PASS 28d 提示模型反复变化
+PASS 28d 中止后暂存与日志已清理
+PASS 28d 中止后模型未被官方权重覆盖
+PASS 28e 对局中 → 中止且模型未变
+PASS 28f 训练仍在运行导致模型再变 → 复核为 reprompt（不写入）
+PASS 28f 模型未变 → 允许写入
+
+--- 恢复事务与官方记录清理（P1） ---
+PASS 29a 恢复成功
+PASS 29a 当前模型 = 备份 A
+PASS 29a 未触碰长期备份
+PASS 29a 恢复模式不写暂存/日志
+PASS 29a 未调用记录回滚
+PASS 29b 记录清理失败 → 判定失败且 failedAt=record
+PASS 29b 已回滚到恢复前的模型 B
+PASS 29b 已调用记录回滚（恢复原记录）
+PASS 29b 长期备份未被修改
+PASS 29b 不谎报完整恢复
+PASS 29c 记录清理抛异常 → 判定失败
+PASS 29c 已回滚到恢复前的模型 B
+PASS 29d 记录仍可读回 → 判定失败并回滚
+PASS 29e 记录回滚失败 → 不报完整成功
+PASS 29e 记录回滚错误被并入 errors
+PASS 29e 记录回滚被调用
+PASS 29f 恢复落盘损坏 → 判定失败
+PASS 29f 已回滚到恢复前的模型 B
+PASS 29g 清除成功且读回不存在 → ok
+PASS 29g 清除后仍可读回 → 失败
+PASS 29g 清除抛异常 → 不崩溃且判失败
+PASS 29h 重复恢复均成功
+PASS 29h 重复恢复后备份仍完整
+PASS 29h 重复恢复后模型仍为 A
+
+--- 待生效授权强制校验（P2） ---
+PASS 30 userAuthorized=true → 可 apply
+PASS 30 userAuthorized=false → 绝不 apply
+PASS 30 userAuthorized=false → reprompt（需重新确认）
+PASS 30 userAuthorized 缺失 → 绝不 apply
+PASS 30 userAuthorized 缺失 → reprompt
+PASS 30 userAuthorized="true" 字符串 → 不算授权
+PASS 30 userAuthorized=1 → 不算授权
+PASS 30 未授权记录不会触发 apply（即使模型基线一致）
+PASS 30 旧版 v1 记录 → drop
+PASS 30 授权基线变化 → reprompt
+PASS 30 已安装同版本 → drop（优先于授权检查）
+PASS 30 对局中 → wait
+PASS 30 未授权记录在任何情况下都不会 apply
+
+--- 崩溃恢复状态矩阵（P0-1） ---
+PASS 31a 无日志 → none（不动任何数据）
+PASS 31a 残留暂存不被销毁（无事务可判定）
+PASS 31a 模型未被触碰
+PASS 31b 持久化真相=基线 → cleanup（日志未更新 ≠ 操作已执行）
+PASS 31b 持久化存档保持基线（未被恢复误写）
+PASS 31b 长期备份与官方记录未被触碰
+PASS 31c 记录已提交+日志落后 → 继续提交（不是回滚）
+PASS 31c 模型保持新权重 B（不回滚成 A）
+PASS 31c 官方记录仍指向 B（不出现 A 配 B）
+PASS 31c 长期备份补做轮换为 A
+PASS 31c 清理暂存与日志
+PASS 31d 全部已提交（备份已轮换）→ cleanup
+PASS 31d 模型保持 B
+PASS 31d 长期备份保持 A
+PASS 31d 清理暂存与日志
+PASS 31e 权重未变 → cleanup
+PASS 31e 模型保持 A 且未被动过
+PASS 31f 清理残留 → cleanup（不误判为需要回滚）
+PASS 31f 模型保持 B
+PASS 31f 日志已清理
+PASS 31g 记录缺失 → 回滚到 A
+PASS 31g 模型回到 A
+PASS 31g 旧官方记录被写入并读回核验（A 配 A）
+PASS 31g 长期备份 X 未被触碰
+PASS 31g 清理暂存与日志
+PASS 31h 缺旧记录快照 → manual
+PASS 31h 已标记 needsManual（阻止继续安装）
+PASS 31h 暂存与长期备份保留
+PASS 31h 模型未被回滚
+PASS 31i 记录指向目标但权重是基线 → fix-record
+PASS 31i 记录被清回"无记录"（与权重一致）
+PASS 31i 清理暂存与日志
+PASS 31j 无法修复记录 → manual 且保留数据
+PASS 31k 清理中断 → 不谎报完成
+PASS 31k 长期备份已补做轮换为 A
+PASS 31k 数据保留（日志与暂存仍在）
+PASS 31k 清理中断不标记 needsManual（提交已完成）
+PASS 31k 重试后幂等收尾完成
+PASS 31k 终态干净且模型仍为 B
+PASS 31l 首次判定 manual 并保留数据
+PASS 31l 重复启动仍为 manual（持续阻止安装）
+PASS 31m 恢复失败且日志无法再写 → 不谎报成功
+PASS 31m 暂存与（原）日志保留
+PASS 31m 官方记录未被误写
+PASS 31n 记录读取异常 → manual（不猜测提交状态）
+PASS 31n 数据保留
+PASS 31o 权重=第三方模型 → manual（绝不自动覆盖）
+
+--- 事务日志故障矩阵（P0-2） ---
+PASS 32a 抛异常 → 中止（journal）
+PASS 32a 模型零改动
+PASS 32a 无暂存/日志残留
+PASS 32b 读回失败 → 中止（journal）
+PASS 32b 模型零改动
+PASS 32c 读回内容不符 → 中止（journal）
+PASS 32c 模型零改动且无残留
+PASS 32d 阶段推进失败 → 中止（journal），不继续提交
+PASS 32d 已回滚到 A（内存与存档）
+PASS 32d 回滚完整（rolledBack/rollbackStatus 一致）
+PASS 32d 官方记录未被提交
+PASS 32d 无残留
+PASS 32e 继续完成提交（状态自洽）
+PASS 32e 如实标记 journalDegraded
+PASS 32e 权重/记录/长期备份全部落位
+PASS 32e 清理完成（无残留）
+PASS 32f 继续完成并标记降级
+PASS 32f 长期备份已轮换
+PASS 32f 再次启动 → 无未完成事务
+PASS 32g 提交成功但清理未完成 → ok:true + cleanupPending
+PASS 32g 暂存保留（供下次启动安全收尾）
+PASS 32g 日志残留为终态阶段
+PASS 32g 重启后判定 cleanup（不误判回滚）
+PASS 32g 终态干净且模型仍为 B
+PASS 32h 中止且无残留
+PASS 32h 再次启动 → none
+PASS 32i 回滚成功但清理未完成 → 如实反馈
+PASS 32i 暂存保留（仍有收尾价值）
+PASS 32i 模型已回到 A
+PASS 32i 重启后 → none/cleanup（不误判回滚）
+PASS 32j 删除后读回异常 → ok:true 但 cleanupPending
+PASS 32j 暂存数据保留（留待后续处理）
+PASS 32j 提交本身完整（权重/记录/备份就位）
+PASS 32k 恢复清理时删除后读回异常 → 不报清理完成
+PASS 32k 暂存数据保留
+PASS 32k 模型未被触碰
+
+--- 手动安装重新授权基线（P1-1） ---
+PASS 33a 旧摘要不更新 → 每次都 reprompt（反复弹窗的根因）
+PASS 33b 重绑基线后同一模型 → apply（不再弹窗）
+PASS 33b 重绑保持显式授权并规范化摘要
+PASS 33c 重授权后模型再次变化 → reprompt（不静默覆盖）
+PASS 33d 无法读取基线 → 仍 reprompt（不允许跳过摘要核验）
+PASS 33e 安装成功（重授权后不再反复弹窗）
+PASS 33e 只弹窗一次
+PASS 33e 事务确实重建过基线（两次复核）
+PASS 33e 长期备份 = B（重新授权时被覆盖的模型）
+PASS 33e 长期备份不是过期基线 A
+PASS 33e 当前模型 = C
+PASS 33f 再次变化 → 第二次弹窗且用户拒绝 → 中止
+PASS 33f 共弹窗两次（每次变化都重新确认）
+PASS 33f 模型保持第四模型（未被官方权重覆盖）
+PASS 33f 长期备份未被触碰
+PASS 33f 中止后暂存与日志已清理
+PASS 33g 重新授权后进入对局 → 拒绝安装
+PASS 33g 模型保持 B 未被覆盖
+PASS 33g 暂存与日志已清理
+PASS 33h 训练仍在运行 → 拒绝安装
+PASS 33h 模型保持 B 未被覆盖
+
+--- 回滚状态合成矩阵（P1-2） ---
+PASS 34a 模型成功+记录成功 → complete
+PASS 34a 模型回到 A
+PASS 34a 完整回滚 → 清理暂存与日志
+PASS 34a 文案与状态一致（complete）
+PASS 34b 模型成功+记录失败 → partial
+PASS 34b rolledBack=false（完整回滚未达成）
+PASS 34b rollbackErrors 含记录回滚错误
+PASS 34b 模型确实回到 A
+PASS 34b 回滚不完整 → 保留暂存与 needsManual 日志
+PASS 34b 文案为 partial（与返回值一致）
+PASS 34c 模型失败+记录成功 → failed
+PASS 34c 文案为 failed（与返回值一致）
+PASS 34c 回滚不完整 → 保留暂存与 needsManual 日志
+PASS 34d 模型失败+记录失败 → failed
+PASS 34d 两类错误都被并入 rollbackErrors
+PASS 34e 恢复入口：模型回滚成功+记录恢复失败 → partial
+PASS 34e 模型回到恢复前的 B
+PASS 34e 原长期备份未被修改
+PASS 34e restore 回滚不完整 → 保留 needsManual 人工标记（阻止继续安装）
+PASS 34f install/restore 返回均含 rollbackStatus/rolledBack/rollbackErrors
+
+--- 官方记录删除核验（P1-3） ---
+PASS 35a 删除成功且读回为空 → ok
+PASS 35b 删除返回 false 且记录仍在 → 失败
+PASS 35b 错误信息区分"删除操作失败"与"仍可读回"
+PASS 35c 删除抛异常且记录仍在 → 失败并记录异常
+PASS 35d 删除成功但读回抛异常 → 绝不报删除成功
+PASS 35e 缺少读取能力 → 不得报告删除成功
+PASS 35f 读回格式异常（空串）→ 视为仍存在
+PASS 35f 读回格式异常（0）→ 视为仍存在
+PASS 35g 删除抛异常且读回为空 → 仍判未确认（保守）
+PASS 35h 无删除能力且记录不存在 → ok
+PASS 35h 无删除能力且记录仍存在 → 失败
+PASS 35i 无删除能力且读取异常 → 失败（无法确认）
+PASS 35j 宿主存储访问抛异常（getItem 抛）→ 验证失败
+PASS 35k 旧记录写回+读回核验通过 → ok（既有路径不受影响）
+PASS 35k 旧记录写回后读回异常 → 失败（同样不冒充成功）
+
+--- 崩溃恢复互斥（P1） ---
+PASS 36a 恢复期间 blocked()=true（_txBlocked 据此拦截）
+PASS 36a 恢复期间新事务取锁失败（互斥成立）
+PASS 36a 并发的第二次恢复被拒绝（started=false，绝不执行）
+PASS 36a 恢复本身正常完成
+PASS 36b 恢复结束后 recovering=false 且锁可用
+PASS 36c 恢复抛异常 → 向上抛出且锁/标志已释放
+PASS 36d 锁被占用 → started=false 且 fn 不执行
+PASS 36e 恢复持锁期间手动安装入口取锁失败（与下载/恢复/待生效共用锁）
+
+--- 宿主存储适配层：严格读取（P1） ---
+PASS 37a 键不存在 → null（确实没有未完成事务）
+PASS 37a 空串 → null（视为无值，与既有语义一致）
+PASS 37a 合法 JSON → 解析为对象
+PASS 37a 内容损坏 → 抛异常（绝不冒充"不存在"）
+PASS 37a 存储访问失败 → 抛异常
+PASS 37a 无存储环境 → null（写入同样会失败，不会存在日志）
+PASS 37b 对照：safeGet 对访问异常返回 null（异常被吞，旧读法丢信息）
+PASS 37c 读取失败 → manual（不再误判为 none）
+PASS 37c 原始现场未被改写（0 次日志写入）
+PASS 37c 暂存与长期备份全部保留
+PASS 37c 模型未被触碰
+PASS 37d 删除报告成功但键仍在 → cleanupPending（不谎报清理完成）
+PASS 37d 暂存保留 + 日志仍在（供后续处理）
+PASS 37e 损坏日志（真实适配层）→ manual 阻断
+PASS 37e 损坏原文未被覆盖（现场完整可查）
+PASS 37e 存储恢复后按正常路径处置（cleanup，不误判阻塞）
+PASS 37e 处置后日志键已清理
+PASS 37f 键确实不存在 → null（唯一允许判"无事务"的情形）
+PASS 37f 合法事务日志 → 解析成功
+PASS 37f {}、null、[]、缺 txId、空 txId、数字、字符串 → 一律抛异常（7 例）
+PASS 37f isTxJournalShape 边界
+PASS 37f classifyInterruptedTx：null → none、{} → manual
+PASS 37f planTxRecovery 同口径：null → none、结构无效 → manual
+PASS 37g 无效日志 {} → manual 阻断
+PASS 37g 无效日志 {} 原文未被改写
+PASS 37g 无效日志 null → manual 阻断
+PASS 37g 无效日志 null 原文未被改写
+PASS 37g 无效日志 [] → manual 阻断
+PASS 37g 无效日志 [] 原文未被改写
+PASS 37h 结构无效 → manual（分类层兜底，不误放行）
+PASS 37h 数据保留（未改写、未回滚）
+
+--- 弹窗 DOM 声明层（更新 UI 布局修复） ---
+PASS 38a 弹窗已建立（mask→panel→title/scroll/actions）
+PASS 38a 面板为纵向 Flex（display/flex-direction/overflow 均 important）
+PASS 38a 面板定位与盒模型明确（fixed / box-sizing / translate 居中）
+PASS 38a 标题参与布局（static!important + display:block + flex 0 0 auto）
+PASS 38a 正文区参与布局且可滚动（static!important + flex 1 1 auto + min-height 0 + overflow auto）
+PASS 38a 按钮行参与布局（static!important + display:flex + flex 0 0 auto）
+PASS 38a 按钮参与布局且外观保留（static + 描边/底色/文字色为 UI 常量）
+PASS 38a 本体 div 全局规则被 !important 隔离（position/transition 全覆盖）
+PASS 38b 旧弹窗被安全关闭（无默认值 → null，不会触发任何动作）
+PASS 38b 同屏只剩一个弹窗
+PASS 38b 新弹窗正常交互（点击 resolve=apply）
+PASS 38b 关闭后无残留
+PASS 38c 新进度浮层替换旧浮层（同屏至多一个）
+PASS 38c 旧句柄 close 幂等（不影响新浮层）
+PASS 38c update 更新正文
+PASS 38c 进度浮层无按钮行（title+scroll 两段结构）
+PASS 38c 进度浮层可正常关闭
+PASS 38d 弹窗正常打开
+PASS 38d 遗留弹窗被安全取消（resolve=defaultValue）
+PASS 38d 仅剩进度浮层
+PASS 38e 进度浮层被弹窗替换
+PASS 38e 弹窗正常关闭且无残留
+
+==== ALL PASS (637) ====

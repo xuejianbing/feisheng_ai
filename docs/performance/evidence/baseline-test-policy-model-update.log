@@ -1,0 +1,9 @@
+FAIL 内置 v3 模型可加载
+file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-policy-model-update.mjs:67
+const meta = builtin.meta;
+                     ^
+
+TypeError: Cannot read properties of null (reading 'meta')
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-policy-model-update.mjs:67:22
+
+Node.js v24.14.0

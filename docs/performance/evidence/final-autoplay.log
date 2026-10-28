@@ -1,0 +1,111 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:61526/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:61526/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:61526/index.html net::ERR_ABORTED
+[smoke] phase hook ready
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:61526/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:61526/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:61526/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: normal
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.2ms
+[browser-console] log [DJSC] update:install t=1ms
+[browser-console] log [DJSC] panels:ready t=1.5ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=3.1ms
+[browser-console] log [DJSC] content:native t=4.1ms
+[browser-console] log [DJSC] engine:install-begin t=4.3ms
+[browser-console] log [DJSC] engine:start t=4.8ms
+[browser-console] log [DJSC] engine:storage-guard t=5.4ms
+[browser-console] log [DJSC] hooks:start t=5.9ms
+[browser-console] log [DJSC] hooks:mem t=6.9ms
+[browser-console] log [DJSC] hooks:store t=9.2ms
+[browser-console] log [DJSC] hooks:archive t=9.3ms
+[browser-console] log [DJSC] hooks:feedback t=9.5ms
+[browser-console] log [DJSC] hooks:matchArchive t=10ms
+[browser-console] log [DJSC] engine:hooks t=21.5ms
+[browser-console] log [DJSC] engine:plugins t=25.8ms
+[browser-console] log [DJSC] engine:settle-watch t=25.9ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] log [DJSC] content:models t=241.9ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[browser-console] log [DJSC] v3:loaded t=315.9ms
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=409.3ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+{"done":true,"startedAt":1793199796936,"phases":9,"uses":27,"result":true,"hostVersion":"1.11.7","mode":"doudizhu","submode":"normal","perf":{"traceVersion":2,"startedAt":1793199796888,"now":1793199816256,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.2},{"name":"update:install","t":1},{"name":"panels:ready","t":1.5,"total":25,"loaded":0,"ok":true},{"name":"content:start","t":3.1},{"name":"content:native","t":4.1},{"name":"engine:install-begin","t":4.3},{"name":"engine:start","t":4.8},{"name":"engine:storage-guard","t":5.4},{"name":"hooks:start","t":5.9},{"name":"hooks:mem","t":6.9},{"name":"hooks:store","t":9.2},{"name":"hooks:archive","t":9.3},{"name":"hooks:feedback","t":9.5},{"name":"hooks:matchArchive","t":10},{"name":"engine:hooks","t":21.5},{"name":"engine:plugins","t":25.8},{"name":"engine:settle-watch","t":25.9},{"name":"content:models","t":241.9,"backend":"IndexedDB","error":false},{"name":"v3:loaded","t":315.9,"source":"builtin"},{"name":"decision:first","t":409.3,"wrapperMs":72}],"longTasks":[{"start":711.4,"ms":180,"precedingMark":null},{"start":1457.3,"ms":98,"precedingMark":null},{"start":1577.8,"ms":110,"precedingMark":"engine:settle-watch"},{"start":1821.4,"ms":120,"precedingMark":"v3:loaded"},{"start":1946.4,"ms":127,"precedingMark":"decision:first"},{"start":2458.9,"ms":74,"precedingMark":"decision:first"},{"start":3558.4,"ms":68,"precedingMark":"decision:first"},{"start":5389.1,"ms":51,"precedingMark":"decision:first"},{"start":6066.8,"ms":55,"precedingMark":"decision:first"},{"start":9291,"ms":81,"precedingMark":"decision:first"},{"start":9893.6,"ms":58,"precedingMark":"decision:first"},{"start":11933.4,"ms":58,"precedingMark":"decision:first"},{"start":12503.1,"ms":54,"precedingMark":"decision:first"},{"start":14116,"ms":67,"precedingMark":"decision:first"},{"start":15208.1,"ms":68,"precedingMark":"decision:first"},{"start":15798.5,"ms":85,"precedingMark":"decision:first"},{"start":16396.9,"ms":63,"precedingMark":"decision:first"},{"start":17689.1,"ms":53,"precedingMark":"decision:first"},{"start":20055,"ms":67,"precedingMark":"decision:first"},{"start":20237.2,"ms":68,"precedingMark":"decision:first"}],"observationBoundary":"ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.","decisions":224,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":10},"resources":[]},"overrideStats":{"use":{"suggested":25,"stagedChoice":25,"pass":25,"selected":23,"executed":18,"veto":2,"candidateAccepted":1,"allyGuard":4},"respond":{},"discard":{"check":3,"selected":1,"executed":1},"compare":{},"soft":{"hit":20}},"alive":2,"dead":1,"errors":[],"browser":"156.0.8078.73","status":"completed"}

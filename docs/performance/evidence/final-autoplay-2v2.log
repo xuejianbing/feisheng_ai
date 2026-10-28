@@ -1,0 +1,122 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50297/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50297/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:50297/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: Execution context was destroyed, most likely because of a navigation.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50297/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50297/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50297/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.2ms
+[browser-console] log [DJSC] update:install t=0.8ms
+[browser-console] log [DJSC] panels:ready t=1.5ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=4.2ms
+[browser-console] log [DJSC] content:native t=5.4ms
+[browser-console] log [DJSC] engine:install-begin t=5.5ms
+[browser-console] log [DJSC] engine:start t=5.7ms
+[browser-console] log [DJSC] engine:storage-guard t=6.2ms
+[browser-console] log [DJSC] hooks:start t=6.6ms
+[browser-console] log [DJSC] hooks:mem t=7.4ms
+[browser-console] log [DJSC] hooks:store t=11.9ms
+[browser-console] log [DJSC] hooks:archive t=12ms
+[browser-console] log [DJSC] hooks:feedback t=12.2ms
+[browser-console] log [DJSC] hooks:matchArchive t=12.9ms
+[browser-console] log [DJSC] engine:hooks t=14.3ms
+[browser-console] log [DJSC] engine:plugins t=16.5ms
+[browser-console] log [DJSC] engine:settle-watch t=16.6ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [DJSC] content:models t=110.1ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] log [DJSC] decision:first t=6771.3ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] log [DJSC] v3:loaded t=9742.5ms
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+{"done":false,"startedAt":1793200280825,"phases":3,"uses":10,"hostVersion":"1.11.7","mode":"versus","submode":"two","perf":{"traceVersion":2,"startedAt":1793200280802,"now":1793200470677,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.2},{"name":"update:install","t":0.8},{"name":"panels:ready","t":1.5,"total":25,"loaded":0,"ok":true},{"name":"content:start","t":4.2},{"name":"content:native","t":5.4},{"name":"engine:install-begin","t":5.5},{"name":"engine:start","t":5.7},{"name":"engine:storage-guard","t":6.2},{"name":"hooks:start","t":6.6},{"name":"hooks:mem","t":7.4},{"name":"hooks:store","t":11.9},{"name":"hooks:archive","t":12},{"name":"hooks:feedback","t":12.2},{"name":"hooks:matchArchive","t":12.9},{"name":"engine:hooks","t":14.3},{"name":"engine:plugins","t":16.5},{"name":"engine:settle-watch","t":16.6},{"name":"content:models","t":110.1,"backend":"IndexedDB","error":false},{"name":"decision:first","t":6771.3,"wrapperMs":296},{"name":"v3:loaded","t":9742.5,"source":"builtin"}],"longTasks":[{"start":716.2,"ms":246,"precedingMark":null},{"start":1539.1,"ms":142,"precedingMark":null},{"start":1741,"ms":85,"precedingMark":null},{"start":1961.5,"ms":150,"precedingMark":"content:models"},{"start":2114.3,"ms":9386,"precedingMark":"content:models"},{"start":12034.5,"ms":10191,"precedingMark":"v3:loaded"},{"start":22845.3,"ms":7655,"precedingMark":"v3:loaded"},{"start":31139.6,"ms":19747,"precedingMark":"v3:loaded"},{"start":51408.4,"ms":19450,"precedingMark":"v3:loaded"},{"start":71370.2,"ms":24259,"precedingMark":"v3:loaded"},{"start":96135.6,"ms":26788,"precedingMark":"v3:loaded"},{"start":123430.5,"ms":44609,"precedingMark":"v3:loaded"},{"start":168572.7,"ms":66,"precedingMark":"v3:loaded"},{"start":169288.7,"ms":22341,"precedingMark":"v3:loaded"}],"firstDecisionPerf":{"ms":296.1,"reusedResult":false,"phases":{}},"recentDecisions":[{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":11004.6,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":10997,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":11019.9,"reusedResult":false,"phases":{"preflight":0,"context":3,"targets":0,"candidates":11012,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":11035.8,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":0,"candidates":11029,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":11049.3,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":0,"candidates":11043,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":11079.2,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":11072,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}}],"observationBoundary":"ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.","decisions":11795,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":9556.60000000149},"resources":[]},"overrideStats":{"use":{"timeout":6,"selected":5,"executed":5,"suggested":1,"stagedChoice":1,"pass":1},"respond":{},"discard":{},"compare":{},"soft":{"hit":10}},"alive":4,"dead":0,"errors":["page.waitForFunction: Timeout 180000ms exceeded."],"browser":"156.0.8078.73","status":"incomplete"}

@@ -1,0 +1,37 @@
+PASS 实际手动火攻队友优先放行，区别于无凭据的伤害
+PASS 真实无懈桥接消费同一玩家意图
+PASS 反无懈不因未知负收益的玩家意图额外浪费牌
+PASS 明确正收益的配合仍可以反无懈恢复
+PASS 控制状态改变不会改写这次操作捕获的手动事实
+PASS 托管操作不取得玩家配合权限
+PASS 强制技能或响应不冒充主动操作
+PASS 已确认的强制自火攻也不会沿用旧手动自伤豁免
+PASS 敌方操作不会取得友方配合权限
+PASS 联机人类主动配合可识别
+PASS 不是同张实际用牌的上下文不能借用意图
+PASS 虚拟牌被复制时只凭同一宿主祖先事件补关联
+PASS 目标改变不借用旧目标的配合权限
+PASS 新局、卸载重置及事件结束不能沿用旧意图
+PASS 铁索解除队友横置，响应不再按伤害保护而取消
+PASS 敌方将友方连入敌方传导时可保护，反无懈方向相反
+PASS 玩家主动连自己或队友优先尊重，仍使用铁索状态收益
+PASS 玩家混合铁索的多目标结算也识别同一个实际计划
+PASS 识别配合只使用响应者的身份视角
+PASS 出牌与无懈复用同一个铁索状态差分，不修改真实横置
+PASS 多目标铁索整体算一次，不把孤立状态的目标分数相加
+PASS 目标运输消费 evaluator 的同一选择，未选目标不再自行放行
+PASS 关闭铁索专项时响应回退宿主，目标运输不接管
+PASS 合作意图不读取任何目标隐藏手牌
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: normal
+[DJSC] hooks:start t=0ms
+[DJSC] hooks:mem t=0.2ms
+[DJSC] hooks:store t=0.9ms
+[DJSC] hooks:archive t=1ms
+[DJSC] hooks:feedback t=1ms
+[DJSC] hooks:matchArchive t=1.3ms
+PASS 真实引擎useCard包装捕获手动意图，卸载后凭据失效
+Trick cooperation tests: 25 passed, 0 failed

@@ -1,0 +1,260 @@
+{
+  "importMs": 6418.5,
+  "contentMs": 658.7000000029802,
+  "totalMs": 7077.20000000298,
+  "report": {
+    "traceVersion": 1,
+    "startedAt": 1793199457327,
+    "now": 1793199460653,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 2
+      },
+      {
+        "name": "update:install",
+        "t": 24
+      },
+      {
+        "name": "content:start",
+        "t": 51.6
+      },
+      {
+        "name": "content:native",
+        "t": 60.8
+      },
+      {
+        "name": "content:models",
+        "t": 563.9
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 565.8
+      },
+      {
+        "name": "engine:start",
+        "t": 568.8
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 574.7
+      },
+      {
+        "name": "hooks:start",
+        "t": 579.7
+      },
+      {
+        "name": "hooks:mem",
+        "t": 586.7
+      },
+      {
+        "name": "hooks:store",
+        "t": 608.3
+      },
+      {
+        "name": "hooks:archive",
+        "t": 609.6
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 610.8
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 614.9
+      },
+      {
+        "name": "engine:hooks",
+        "t": 624.5
+      },
+      {
+        "name": "engine:plugins",
+        "t": 640.7
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 641.7
+      },
+      {
+        "name": "panels:ready",
+        "t": 1557.9,
+        "total": 25,
+        "loaded": 25,
+        "ok": true
+      },
+      {
+        "name": "v3:loaded",
+        "t": 2020.9,
+        "source": "builtin"
+      }
+    ],
+    "decisions": null,
+    "firstDecision": false,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 34.899999998509884
+    }
+  },
+  "resources": [],
+  "heap": 69299732,
+  "metrics": [
+    {
+      "name": "Timestamp",
+      "value": 56582.197593
+    },
+    {
+      "name": "AudioHandlers",
+      "value": 0
+    },
+    {
+      "name": "AudioWorkletProcessors",
+      "value": 0
+    },
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "Frames",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 20574
+    },
+    {
+      "name": "LayoutObjects",
+      "value": 356
+    },
+    {
+      "name": "MediaKeySessions",
+      "value": 0
+    },
+    {
+      "name": "MediaKeys",
+      "value": 0
+    },
+    {
+      "name": "Nodes",
+      "value": 71035
+    },
+    {
+      "name": "Resources",
+      "value": 29
+    },
+    {
+      "name": "ContextLifecycleStateObservers",
+      "value": 289
+    },
+    {
+      "name": "V8PerContextDatas",
+      "value": 4
+    },
+    {
+      "name": "WorkerGlobalScopes",
+      "value": 1
+    },
+    {
+      "name": "UACSSResources",
+      "value": 0
+    },
+    {
+      "name": "RTCPeerConnections",
+      "value": 0
+    },
+    {
+      "name": "ResourceFetchers",
+      "value": 4
+    },
+    {
+      "name": "AdSubframes",
+      "value": 0
+    },
+    {
+      "name": "DetachedScriptStates",
+      "value": 0
+    },
+    {
+      "name": "ArrayBufferContents",
+      "value": 37
+    },
+    {
+      "name": "LayoutCount",
+      "value": 10
+    },
+    {
+      "name": "RecalcStyleCount",
+      "value": 15
+    },
+    {
+      "name": "LayoutDuration",
+      "value": 0.309452
+    },
+    {
+      "name": "RecalcStyleDuration",
+      "value": 0.062055
+    },
+    {
+      "name": "DevToolsCommandDuration",
+      "value": 0.00509
+    },
+    {
+      "name": "ScriptDuration",
+      "value": 4.300763
+    },
+    {
+      "name": "V8CompileDuration",
+      "value": 0.000017
+    },
+    {
+      "name": "TaskDuration",
+      "value": 8.095334
+    },
+    {
+      "name": "TaskOtherDuration",
+      "value": 3.417957
+    },
+    {
+      "name": "ThreadTime",
+      "value": 1.277256
+    },
+    {
+      "name": "ProcessTime",
+      "value": 15.315336
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 41964536
+    },
+    {
+      "name": "JSHeapTotalSize",
+      "value": 84848640
+    },
+    {
+      "name": "FirstMeaningfulPaint",
+      "value": 56572.263867
+    },
+    {
+      "name": "DomContentLoaded",
+      "value": 56571.732752
+    },
+    {
+      "name": "NavigationStart",
+      "value": 56571.399138
+    }
+  ],
+  "browser": "156.0.8078.73",
+  "cpuRate": 6,
+  "kind": "Chrome desktop approximation; host initialized before extension import"
+}

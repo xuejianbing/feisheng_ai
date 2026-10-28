@@ -1,0 +1,17 @@
+PASS 普通2v2伤友模式偏好为零，不按敌方数量/血线回赠动作分
+PASS 已公开队伍不再读取identity/identityShown参与伤友算式
+PASS 模式建议与方向护栏串联后，普通伤友动作仍被压到原有负上限
+PASS 已低于友伤上限的候选不再叠加固定惩罚
+PASS 方向来源只结算一次，重复调用不能反复扣分
+PASS 合法自伤路径不再被当作打队友额外扣分，也不获得新奖励
+PASS 此层不凭卖血技能名或宿主正effect授予伤友豁免，原有护栏继续生效
+PASS 无目标群体牌沿用areaExpectedValue，不再叠加一份友伤模式分
+PASS 模式建议不读取他人的隐藏手牌、技能或装备以伪造额外损失
+PASS 攻击敌方及桃/无懈友方原有偏好保持
+PASS 缺失side或目标不明不推导敌方奖励
+PASS 旧公式退出属于正确性修复，关闭策略优化也不重新启用
+PASS 其他对决保留旧公式，包括有/无敌方与身份标记两分支
+PASS 自定义乱斗不借普通2v2标识改变兼容行为
+PASS 非伤害卡和技能候选不受旧友伤公式修复影响
+15 checks passed (host stubs; real games remain unverified)
+PASS [weique][2026-10-20] 2v2 friendly-fire scoring ownership

@@ -1,0 +1,5 @@
+PASS malformed/unavailable model has bounded attempts and safe fallback
+[V5] promises.json 失败(1/2): extension/无名AI/model/v5_mixup_s42.json corrupt JSON
+[V5] promises.json 失败(2/2): extension/%E6%97%A0%E5%90%8DAI/model/v5_mixup_s42.json corrupt JSON
+[V5] fetch 失败(1/2): extension/无名AI/model/v5_mixup_s42.json missing file
+[V5] fetch 失败(2/2): extension/%E6%97%A0%E5%90%8DAI/model/v5_mixup_s42.json missing file

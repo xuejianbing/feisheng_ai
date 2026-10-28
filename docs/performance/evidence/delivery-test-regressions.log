@@ -1,0 +1,112 @@
+
+--- P1-a 落盘扫描五态 ---
+PASS 无存档无记录 → builtin-only
+PASS 官方权重完整落地 → official-intact
+PASS official-intact 暴露官方 sha256（不是 digest）
+PASS official-intact 逐参数 10 项齐全
+PASS 区分元素数与实际字节数（int16 字节 = 元素×2）
+PASS 本地训练成果覆盖 → archive-mismatch
+PASS 无官方记录但参数完整 → params-ok-no-record
+PASS 参数长度不符 → damaged
+PASS 长度不符明细可定位（b3：字节数≠元素×2）
+PASS 存档无法解析 → damaged
+PASS 网络结构版本不符 → damaged
+PASS 旧存档（数据纪元过旧）→ damaged
+PASS 有官方记录但存档缺失 → damaged
+PASS 只认官方记录 sha256（旧 digest 字段不能冒充一致）
+PASS 读取失败 → ok=false 且不得冒充 builtin-only
+PASS 契约不可用 → ok=false 且不得冒充任一结论
+
+--- P1-a 宿主层 scanWeightsOnDisk（真实 import 生产模块） ---
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+PASS 已安装官方权重 → official-intact
+PASS 摘要不匹配 → archive-mismatch
+PASS 存档损坏 → damaged
+PASS 无官方记录 → params-ok-no-record
+PASS 旧存档 → damaged
+PASS 存储读取抛错 → ok=false / verdict=null（不得冒充 builtin-only）
+PASS 读取失败错误信息可信
+PASS 全新安装 → builtin-only（真·无存档才允许）
+PASS 官方记录 JSON 损坏 → ok=false，不得冒充无记录
+PASS 官方记录结构不合法 → ok=false，不得冒充无记录
+PASS 官方记录读取抛错 → ok=false，不得冒充无记录
+PASS 记录确实不存在 → 正常进入无记录态（params-ok-no-record）
+PASS 官方记录内容为 JSON null → ok=false，不得冒充无记录
+PASS 官方记录键存在但内容为空字符串 → ok=false，不得冒充无记录
+PASS 官方记录内容为数组 → ok=false
+PASS 官方记录缺失 sha256 → ok=false（不得判 official-intact）
+PASS 官方记录只有旧 digest 字段 → 视为摘要缺失，ok=false
+PASS 官方记录 sha256 类型错误（数字）→ ok=false
+PASS 官方记录 sha256 格式错误（长度不足）→ ok=false
+PASS 官方记录 sha256 含非十六进制字符 → ok=false
+PASS 合法摘要（大写十六进制）→ official-intact
+PASS 记录修复后恢复正常五态判定
+
+--- P2-c shadow 日志刷盘 ---
+PASS 退出兜底监听幂等（pagehide/beforeunload 各一次）
+PASS 退出时同步写掉未落盘记录（不再丢 5s 窗口数据）
+PASS 退出刷盘只写一次
+PASS 连续退出事件（无脏数据）不再重复写盘
+PASS 重复触发不影响已保存内容
+PASS clear 同步清内存缓存
+PASS 清空后退出兜底也不得写回旧日志
+PASS 写盘失败进入退避（不抛异常、数据仍在内存）
+PASS 退避期内普通刷盘不再重复写（无高频重试）
+PASS 存储恢复后（退避解除）写盘成功
+PASS off 清理：无缓存、无脏标记、退出监听已移除
+PASS off 之后任何刷盘路径都不再写回
+PASS off 已持久化关闭标记
+
+--- P2-a 样本统计三口径 ---
+PASS 指标不再相加（120+80=200 属重复计数）
+PASS 指标名不再声称"待传+已传"总数
+PASS status 暴露三个独立口径
+PASS 不再存在"合计=本地+已传"的字段
+
+--- P2-b 上传任务锁 ---
+PASS 退避期内上传返回 backoff
+PASS 退避重复调用不泄漏任务锁（回归：旧实现第二次即 busy）
+PASS 成功路径：上传后锁已释放
+PASS 成功后再次上传不是 busy
+PASS 失败路径：返回错误且锁已释放
+PASS 429 后自动上传进入退避
+PASS 异常路径：锁释放且可再次上传
+PASS 未开启自动上传时跳过（语义未变）
+PASS 开启后自动上传可继续（锁未卡死）
+
+--- P1-b 配置迁移持久化（宿主桩按本体真实语义） ---
+PASS 桩复刻本体：普通 saveConfig 返回 undefined（旧桩错在返回 Promise）
+PASS 桩复刻本体：落盘发生在回调路径（hostStore 收到值）
+PASS 未配置用户：启动时只落盘迁移标记，不写入/不删除任何玩家配置
+PASS 标记真正进入持久化存储（判据来自宿主回调，不是内存 lib.config）
+PASS 模块加载即暴露迁移测试钩子（生产路径不变）
+PASS 玩家已保存的取值不被自动修正（无证据不覆盖）
+PASS 未产生任何针对这两个开关的写入（更不会删键）
+PASS 重启：迁移不重跑，玩家设置保持原样
+PASS 存储失败：不谎报迁移完成（落盘无标记、内存标记被回收）
+PASS 中断后再次启动可安全重试并完成
+PASS 存储悬挂：超时后仍不谎报完成（无悬挂 Promise 拖住启动）
+PASS 重载中：写入未受理也不误判为成功（不落盘、不写内存标记）
+PASS 重载结束后重启可正常完成迁移
+PASS 无 promises 时走回调形态，仍能确认落盘
+PASS 无来源证据 → 不纳入清理计划（保留玩家配置）
+PASS 有来源证据（记录到旧版强制写入 false）→ 才纳入清理计划
+PASS 玩家后在旧值上改过 → 仍不清理（只修正与强制写入值完全相同的残留）
+PASS 旧前缀键（决策积分引擎）同样受门控
+PASS 生产清单为空：本版本不修正任何玩家已保存配置
+
+--- P1-c 超大归档不删除 ---
+PASS 启动不再删除历史归档
+PASS 归档开关暂停并落盘
+PASS 提示标记落盘（防重复弹窗）
+PASS 玩家未确认时不删除归档
+PASS 重启不重复提示/不重复改写开关
+PASS 归档仍在（可继续查看/导出）
+PASS 明确确认后清空归档（删除必须经玩家授权）
+PASS 设置菜单提供「清空战报归档」入口
+PASS 归档开关/查看/导出入口保持
+PASS 菜单入口同样需要确认（取消则不动数据）
+PASS 设置菜单入口：确认后清空
+
+================ 结果 ================
+PASS 94  FAIL 0

@@ -1,0 +1,1947 @@
+{
+  "importMs": 4395.20000000298,
+  "contentMs": 8383.09999999404,
+  "totalMs": 12778.29999999702,
+  "report": {
+    "traceVersion": 1,
+    "startedAt": 1793199570914,
+    "now": 1793199581984,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 2
+      },
+      {
+        "name": "update:install",
+        "t": 20.2
+      },
+      {
+        "name": "content:start",
+        "t": 36.3
+      },
+      {
+        "name": "content:native",
+        "t": 43.9
+      },
+      {
+        "name": "panels:ready",
+        "t": 742.7,
+        "total": 25,
+        "loaded": 25,
+        "ok": true
+      },
+      {
+        "name": "v3:loaded",
+        "t": 793.2,
+        "source": "builtin"
+      },
+      {
+        "name": "content:models",
+        "t": 8161
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 8162.6
+      },
+      {
+        "name": "engine:start",
+        "t": 8165.8
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 8169.6
+      },
+      {
+        "name": "hooks:start",
+        "t": 8172.8
+      },
+      {
+        "name": "hooks:mem",
+        "t": 8178.8
+      },
+      {
+        "name": "hooks:store",
+        "t": 8196.9
+      },
+      {
+        "name": "hooks:archive",
+        "t": 8198.4
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 8199.2
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 8203.7
+      },
+      {
+        "name": "engine:hooks",
+        "t": 8216.1
+      },
+      {
+        "name": "engine:plugins",
+        "t": 8278
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 8280.8
+      }
+    ],
+    "decisions": null,
+    "firstDecision": false,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 29.5
+    }
+  },
+  "resources": [
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/extension.js",
+      "duration": 3.8000000044703484
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/modeModelStore.js?v=41a",
+      "duration": 18
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/panelLoader.js?v=41a",
+      "duration": 16.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/modelUpdate.js?v=41a",
+      "duration": 17.099999994039536
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/policyModelUpdate.js?v=41a",
+      "duration": 17.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/policyModelV3.js?v=41a",
+      "duration": 17
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/bootTrace.js?v=41a",
+      "duration": 16.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/swallow.js",
+      "duration": 17
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/shared/utils.js?v=41a",
+      "duration": 15.900000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/bootstrap/arenaReady.js?v=41a",
+      "duration": 15.199999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/config.js?v=41a",
+      "duration": 15
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/content/content.js?v=41a",
+      "duration": 15.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/content/precontent.js?v=41a",
+      "duration": 15.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/help/help.js?v=41a",
+      "duration": 14.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/index.js?v=41a",
+      "duration": 14.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/version.js?v=41a",
+      "duration": 14.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/modeModelDB.js?v=41a",
+      "duration": 5.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/storage/storage.js?v=41a",
+      "duration": 5.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/weights.js?v=41a",
+      "duration": 5.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/cloudSampleState.js?v=41a",
+      "duration": 5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/updateUi.js?v=41a",
+      "duration": 9.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/host.js?v=41a",
+      "duration": 10.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/defaultWeights.js?v=41a",
+      "duration": 11.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/weightBundle.js?v=41a",
+      "duration": 10.199999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/applyWeights.js?v=41a",
+      "duration": 10.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/update/updateCore.js?v=41a",
+      "duration": 9.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/config/util.js?v=41a",
+      "duration": 7.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/settingsHelp.js?v=41a",
+      "duration": 8.199999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/content/farmerHandVisibility.js?v=41a",
+      "duration": 7.199999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identityDiagnostics.js?v=41a",
+      "duration": 9.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/content/optimization.js?v=41a",
+      "duration": 8.099999994039536
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/content/afunction.js?v=41a",
+      "duration": 7.699999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/doudizhu/choices.js?v=41a",
+      "duration": 17.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a",
+      "duration": 17.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/panel.js?v=41a",
+      "duration": 17.799999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skills.js?v=41a",
+      "duration": 18.900000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/compat.js?v=41a",
+      "duration": 18.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a",
+      "duration": 18.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/logger.js?v=41a",
+      "duration": 21
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/registry.js?v=41a",
+      "duration": 22.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/responseAI.js?v=41a",
+      "duration": 22.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/stats/compareAI.js?v=41a",
+      "duration": 22.400000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategist.js?v=41a",
+      "duration": 22.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/optimization.js?v=41a",
+      "duration": 21.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/index.js?v=41a",
+      "duration": 21
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/plugins/index.js?v=41a",
+      "duration": 20.799999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/plugins.js?v=41a",
+      "duration": 21.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/eventBus.js?v=41a",
+      "duration": 20.400000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/stateCards.js?v=41a",
+      "duration": 18.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/versusStatus.js?v=41a",
+      "duration": 18
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/configLayout.js?v=41a",
+      "duration": 17.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/configSchema.js?v=41a",
+      "duration": 17.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/changelog.js?v=41a",
+      "duration": 17.900000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/identities/zhong.js?v=41a",
+      "duration": 17.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/identities/fan.js?v=41a",
+      "duration": 16.799999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/js/config/identities/nei.js?v=41a",
+      "duration": 16
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identityFacts.js?v=41a",
+      "duration": 3.7999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/playerIdentity.js?v=41a",
+      "duration": 3.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/jiedaoEvaluator.js?v=41a",
+      "duration": 6.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/tacticalOptimization.js?v=41a",
+      "duration": 5.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/playerState.js?v=41a",
+      "duration": 5.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/tiesuoEvaluator.js?v=41a",
+      "duration": 5.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/modeContext.js?v=41a",
+      "duration": 3.7999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/execution/decisionWindow.js?v=41a",
+      "duration": 13.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/tiesuoRecast.js?v=41a",
+      "duration": 13.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/wuxieOptimization.js?v=41a",
+      "duration": 12.199999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/wuxieEvaluator.js?v=41a",
+      "duration": 11.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/execution/executionGateway.js?v=41a",
+      "duration": 11.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillChoiceTransaction.js?v=41a",
+      "duration": 11.400000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillCardChoiceBrain.js?v=41a",
+      "duration": 11.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/delayedOptimization.js?v=41a",
+      "duration": 11.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/relations/relations.js?v=41a",
+      "duration": 10.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/logFormat.js?v=41a",
+      "duration": 10.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillScanner.js?v=41a",
+      "duration": 9.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillRules.js?v=41a",
+      "duration": 9.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/ownedBindings.js?v=41a",
+      "duration": 42.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/recoverableListener.js?v=41a",
+      "duration": 42.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/panelTheme.js?v=41a",
+      "duration": 42.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/tables/value-tables.js?v=41a",
+      "duration": 41.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/threat/threat.js?v=41a",
+      "duration": 41.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/mini-model.js?v=41a",
+      "duration": 41
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/trainExport.js?v=41a",
+      "duration": 42.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/activeSkillEligibility.js?v=41a",
+      "duration": 43.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/observer.js?v=41a",
+      "duration": 42.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identity.js?v=41a",
+      "duration": 40.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/team/team.js?v=41a",
+      "duration": 40
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/resource/economy.js?v=41a",
+      "duration": 39.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/memory/memory.js?v=41a",
+      "duration": 41.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/report/report.js?v=41a",
+      "duration": 41.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/archive/archive.js?v=41a",
+      "duration": 41
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/io/export.js?v=41a",
+      "duration": 40
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/gameLogStore.js?v=41a",
+      "duration": 39.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/io/share.js?v=41a",
+      "duration": 38.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/feedback/feedback.js?v=41a",
+      "duration": 39.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/memory/deckMemory.js?v=41a",
+      "duration": 39.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/predict/deckPredict.js?v=41a",
+      "duration": 40.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/feedback/styleFeedback.js?v=41a",
+      "duration": 40.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/multiturn.js?v=41a",
+      "duration": 39.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/profiles/templates.js?v=41a",
+      "duration": 39.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/report/charts.js?v=41a",
+      "duration": 39.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/stats/aiStats.js?v=41a",
+      "duration": 39.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/i18n/i18n.js?v=41a",
+      "duration": 39.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/autoplay/autoplay.js?v=41a",
+      "duration": 39.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/profile/profiles.js?v=41a",
+      "duration": 38.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/feedback/decisionFeedback.js?v=41a",
+      "duration": 38.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/perf.js?v=41a",
+      "duration": 37.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/smartPanel.js?v=41a",
+      "duration": 37.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/recommend.js?v=41a",
+      "duration": 39.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/health.js?v=41a",
+      "duration": 38.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/explain/explain.js?v=41a",
+      "duration": 38.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/adaptive.js?v=41a",
+      "duration": 38.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/pickRecommend.js?v=41a",
+      "duration": 37.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/planner.js?v=41a",
+      "duration": 37.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/rescuePolicy.js?v=41a",
+      "duration": 35.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/jiedaoChoiceBridge.js?v=41a",
+      "duration": 35.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/trickResponseContext.js?v=41a",
+      "duration": 34.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/jiedaoResponse.js?v=41a",
+      "duration": 34.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/versusContext.js?v=41a",
+      "duration": 34.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/resourceReserveRuntime.js?v=41a",
+      "duration": 34.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/decisionCache.js?v=41a",
+      "duration": 190.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/decisionAudit.js?v=41a",
+      "duration": 197.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/cooperativeTrickIntent.js?v=41a",
+      "duration": 200.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/suggestionFusion.js?v=41a",
+      "duration": 199.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/choiceAudit.js?v=41a",
+      "duration": 198.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/features/identityCompatibility.js?v=41a",
+      "duration": 197
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identityView.js?v=41a",
+      "duration": 196.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identityEvidence.js?v=41a",
+      "duration": 195.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/observer/identityEvidenceHost.js?v=41a",
+      "duration": 197
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/modeDataset.js?v=41a",
+      "duration": 196.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/tiesuoCandidateOptions.js?v=41a",
+      "duration": 194.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/doudizhuDiagnostics.js?v=41a",
+      "duration": 193.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/playerDemonstration.js?v=41a",
+      "duration": 192.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/classicRuntime.js?v=41a",
+      "duration": 192.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/modeTraining.js?v=41a",
+      "duration": 192.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/modeStats.js?v=41a",
+      "duration": 192.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/decisionStages.js?v=41a",
+      "duration": 190.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/remainingUtility.js?v=41a",
+      "duration": 189.59999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/areaUtility.js?v=41a",
+      "duration": 188.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/contextUtility.js?v=41a",
+      "duration": 187.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/cardPlayBrain.js?v=41a",
+      "duration": 187.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillPlayBrain.js?v=41a",
+      "duration": 189.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/basic/equipBrain.js?v=41a",
+      "duration": 188.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/basic/judgeBrain.js?v=41a",
+      "duration": 187.59999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/basic/targetBrain.js?v=41a",
+      "duration": 187
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/turnStrategicState.js?v=41a",
+      "duration": 186.09999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/playerSnapshot.js?v=41a",
+      "duration": 186.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/storage/cache.js?v=41a",
+      "duration": 187
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/memory/mem.js?v=41a",
+      "duration": 185.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/scoreSelfMod.js?v=41a",
+      "duration": 185.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/skillLog.js?v=41a",
+      "duration": 184.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a",
+      "duration": 184.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/storage/storagePaths.js?v=41a",
+      "duration": 183.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/exchange/exchange.js?v=41a",
+      "duration": 184.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategy.js?v=41a",
+      "duration": 184.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillProgress.js?v=41a",
+      "duration": 184.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/resourceMaximize.js?v=41a",
+      "duration": 183.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/team/teamBroadcast.js?v=41a",
+      "duration": 183.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/modeStrategy.js?v=41a",
+      "duration": 182.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategicState.js?v=41a",
+      "duration": 182
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/intentAlignment.js?v=41a",
+      "duration": 182.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/characterPolicy.js?v=41a",
+      "duration": 182.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/utilityPipeline.js?v=41a",
+      "duration": 182.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/equipmentUtility.js?v=41a",
+      "duration": 180.40000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/cardConsumptionUtility.js?v=41a",
+      "duration": 180.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/attackExpectedUtility.js?v=41a",
+      "duration": 180.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/feedbackUtility.js?v=41a",
+      "duration": 180.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/comboFallbackUtility.js?v=41a",
+      "duration": 180.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/globalScanner.js?v=41a",
+      "duration": 180.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/missingModules.js",
+      "duration": 180.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/autoLearn.js",
+      "duration": 180.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/predict/handInference.js?v=41a",
+      "duration": 180
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/allyExempt.js?v=41a",
+      "duration": 179.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/guardRecorder.js?v=41a",
+      "duration": 180
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/localTrainer.js?v=41a",
+      "duration": 180.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/discover/autoDiscover.js?v=41a",
+      "duration": 179.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/wuxieTiming.js?v=41a",
+      "duration": 178.59999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/wuguTiming.js?v=41a",
+      "duration": 178.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/selfHeal.js?v=41a",
+      "duration": 178.90000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/bandit.js?v=41a",
+      "duration": 179.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/modelState.js?v=41a",
+      "duration": 180.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/championStrategy.js?v=41a",
+      "duration": 179
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/conflictDetector.js?v=41a",
+      "duration": 177.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/selfCheck.js?v=41a",
+      "duration": 177.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/changelog.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/keepStrategy.js?v=41a",
+      "duration": 176.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/equipScarcity.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/team/teammateIntent.js?v=41a",
+      "duration": 178.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/counterStrategy.js?v=41a",
+      "duration": 177.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/situationEval.js?v=41a",
+      "duration": 176.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/reasoning/riskQuant.js?v=41a",
+      "duration": 176.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/moodState.js?v=41a",
+      "duration": 176.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/counters/mutualRelations.js?v=41a",
+      "duration": 175.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/orderOptimizer.js?v=41a",
+      "duration": 177.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/passStrategy.js?v=41a",
+      "duration": 177.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/damageTransfer.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/treeSearch.js?v=41a",
+      "duration": 176.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/delayOptimizer.js?v=41a",
+      "duration": 175.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/predict/deckTopPredict.js?v=41a",
+      "duration": 175.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/discardStrategy.js?v=41a",
+      "duration": 176.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/learningLoop.js?v=41a",
+      "duration": 177
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/archiveRecycle.js?v=41a",
+      "duration": 176.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/reasoning/gameTheory.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/perfOptimizer.js?v=41a",
+      "duration": 176.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/responseOpt.js?v=41a",
+      "duration": 175.59999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/endgameOpt.js?v=41a",
+      "duration": 175.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/predict/opponentPredict.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/resource/resourceTiming.js?v=41a",
+      "duration": 176.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/aoeTiming.js?v=41a",
+      "duration": 177.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/aoeDirectionBridge.js?v=41a",
+      "duration": 176.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/attackChoiceBridge.js?v=41a",
+      "duration": 176.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/materialReserve.js?v=41a",
+      "duration": 175.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/lethal.js?v=41a",
+      "duration": 176.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/judgeTiming.js?v=41a",
+      "duration": 176.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/multiTurnOpt.js?v=41a",
+      "duration": 177.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/jiedaoTiming.js?v=41a",
+      "duration": 177.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/shandianTiming.js?v=41a",
+      "duration": 176.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/taoyuanTiming.js?v=41a",
+      "duration": 175.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/shaTargetOpt.js?v=41a",
+      "duration": 174.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/taoTiming.js?v=41a",
+      "duration": 174.90000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/jiuTiming.js?v=41a",
+      "duration": 174.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/timing/shunshouTiming.js?v=41a",
+      "duration": 174.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/deepValue.js?v=41a",
+      "duration": 174.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/tuning/decayOpt.js?v=41a",
+      "duration": 173.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/scoreUnify.js?v=41a",
+      "duration": 173.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/actionCandidate.js?v=41a",
+      "duration": 173.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/decisionTrace.js?v=41a",
+      "duration": 173.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/gameTelemetry.js?v=41a",
+      "duration": 172.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/gameResult.js?v=41a",
+      "duration": 172.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/playerFeedback.js?v=41a",
+      "duration": 173.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/turnSummary.js?v=41a",
+      "duration": 173.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/matchArchive.js?v=41a",
+      "duration": 173.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/matchArchiveStore.js?v=41a",
+      "duration": 173.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/decisionMargin.js?v=41a",
+      "duration": 173.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/decisionTransaction.js?v=41a",
+      "duration": 173.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/features/features.js?v=41a",
+      "duration": 173.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/shadow/decodeV5.js?v=41a",
+      "duration": 173.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/cloud/cloudIngest.js?v=41a",
+      "duration": 173.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/modelGuard.js?v=41a",
+      "duration": 173.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/feedback/elementFeedback.js?v=41a",
+      "duration": 173.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/metaCognition.js?v=41a",
+      "duration": 173.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/log/cognitiveLog.js?v=41a",
+      "duration": 173.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/conflictDetector.js",
+      "duration": 174.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/calibrate/decisionCalibrator.js",
+      "duration": 174.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/calibrate/calibratorPanel.js",
+      "duration": 173.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/profile/multiProfile.js",
+      "duration": 173.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategyBus.js",
+      "duration": 173.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/brainDashboard.js",
+      "duration": 173.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/replay/decisionReplay.js",
+      "duration": 174.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/io/exportAll.js",
+      "duration": 174.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/replayPanel.js",
+      "duration": 173.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/weightPersist.js",
+      "duration": 172.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/stats/aiStats.js",
+      "duration": 172
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/allyExempt.js",
+      "duration": 171.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/decisionHook.js",
+      "duration": 174.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/decisionRegistry.js",
+      "duration": 173.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/tables/elementAccess.js",
+      "duration": 173.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/safety/guardRecorder.js",
+      "duration": 172.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/health.js",
+      "duration": 172.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/localTrainer.js",
+      "duration": 171.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/multiTurnPlan.js",
+      "duration": 174.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/resource/resourceManage.js",
+      "duration": 173.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/responseAI.js",
+      "duration": 174.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillCustom.js",
+      "duration": 174
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillRules.js",
+      "duration": 173.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillScanner.js",
+      "duration": 173.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/autoplay/autoplay.js",
+      "duration": 175.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/changelog.js",
+      "duration": 175.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/report/charts.js",
+      "duration": 176.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/stats/compareAI.js",
+      "duration": 175.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/compat.js",
+      "duration": 174.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/decisionDashboard.js",
+      "duration": 173.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/i18n/i18n.js",
+      "duration": 174.90000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/identityVisual.js",
+      "duration": 175.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/modules.js",
+      "duration": 175.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/pickRecommend.js",
+      "duration": 175.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/profile/profiles.js",
+      "duration": 174.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/replay/replayAnalysis.js",
+      "duration": 174.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/selfCheck.js",
+      "duration": 174.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/smartPanel.js",
+      "duration": 174.90000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/crossModeTransfer.js",
+      "duration": 175.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/decisionCompare.js",
+      "duration": 174.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/comparePanel.js",
+      "duration": 173
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/modelHotSwap.js",
+      "duration": 173
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/knowledge/sharedKnowledge.js?v=41a",
+      "duration": 173
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/evolution.js",
+      "duration": 172.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/reasoning/psychology.js?v=41a",
+      "duration": 175
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/comboChain.js?v=41a",
+      "duration": 174.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/memory/playerMemory.js?v=41a",
+      "duration": 173.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a",
+      "duration": 172.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/explain/decisionNarrator.js?v=41a",
+      "duration": 172.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/skillOutcome.js?v=41a",
+      "duration": 171.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/actionOutcome.js?v=41a",
+      "duration": 174.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/delayedOutcome.js?v=41a",
+      "duration": 173.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/publicProvenance.js?v=41a",
+      "duration": 173.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/postCheck.js?v=41a",
+      "duration": 173.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/outcomeStats.js?v=41a",
+      "duration": 172.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/deepThink.js?v=41a",
+      "duration": 172
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/cardStrategy.js?v=41a",
+      "duration": 173.09999999403954
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/features/autoFeature.js?v=41a",
+      "duration": 173.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/reasoning/softMetrics.js?v=41a",
+      "duration": 172.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillTags.js",
+      "duration": 172.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/judgeZone.js",
+      "duration": 171.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/cards/cardTags.js",
+      "duration": 171.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/viewAs.js",
+      "duration": 172.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/costCalc.js",
+      "duration": 173.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/aiTools.js",
+      "duration": 172.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/learningOptimizer.js",
+      "duration": 172.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillTiming.js",
+      "duration": 171.60000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/use.js?v=41a",
+      "duration": 153
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/respond.js?v=41a",
+      "duration": 151.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/discard.js?v=41a",
+      "duration": 151.30000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/compare.js?v=41a",
+      "duration": 150.10000000149012
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/circuit.js?v=41a",
+      "duration": 149.89999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/terms.js?v=41a",
+      "duration": 148.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/plugins/enginePlugin.js?v=41a",
+      "duration": 147
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/plugins/panelPlugin.js?v=41a",
+      "duration": 147.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/plugins/skillPlugin.js?v=41a",
+      "duration": 148.79999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/plugins/cognitionPlugin.js?v=41a",
+      "duration": 148.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/config/versusSettings.js?v=41a",
+      "duration": 146.90000000596046
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/logs/versionChangelog.js?v=41a",
+      "duration": 146
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/logs/sessionChangelog.js?v=41a",
+      "duration": 145.70000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/logs/WORK_TRAIL.js?v=41a",
+      "duration": 145.39999999850988
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cards/jiedaoBranches.js?v=41a",
+      "duration": 4.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/cooperationPolicy.js?v=41a",
+      "duration": 3.2999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/judgeName.js?v=41a",
+      "duration": 3.8000000044703484
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/friendlyStripPlan.js?v=41a",
+      "duration": 3.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/team.js?v=41a",
+      "duration": 4.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/context.js?v=41a",
+      "duration": 5.300000004470348
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/features/dimensionAdapter.js?v=41a",
+      "duration": 5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/responseWindow.js?v=41a",
+      "duration": 6.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/benefitTrickEffect.js?v=41a",
+      "duration": 5.300000004470348
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/responseMaterials.js?v=41a",
+      "duration": 4.800000004470348
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/execution/executionGatewayCore.js?v=41a",
+      "duration": 3.4000000059604645
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/basic/discardBrain.js?v=41a",
+      "duration": 3.2999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/identityStance.js?v=41a",
+      "duration": 4.300000004470348
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/identityPolicy.js?v=41a",
+      "duration": 3.7999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/state/gamePhase.js?v=41a",
+      "duration": 2.8000000044703484
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/performanceCore.js?v=41a",
+      "duration": 9.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/saveRetry.js?v=41a",
+      "duration": 9.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/actionCredit.js?v=41a",
+      "duration": 8.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/trainingDBConnection.js?v=41a",
+      "duration": 7.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/trainingExportFile.js?v=41a",
+      "duration": 6.9000000059604645
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/samplePersistence.js?v=41a",
+      "duration": 6.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/report/classicEffects.js?v=41a",
+      "duration": 3
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/storage/journalStorage.js?v=41a",
+      "duration": 3.2999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/multiTurnPlan.js?v=41a",
+      "duration": 6
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/resource/resourceManage.js?v=41a",
+      "duration": 5.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/identityVisual.js?v=41a",
+      "duration": 5.300000004470348
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/replay/replayAnalysis.js?v=41a",
+      "duration": 5.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/diag/swallow.js?v=41a",
+      "duration": 3.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/profile/profile.js?v=41a",
+      "duration": 4.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/actionDependencyGraph.js?v=41a",
+      "duration": 4.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/utilityVector.js?v=41a",
+      "duration": 4.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/resourceReserve.js?v=41a",
+      "duration": 3.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/labelPolicy.js?v=41a",
+      "duration": 4.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/sampleEligibility.js?v=41a",
+      "duration": 4.0999999940395355
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/trainingDataset.js?v=41a",
+      "duration": 3.8000000044703484
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/adapt/gameProfile.js?v=41a",
+      "duration": 4.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTactics.js?v=41a",
+      "duration": 3
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/doudizhu/classic.js?v=41a",
+      "duration": 3.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/objective.js?v=41a",
+      "duration": 3
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategicStateCore.js?v=41a",
+      "duration": 3.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/objectiveCore.js?v=41a",
+      "duration": 3.2999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/characterPolicyCore.js?v=41a",
+      "duration": 3
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/keepStrategyOpt.js?v=41a",
+      "duration": 2.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/decisionRegistry.js?v=41a",
+      "duration": 3.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/learningOptimizer.js?v=41a",
+      "duration": 2.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/aoeRiskRuntime.js?v=41a",
+      "duration": 3.3000000044703484
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/utility/utilityExplain.js?v=41a",
+      "duration": 4.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/journal/matchArchiveDB.js?v=41a",
+      "duration": 3.7999999970197678
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/tables/elementAccess.js?v=41a",
+      "duration": 4.4000000059604645
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/crossModeTransfer.js?v=41a",
+      "duration": 4.299999997019768
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/cloud/ingestReceipt.js?v=41a",
+      "duration": 4.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/cloud/sourceIdentity.js?v=41a",
+      "duration": 3.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/perception/replay/decisionReplay.js?v=41a",
+      "duration": 2.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/decisionCompare.js?v=41a",
+      "duration": 2.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/analysis/naturalCompletion.js?v=41a",
+      "duration": 1.8999999985098839
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/features/autoFeatureEvidence.js?v=41a",
+      "duration": 3.7000000029802322
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/override/choiceLifecycle.js?v=41a",
+      "duration": 2.2000000029802322
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/basic/respondBrain.js?v=41a",
+      "duration": 2.2000000029802322
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/response/responseMaterialPacking.js?v=41a",
+      "duration": 2.7000000029802322
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/aoeRisk.js?v=41a",
+      "duration": 2.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/modeTrainingPanel.js?v=41a",
+      "duration": 21.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/brainDashboard.js?v=41a",
+      "duration": 17.69999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/calibrate/calibratorPanel.js?v=41a",
+      "duration": 17.099999994039536
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/comparePanel.js?v=41a",
+      "duration": 16.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/decisionDashboard.js?v=41a",
+      "duration": 15.699999995529652
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/io/exportAll.js?v=41a",
+      "duration": 15.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/replayPanel.js?v=41a",
+      "duration": 13.200000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/dashboard/championPanel.js?v=41a",
+      "duration": 12.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/info.json",
+      "duration": 17.700000002980232
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/shadow/shadowCore.js?v=41a",
+      "duration": 15.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/css/AIjinjiang.css",
+      "duration": 3.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/client_policy_model_v3.js?v=41a",
+      "duration": 2.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/confidence.js?v=41a",
+      "duration": 53.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/engine/decisionHook.js?v=41a",
+      "duration": 50.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/verifyAll.js?v=41a",
+      "duration": 49.20000000298023
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/layers.js?v=41a",
+      "duration": 48.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/calibrate/decisionCalibrator.js?v=41a",
+      "duration": 44.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/cognition/profile/multiProfile.js?v=41a",
+      "duration": 43.399999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/strategy/strategyBus.js?v=41a",
+      "duration": 41.899999998509884
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/weights/weightPersist.js?v=41a",
+      "duration": 40.80000000447035
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/net/modelHotSwap.js?v=41a",
+      "duration": 40.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/model/train/evolution.js?v=41a",
+      "duration": 39.600000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/skills/skillTags.js?v=41a",
+      "duration": 38
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/judgeZone.js?v=41a",
+      "duration": 37.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/knowledge/cards/cardTags.js?v=41a",
+      "duration": 38.19999999552965
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/viewAs.js?v=41a",
+      "duration": 36.29999999701977
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/decision/cardplay/costCalc.js?v=41a",
+      "duration": 36.5
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/view/panel/aiTools.js?v=41a",
+      "duration": 34.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/io/mergeExport.js?v=41a",
+      "duration": 31.400000005960464
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/runtime/extensionPoints.js?v=41a",
+      "duration": 31.100000001490116
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/foundation/config/configSpec.js?v=41a",
+      "duration": 31
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/professionalReadiness.js?v=41a",
+      "duration": 30
+    },
+    {
+      "name": "%E6%97%A0%E5%90%8DAI/score/verification/semanticAudit.js?v=41a",
+      "duration": 4.600000001490116
+    }
+  ],
+  "heap": 75454658,
+  "longs": [
+    {
+      "start": 1120.6000000014901,
+      "ms": 66
+    },
+    {
+      "start": 1522.3999999985099,
+      "ms": 1076
+    },
+    {
+      "start": 2747.10000000149,
+      "ms": 135
+    },
+    {
+      "start": 3407.89999999851,
+      "ms": 1550
+    },
+    {
+      "start": 5190.89999999851,
+      "ms": 208
+    },
+    {
+      "start": 13514.89999999851,
+      "ms": 259
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Timestamp",
+      "value": 56703.563699
+    },
+    {
+      "name": "AudioHandlers",
+      "value": 0
+    },
+    {
+      "name": "AudioWorkletProcessors",
+      "value": 0
+    },
+    {
+      "name": "Documents",
+      "value": 2
+    },
+    {
+      "name": "Frames",
+      "value": 2
+    },
+    {
+      "name": "JSEventListeners",
+      "value": 20674
+    },
+    {
+      "name": "LayoutObjects",
+      "value": 365
+    },
+    {
+      "name": "MediaKeySessions",
+      "value": 0
+    },
+    {
+      "name": "MediaKeys",
+      "value": 0
+    },
+    {
+      "name": "Nodes",
+      "value": 92639
+    },
+    {
+      "name": "Resources",
+      "value": 464
+    },
+    {
+      "name": "ContextLifecycleStateObservers",
+      "value": 290
+    },
+    {
+      "name": "V8PerContextDatas",
+      "value": 4
+    },
+    {
+      "name": "WorkerGlobalScopes",
+      "value": 1
+    },
+    {
+      "name": "UACSSResources",
+      "value": 0
+    },
+    {
+      "name": "RTCPeerConnections",
+      "value": 0
+    },
+    {
+      "name": "ResourceFetchers",
+      "value": 4
+    },
+    {
+      "name": "AdSubframes",
+      "value": 0
+    },
+    {
+      "name": "DetachedScriptStates",
+      "value": 0
+    },
+    {
+      "name": "ArrayBufferContents",
+      "value": 38
+    },
+    {
+      "name": "LayoutCount",
+      "value": 10
+    },
+    {
+      "name": "RecalcStyleCount",
+      "value": 15
+    },
+    {
+      "name": "LayoutDuration",
+      "value": 0.243634
+    },
+    {
+      "name": "RecalcStyleDuration",
+      "value": 0.059448
+    },
+    {
+      "name": "DevToolsCommandDuration",
+      "value": 0.009152
+    },
+    {
+      "name": "ScriptDuration",
+      "value": 2.945566
+    },
+    {
+      "name": "V8CompileDuration",
+      "value": 0
+    },
+    {
+      "name": "TaskDuration",
+      "value": 5.904487
+    },
+    {
+      "name": "TaskOtherDuration",
+      "value": 2.646687
+    },
+    {
+      "name": "ThreadTime",
+      "value": 0.954205
+    },
+    {
+      "name": "ProcessTime",
+      "value": 20.13841
+    },
+    {
+      "name": "JSHeapUsedSize",
+      "value": 49180580
+    },
+    {
+      "name": "JSHeapTotalSize",
+      "value": 80465920
+    },
+    {
+      "name": "FirstMeaningfulPaint",
+      "value": 56687.914233
+    },
+    {
+      "name": "DomContentLoaded",
+      "value": 56687.428861
+    },
+    {
+      "name": "NavigationStart",
+      "value": 56687.090462
+    }
+  ],
+  "browser": "156.0.8078.73",
+  "cpuRate": 6,
+  "kind": "Chrome desktop approximation; host initialized before extension import"
+}

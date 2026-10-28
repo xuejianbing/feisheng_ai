@@ -1,0 +1,56 @@
+PASS 忠臣对公开主公是队友
+PASS 主忠双向/反反/公开敌人/自身关系
+PASS 超额公开身份关闭配额硬推断，保留公开事实
+PASS 缺失可靠规则不能套经验公式
+PASS 特殊子模式与双内显式降级
+PASS 不读取隐藏身份，包括探测明忠
+PASS 观察者自身私有身份只影响自身视角
+PASS 主公视图含四身份完整 one-hot
+PASS 视图诊断声明实际消费的新证据组数
+PASS 同名实体视图隔离
+PASS 同回合公开身份、扩展死亡事实与规则变更立即刷新
+PASS 私有身份版本与重开局不命中旧缓存
+PASS 死亡公开事实不依赖 identityShown，来源和知晓程度一致
+PASS 公开主公与存活明置角色保留准确来源
+PASS 濒死未公开身份不能据血量获得死亡公开来源
+PASS 特征不受隐藏目标真值替换影响
+PASS 特征提取不访问隐藏身份 getter 或目标手牌内容
+PASS 合法自身与公开目标特征保留
+PASS 面板统一使用观察者视图、不使用宿主态度
+PASS 关系缓存键跟踪精确版本，非仅舍入最大值
+PASS 身份旧模型暂停，其他模式兼容声明明确
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+PASS 身份场低层采样入口拒绝旧语义混入
+PASS 身份场冠军路径明确暂停
+PASS 宿主回退实际计数，不猴补丁替换宿主
+PASS 公开事件不可变，eventId 幂等，rootActionId 合并
+PASS 拆主公兵乐是帮助，拆装备是伤害，仅按牌名无法判断
+PASS 强制、AOE 波及、自救不成为主动身份倾向证据
+PASS 内奸救主保留事实，不因救援锁成忠臣
+PASS 无懈只有最终实际保护关系明晰才能算帮助，反无懈未知
+PASS 公开角色后续变化不回写历史，未知机会不造负证据
+PASS 首批旧观察不再因拆顺牌名记敌意
+PASS 宿主完成事件记录友方伤害，酒杀/死亡同根且不启动 thenable
+PASS 宿主拆除比较公开判定/装备快照，不偷看手牌
+PASS 旧局宿主完成回调不可写入新局账本
+PASS 死亡身份只在确认死亡后公开，不能在创建 die 事件时提前泄露
+PASS 未支持明忠模式不能泄露暗主公或推断其隐藏身份
+PASS 未支持明忠模式的关系暴露状态也不能公开暗主公
+PASS 正常生命周期的视图和账本使用同一会话号
+PASS 真实 chooseToUse(type=phase) 出牌链产生单组主动证据
+PASS 真实濒死 chooseToUse(type=dying) 自愿救主产生帮助证据
+PASS 技能控制下的 chooseToUse 不能借 phaseUse 祖先伪装主动选择
+PASS 非身份模式保留旧目标特征语义，不将变更输入交给旧权重
+[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: normal
+PASS 真实生产模型入口在身份场返回暂停原因
+[DJSC] hooks:start t=0ms
+[DJSC] hooks:mem t=0.1ms
+[DJSC] hooks:store t=1ms
+[DJSC] hooks:archive t=1ms
+[DJSC] hooks:feedback t=1ms
+[DJSC] hooks:matchArchive t=1.4ms
+PASS 真实引擎包装器与全局完成技能贯通并可卸载
+Identity tests: 44 passed, 0 failed

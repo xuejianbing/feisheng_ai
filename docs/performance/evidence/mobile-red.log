@@ -1,0 +1,41 @@
+FAIL content completes before eight-second model restore and installs only once AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+false !== true
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:15:33
+    at async test (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:6:47)
+    at async file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:7:1
+(node:22036) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL active identity is unavailable while restore is pending AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ {
++   activatedAt: undefined,
++   id: 'legacy',
++   previousId: null,
++   ruleKeys: [
++     'doudizhu/normal'
++   ],
++   state: '已启用试用版本',
++   validation: null
++ }
+- null
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:26:239
+    at async test (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:6:47)
+    at async file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:26:1
+PASS late restore preserves new candidate and activation including same ID replacement
+PASS restore errors are settled failures rather than successful reads
+FAIL panels load only on first open, coalesce shared paths, retain loaded synchronous return Error: mount blocked on panel import
+    at Timeout._onTimeout (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:29:80)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+FAIL unmount during panel load suppresses stale invocation and mounting Error: mount blocked on panel import
+    at Timeout._onTimeout (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:29:80)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+FAIL failed lazy panel reports error without breaking other panels or automatic retry TypeError: target.openScorePanel is not a function
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:33:266
+    at async test (file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:6:47)
+    at async file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-performance.mjs:33:1

@@ -1,0 +1,252 @@
+{
+  "done": true,
+  "startedAt": 1793199796936,
+  "phases": 9,
+  "uses": 27,
+  "result": true,
+  "hostVersion": "1.11.7",
+  "mode": "doudizhu",
+  "submode": "normal",
+  "perf": {
+    "traceVersion": 2,
+    "startedAt": 1793199796888,
+    "now": 1793199816256,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.2
+      },
+      {
+        "name": "update:install",
+        "t": 1
+      },
+      {
+        "name": "panels:ready",
+        "t": 1.5,
+        "total": 25,
+        "loaded": 0,
+        "ok": true
+      },
+      {
+        "name": "content:start",
+        "t": 3.1
+      },
+      {
+        "name": "content:native",
+        "t": 4.1
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 4.3
+      },
+      {
+        "name": "engine:start",
+        "t": 4.8
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 5.4
+      },
+      {
+        "name": "hooks:start",
+        "t": 5.9
+      },
+      {
+        "name": "hooks:mem",
+        "t": 6.9
+      },
+      {
+        "name": "hooks:store",
+        "t": 9.2
+      },
+      {
+        "name": "hooks:archive",
+        "t": 9.3
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 9.5
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 10
+      },
+      {
+        "name": "engine:hooks",
+        "t": 21.5
+      },
+      {
+        "name": "engine:plugins",
+        "t": 25.8
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 25.9
+      },
+      {
+        "name": "content:models",
+        "t": 241.9,
+        "backend": "IndexedDB",
+        "error": false
+      },
+      {
+        "name": "v3:loaded",
+        "t": 315.9,
+        "source": "builtin"
+      },
+      {
+        "name": "decision:first",
+        "t": 409.3,
+        "wrapperMs": 72
+      }
+    ],
+    "longTasks": [
+      {
+        "start": 711.4,
+        "ms": 180,
+        "precedingMark": null
+      },
+      {
+        "start": 1457.3,
+        "ms": 98,
+        "precedingMark": null
+      },
+      {
+        "start": 1577.8,
+        "ms": 110,
+        "precedingMark": "engine:settle-watch"
+      },
+      {
+        "start": 1821.4,
+        "ms": 120,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 1946.4,
+        "ms": 127,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 2458.9,
+        "ms": 74,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 3558.4,
+        "ms": 68,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 5389.1,
+        "ms": 51,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 6066.8,
+        "ms": 55,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 9291,
+        "ms": 81,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 9893.6,
+        "ms": 58,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 11933.4,
+        "ms": 58,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 12503.1,
+        "ms": 54,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 14116,
+        "ms": 67,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 15208.1,
+        "ms": 68,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 15798.5,
+        "ms": 85,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 16396.9,
+        "ms": 63,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 17689.1,
+        "ms": 53,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 20055,
+        "ms": 67,
+        "precedingMark": "decision:first"
+      },
+      {
+        "start": 20237.2,
+        "ms": 68,
+        "precedingMark": "decision:first"
+      }
+    ],
+    "observationBoundary": "ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.",
+    "decisions": 224,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 10
+    },
+    "resources": []
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 25,
+      "stagedChoice": 25,
+      "pass": 25,
+      "selected": 23,
+      "executed": 18,
+      "veto": 2,
+      "candidateAccepted": 1,
+      "allyGuard": 4
+    },
+    "respond": {},
+    "discard": {
+      "check": 3,
+      "selected": 1,
+      "executed": 1
+    },
+    "compare": {},
+    "soft": {
+      "hit": 20
+    }
+  },
+  "alive": 2,
+  "dead": 1,
+  "errors": [],
+  "browser": "156.0.8078.73",
+  "status": "completed"
+}

@@ -1,0 +1,47 @@
+
+--- comboRulesData 数据契约 ---
+PASS 规则总数为 6
+PASS hard_force 为 2 条
+PASS soft_boost 为 4 条
+PASS hard_force 含 CR_jiu_sha
+PASS hard_force 含 CR_zhuge_burst
+PASS 每条规则都有 condition 数组
+PASS 每条规则都有 action 与 confidence
+PASS hard_force 阈值 0.6
+PASS force_unsafe 规则未被放进 hard_force
+
+--- ruleGate ---
+PASS ruleGate 自检通过
+PASS token sha_in_hand 命中
+PASS token jiu_used 命中
+PASS token sha_count_ge_2 不命中
+PASS token enemy_hp_le_2 不命中
+PASS hard_force 在「已用酒且有杀」时命中
+PASS hard_force 命中的是 card:sha
+PASS hard_force 写入 forcedByRule 标记
+
+--- client_policy_model_v2 权重 ---
+PASS 权重已加载到全局
+PASS 权重 selfTest 通过
+PASS 类别为 17 类
+PASS meta.featureDim 为 114
+PASS meta.featureKeep 长度 114
+PASS featureKeep 最大索引 129（对应 130 维特征）
+PASS predictProba 归一（和≈1）
+
+--- 维度适配：130 / 134 维均可产出影子记录 ---
+PASS 130 维可映射到 114 维
+PASS 134 维可映射到 114 维
+PASS 129 维被拒绝（索引不足）
+PASS 130 维可预测出 17 类降序
+PASS 130 维影子评估可产出记录
+PASS 134 维影子评估可产出记录（原 !==130 会让此处恒为 null）
+
+--- 影子模式语义 ---
+PASS shadowEvaluate 不修改候选分数
+PASS policyModelV2 自检通过
+PASS 统计口径为 shadow 模式
+
+========================================
+PASS 33  FAIL 0
+========================================
