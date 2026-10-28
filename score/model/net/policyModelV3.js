@@ -23,6 +23,7 @@
  * 维度口径：仓库 features.js 现为 134 维（f130-f133 目标身份 one-hot），v3 只吃 f0-f129，
  *   因此 130/134/142 维特征均可用（统一取前 130 维），<130 维拒绝。
  */
+import { cfg } from '../../foundation/config/util.js?v=41a';
 import { safeGet, setJSONQuotaSafe } from '../../foundation/storage/storage.js?v=41a';
 import { loadCachedPolicyMeta } from '../../../js/update/policyModelUpdate.js?v=41a';
 
@@ -175,7 +176,7 @@ export function startLoading() {
 try {
     if (typeof window !== 'undefined') {
         const ric = window.requestIdleCallback || function (fn) { return setTimeout(fn, 1500); };
-        ric(function () { startLoading(); }, { timeout: 8000 });
+        ric(function () { if (cfg('policyModelV3Mode', 'shadow') !== 'off') startLoading(); }, { timeout: 8000 });
     }
 } catch (e) { /* 忽略 */ }
 
@@ -212,7 +213,9 @@ export function toModelFeatures(feat) {
 }
 
 export function predictClasses(feat) {
+    if (cfg('policyModelV3Mode', 'shadow') === 'off') return null;
     const m = _modelReady();
+    if (!m) startLoading();
     if (!m || typeof m.predictProba !== 'function') return null;
     try {
         const x = toModelFeatures(feat);
