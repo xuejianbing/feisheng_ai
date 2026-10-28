@@ -5,7 +5,7 @@
 ## 基线、工作区和修改边界
 
 - 指定源码基线：`636b636b862d427d8a8d55a764159238c3029c0d`，核对 `VERSION=4.4.3`、BUILD_DATE=2026-10-27。
-- 最终运行时代码提交：`ddf7bb83bf01bcac2971f75b3591e3551aac4369`。之后仅提交报告、测试证据和打包工具；最终交付 HEAD 另写在安装包旁 `FINAL-COMMIT.txt` 和 delivery.json，避免文档自引用提交哈希。
+- 最终运行时代码提交：`00cf19f9939b1654e3b7820224cdc497c9417043`。之后仅提交测试、报告、证据和打包工具；最终交付 HEAD 另写在安装包旁 `FINAL-COMMIT.txt` 和 delivery.json，避免文档自引用提交哈希。
 - 分支：`codex/mobile-performance-443`。建议分支 `fix/mobile-performance-4.4.3` 已被另一干净工作树占用，未改写该分支。
 - 工作树：`C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/无名AI`。
 - 原安装目录位于另一个提交 3edbc6e，已有大量暂存文档；完整保留，没有在那里修改或提交。
@@ -69,7 +69,7 @@ v5：共享一个加载 Promise，并发两次加载从 4 次模型读取降为 
 
 shadow：关闭后禁止样本级 v5 推理；加载中关闭或卸载后不能启动轮询，退出清理同时停止刷盘定时器；延迟 reward 回填检查代际，不会在卸载后重建刷盘任务。保留原默认开关与影子用途。
 
-v3：idle 回调执行时检查 off，关闭状态不启动后台模型；之后开启时由首次预测触发一次加载，未就绪仍走原安全降级；再次关闭抑制推理。显式 startLoading 仍为诊断/手动加载 API。未改 client_policy_model_v3.js 权重或数学计算。
+v3：idle 回调执行时检查 mode=off 及 policyModelV3Shadow=false（active 模式仍可预加载），关闭状态不启动后台模型；之后开启时由实际 shadow/apply/预测入口触发一次加载，未就绪仍走原安全降级；再次关闭抑制推理。显式 startLoading 仍为诊断/手动加载 API。未改 client_policy_model_v3.js 权重或数学计算。
 
 模型微基准中位数（毫秒）：
 
@@ -98,7 +98,7 @@ Node 诊断微基准记录 10000 次数字时序耗时约 3.37–6.83ms，见 di
 
 必需原有项目：regressions 94、weights 637、policy-model-v3 25、policy-model-update 22、response-lifecycle 45、state-fingerprint 13，均通过；10 个 2V2 专项脚本也通过。其余原有卡牌/合作/身份/遥测/边界脚本及 7 个新增性能脚本全部执行。Node 自动回归不替代宿主/手机验证。
 
-真实普通斗地主：两个独立临时上下文完整托管完成，分别 9 回合/27 次用牌/224 次 bestAction 调用，以及 12 回合/40 次用牌/437 次调用，页面错误列表均为空。原速首决策 wrapper 分别 72ms/89ms；随机不同局面，不构成同固定局面的 A/B 性能证明。最近阶段数据见 final-autoplay-phases.json。部分旧模块控制台仍报告 get/_status 未定义；没有借此次任务修改这些非阻断路径。
+真实普通斗地主：两个独立临时上下文完整托管完成，分别 9 回合/27 次用牌/224 次 bestAction 调用，以及 12 回合/40 次用牌/437 次调用，页面错误列表均为空。原速首决策 wrapper 分别 72ms/89ms；随机不同局面，不构成同固定局面的 A/B 性能证明。最近阶段数据见 final-autoplay-phases.json。v3 开关后续修正另通过生产 shadow 入口的两种开关回归，不将此前启动数据宣称为后续精确重测。部分旧模块控制台仍报告 get/_status 未定义；没有借此次任务修改这些非阻断路径。
 
 真实 2V2：final-autoplay-2v2.json 记录 180 秒未结束，仅 3 回合/10 次用牌；候选阶段出现约 11 秒计算及大量 Maximum call stack size exceeded 警告，最长长任务约 44.6 秒。此场景明确不通过。基线同配置也在 180 秒超时（2 回合/6 次用牌、8420 次调用），并出现同样的调用栈警告，见 baseline-autoplay-2v2.json/log。随机牌局不同且部分运行窗口重叠，不能用两局差异估算性能改善，但原版也存在该失败。不能因 10 个单测通过就宣称 2V2 手机性能已通过；未定位完整递归根因前不通过跳过策略或护栏来制造提速。
 

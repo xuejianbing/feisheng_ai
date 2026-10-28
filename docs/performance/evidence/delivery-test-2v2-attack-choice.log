@@ -20,10 +20,10 @@ PASS 嵌套安装不重复包装同一check，卸载恢复原方法
 [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
 [无名AI] 选将评分系统已加载，当前模式: two
 [DJSC] hooks:start t=0ms
-[DJSC] hooks:mem t=0.1ms
-[DJSC] hooks:store t=1.5ms
-[DJSC] hooks:archive t=1.6ms
-[DJSC] hooks:feedback t=1.6ms
-[DJSC] hooks:matchArchive t=2ms
+[DJSC] hooks:mem t=0.2ms
+[DJSC] hooks:store t=1.6ms
+[DJSC] hooks:archive t=1.7ms
+[DJSC] hooks:feedback t=1.7ms
+[DJSC] hooks:matchArchive t=2.2ms
 PASS 真实引擎安装卸载接通实体选牌和目标桥
 2v2 attack choice: 17 passed

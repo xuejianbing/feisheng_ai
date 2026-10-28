@@ -29,9 +29,9 @@ PASS 合作意图不读取任何目标隐藏手牌
 [无名AI] 选将评分系统已加载，当前模式: normal
 [DJSC] hooks:start t=0ms
 [DJSC] hooks:mem t=0.1ms
-[DJSC] hooks:store t=0.8ms
-[DJSC] hooks:archive t=0.8ms
-[DJSC] hooks:feedback t=0.9ms
-[DJSC] hooks:matchArchive t=1.2ms
+[DJSC] hooks:store t=0.7ms
+[DJSC] hooks:archive t=0.7ms
+[DJSC] hooks:feedback t=0.7ms
+[DJSC] hooks:matchArchive t=1ms
 PASS 真实引擎useCard包装捕获手动意图，卸载后凭据失效
 Trick cooperation tests: 25 passed, 0 failed

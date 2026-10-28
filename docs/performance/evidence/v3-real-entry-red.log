@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: production shadow entry must restart lazy load
+
+false !== true
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-mobile-v3-disable.mjs:5:176 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

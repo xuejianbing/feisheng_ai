@@ -13,7 +13,7 @@ Execution: inline; user supplied detailed authorized implementation and delivery
 Review focus: late restore cannot overwrite new save; per-game specialist identity never changes; pending panel completion cannot remount; disabled shadow cannot restart after load; malformed model failure cannot retry forever.
 
 ## Execution ledger
-Implemented storage decoupling, lazy panels, bounded v5 decode/coalescing, disabled v3 preload gating and bounded diagnostics; runtime final ddf7bb83.
+Implemented storage decoupling, lazy panels, bounded v5 decode/coalescing, disabled v3 preload gating and bounded diagnostics; runtime final 00cf19f.
 Red/green tests and final 40-script logs retained under evidence. Fresh reviewer found panel generation and pending-content uninstall races; fixed with regressions.
 Ruling: keep score/index diagnostic batch exposure unchanged because sync API and module side effects are not yet safely separated.
 Ruling: retain per-game specialist version pinning; models restored during a game become usable next game.

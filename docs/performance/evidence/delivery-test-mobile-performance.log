@@ -10,7 +10,7 @@ PASS module self registration cannot survive disposed pending load
 PASS late old module registration preserves new hot-reload owner
 PASS durable save waits for restore; promote/rollback guards preserve active model on write failure
 PASS unload while native content awaits cannot reinstall engine
-(node:31184) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:22564) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 [无名AI] 面板加载失败 openScorePanel: bad file
 [无名AI] 面板加载失败 openScorePanel: bad file
