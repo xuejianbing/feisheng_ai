@@ -12,7 +12,25 @@
  */
 
 const MAX_MARKS = 160;
-const TRACE_VERSION = 1;
+const TRACE_VERSION = 2;
+let _observer = null;
+const _longTasks = [];
+let _printed = 0;
+export function uninstallPerfReport() { try { if (_observer) _observer.disconnect(); } catch (_) {} _observer = null; }
+function observeLongTasks() {
+ if (_observer || typeof PerformanceObserver === 'undefined') return;
+ try {
+  _observer = new PerformanceObserver(list => {
+   for (const entry of list.getEntries()) {
+    const preceding = _marks.filter(m => m.t + _t0 <= entry.startTime).slice(-1)[0];
+    _longTasks.push({ start: _round(entry.startTime), ms: _round(entry.duration), precedingMark: preceding?.name || null });
+   }
+   if (_longTasks.length > 50) _longTasks.splice(0, _longTasks.length - 50);
+  });
+  _observer.observe({type:'longtask',buffered:true});
+ } catch (_) { uninstallPerfReport(); }
+}
+
 
 let _t0 = 0;
 let _startedAt = 0;
@@ -45,7 +63,7 @@ export function bootMark(name, extra) {
 		}
 		_marks.push(rec);
 		if (_marks.length > MAX_MARKS) _marks.splice(0, _marks.length - MAX_MARKS);
-		try { console.log('[DJSC] ' + rec.name + ' t=' + rec.t + 'ms'); } catch (e) { /* 控制台不可用时不阻断 */ }
+		try { if (_printed++ < MAX_MARKS) console.log('[DJSC] ' + rec.name + ' t=' + rec.t + 'ms'); } catch (e) { /* 控制台不可用时不阻断 */ }
 		return rec;
 	} catch (e) { return null; }
 }
@@ -61,6 +79,9 @@ export function bootReport() {
 		startedAt: _startedAt || null,
 		now: Date.now(),
 		marks: bootTrace(),
+        longTasks: _longTasks.slice(),
+        observationBoundary: 'ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.',
+
 	};
 	try {
 		const w = (typeof window !== 'undefined') ? window : null;
@@ -75,7 +96,10 @@ export function bootReport() {
 				: null;
 		}
 	} catch (e) { /* 诊断失败不影响主流程 */ }
-	return out;
+    try {
+        out.resources = performance.getEntriesByType('resource').filter(e => decodeURI(e.name).includes('/extension/无名AI/')).slice(-160).map(e => ({ path: decodeURI(e.name).split('/extension/无名AI/')[1].split('?')[0], start: _round(e.startTime), fetchMs: _round(e.duration) }));
+    } catch (_) { out.resources = []; }
+    return out;
 }
 
 /** 挂到 window.__DJSC（幂等；不覆盖已有同名函数）。 */
@@ -83,6 +107,7 @@ export function installPerfReport() {
 	try {
 		if (typeof window === 'undefined') return false;
 		window.__DJSC = window.__DJSC || {};
+        observeLongTasks();
 		if (typeof window.__DJSC.perfReport !== 'function') window.__DJSC.perfReport = bootReport;
 		if (typeof window.__DJSC.bootTrace !== 'function') window.__DJSC.bootTrace = bootTrace;
 		if (typeof window.__DJSC.bootMark !== 'function') window.__DJSC.bootMark = bootMark;

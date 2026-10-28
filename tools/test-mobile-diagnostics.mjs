@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+let observer,disconnected=false;
+globalThis.window={__DJSC:{}};
+globalThis.PerformanceObserver=class{constructor(cb){this.cb=cb;observer=this;}observe(){}disconnect(){disconnected=true;}};
+const m=await import('../score/foundation/diag/bootTrace.js');m.installPerfReport();assert(observer,'longtask observer installed');
+for(let i=0;i<300;i++)m.bootMark('test',{object:{secret:'never stored'}});
+observer.cb({getEntries:()=>Array.from({length:100},(_,i)=>({startTime:i,duration:50}))});
+const report=window.__DJSC.perfReport();assert.equal(report.marks.length,160);assert.equal(report.longTasks.length,50);assert(!JSON.stringify(report).includes('never stored'));assert.equal(typeof report.observationBoundary,'string');m.uninstallPerfReport();assert(disconnected);
+console.log('PASS bounded marks/longtasks, primitive-only metadata and observer disposal');

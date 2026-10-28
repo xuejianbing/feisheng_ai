@@ -31,9 +31,9 @@ import { mountPanels } from './score/foundation/diag/panelLoader.js?v=41a';
 import { installModelUpdate, uninstallModelUpdate } from './js/update/modelUpdate.js?v=41a';   /* ★ 模型权重在线更新（原整包在线更新已移除） */
 import { installPolicyModelUpdate } from './js/update/policyModelUpdate.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 热更检查（纯数据 JSON，失败静默） */
 import './score/model/net/policyModelV3.js?v=41a';   /* ★ 4.1.5.0：策略模型 v3 接线（自注册 window.__DJSC.policyModelV3，影子评估默认开） */
-import { bootMark, installPerfReport } from './score/foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动/首次决策耗时轨迹（手机端卡死定位，只读） */
+import { bootMark, installPerfReport, uninstallPerfReport } from './score/foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动/首次决策耗时轨迹（手机端卡死定位，只读） */
 window.__DJSC = window.__DJSC || {};
-bootMark('ext:start');   /* ★ 4.4.3：模块开始执行；控制台看不到这条 = 卡在宿主解析/加载阶段 */
+bootMark('ext:start');   /* ★ 4.4.3：静态 ESM 依赖求值后的入口，不能据此定位特定依赖 */
 installPerfReport();
 let _extensionDisposed = false, _panelReport = null;
 // Inspectable readiness promise for browser/host release checks.
@@ -170,6 +170,7 @@ extensionPackage.content = async function (config, pack) {
 const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
     _extensionDisposed = true;
+    uninstallPerfReport();
     if (_panelReport) _panelReport.dispose();
 	try { uninstallModelUpdate();
 installPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */ } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
