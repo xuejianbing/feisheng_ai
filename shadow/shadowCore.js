@@ -33,6 +33,7 @@ let _shadowGeneration = 0;
 export function stopShadowRuntime() {
     _shadowGeneration++; _started = false; DIAG.started = false;
     if (_timer) clearInterval(_timer); _timer = null;
+    if (_flushTimer) clearInterval(_flushTimer); _flushTimer = null;
     setV5Enabled(false); flushShadowLog(true); dropExitFlush();
 }
 const MAX_RECORDS = 300;   /* PR5：localStorage 是主扩展共享池（约5MB 配额），大日志会把主扩展其他 setItem 挤到 QuotaExceeded（被各模块静默吞掉→决策状态异常）。本地只留 300 条调试窗口（约600KB），全量分析数据以服务端 shadowV5 入库为准 */
@@ -229,7 +230,9 @@ function processDecision(candidates, best, me, bestTargetObj) {
     markLogDirty();   /* ★ 4.1.2.5：内存追加+脏标记，5s 防抖刷盘 */
     DIAG.processed++;
 
+    const rewardGeneration = _shadowGeneration;
     setTimeout(() => {
+        if (rewardGeneration !== _shadowGeneration || !_started) return;
         try {
             const snapAfter = snapshot(me, bestTarget);
             const gain = computeGain(snapBefore, snapAfter, isEnemy);
