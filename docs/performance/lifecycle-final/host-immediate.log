@@ -1,0 +1,86 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59007/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59007/preload.js net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: Execution context was destroyed, most likely because of a navigation.
+[requestfailed] http://127.0.0.1:59007/index.html net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59007/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59007/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59007/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.3ms
+[browser-console] log [DJSC] update:install t=1.1ms
+[browser-console] log [DJSC] panels:ready t=1.7ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=3ms
+[browser-console] log [DJSC] content:native t=3.7ms
+[browser-console] log [DJSC] engine:install-begin t=3.8ms
+[browser-console] log [DJSC] engine:start t=4ms
+[browser-console] log [DJSC] engine:storage-guard t=4.5ms
+[browser-console] log [DJSC] hooks:start t=4.8ms
+[browser-console] log [DJSC] hooks:mem t=5.6ms
+[browser-console] log [DJSC] hooks:store t=8.5ms
+[browser-console] log [DJSC] hooks:archive t=8.6ms
+[browser-console] log [DJSC] hooks:feedback t=8.6ms
+[browser-console] log [DJSC] hooks:matchArchive t=9.9ms
+[browser-console] log [DJSC] engine:hooks t=10.8ms
+[browser-console] log [DJSC] engine:plugins t=12.3ms
+[browser-console] log [DJSC] engine:settle-watch t=12.4ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[browser-console] log [DJSC] v3:loaded t=106ms
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+{"resources":{"timers":[{"kind":"Interval","ms":600,"source":"extension.js"}],"listeners":[]},"shadow":{"started":false,"polls":0,"withCands":0,"withBest":0,"withMe":0,"noFeat":0,"emptyPred":0,"processed":0,"featPatch":0,"lastCandLen":0,"errors":[]},"updaterPresent":false,"requestsAfterUninstall":[],"errors":[],"scenario":"immediate-unload","status":"failed"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'failed' !== 'passed'
+
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/docs/performance/lifecycle-final/host-lifecycle.mjs:141:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'failed',
+  expected: 'passed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.14.0

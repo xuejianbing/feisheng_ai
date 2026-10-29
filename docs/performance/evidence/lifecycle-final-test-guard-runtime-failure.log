@@ -1,0 +1,4 @@
+PASS runtime/recursive guard failures are distinct from legal/invalid actions
+PASS engine withdraws failed guard recommendation without constructing end action
+[guard] 护栏检查异常：recursive
+[guard] 护栏检查异常：missing host

@@ -1,0 +1,15 @@
+PASS install then immediately uninstall: no shadow start after 3s and no update jobs
+PASS already queued timer callback cannot start after uninstall
+PASS late module import cannot schedule a start after uninstall
+[Shadow] v5集成模型加载完成
+PASS uninstall while v5 load awaits cannot install polling or exit listeners
+PASS model cleanup failure does not skip the other updater
+PASS policy cleanup failure does not skip the other updater
+[Shadow] v5集成模型加载完成
+[Shadow] v5集成模型加载完成
+[Shadow] v5集成模型加载完成
+[Shadow] v5集成模型加载完成
+[Shadow] v5集成模型加载完成
+PASS five installation/uninstallation generations leave no polling, update requests or listeners
+(node:18948) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

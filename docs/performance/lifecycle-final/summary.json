@@ -1,0 +1,68 @@
+[
+  {
+    "scenario": "host-repeat-cycle0",
+    "status": "passed",
+    "elapsedMs": null,
+    "phases": null,
+    "uses": null,
+    "maxDepth": null,
+    "guardErrors": null,
+    "requestsAfterUninstall": [],
+    "errors": []
+  },
+  {
+    "scenario": "host-repeat-cycle1",
+    "status": "passed",
+    "elapsedMs": null,
+    "phases": null,
+    "uses": null,
+    "maxDepth": null,
+    "guardErrors": null,
+    "requestsAfterUninstall": [],
+    "errors": []
+  },
+  {
+    "scenario": "host-repeat-cycle2",
+    "status": "passed",
+    "elapsedMs": null,
+    "phases": null,
+    "uses": null,
+    "maxDepth": null,
+    "guardErrors": null,
+    "requestsAfterUninstall": [],
+    "errors": []
+  },
+  {
+    "scenario": "host-loading-targeted",
+    "status": "passed",
+    "elapsedMs": null,
+    "phases": null,
+    "uses": null,
+    "maxDepth": null,
+    "guardErrors": null,
+    "requestsAfterUninstall": [],
+    "errors": []
+  },
+  {
+    "scenario": "2v2",
+    "status": "completed",
+    "elapsedMs": 28619,
+    "phases": 7,
+    "uses": 33,
+    "maxDepth": 1,
+    "guardErrors": 0,
+    "requestsAfterUninstall": null,
+    "errors": []
+  },
+  {
+    "scenario": "doudizhu",
+    "status": "completed",
+    "elapsedMs": 62707,
+    "phases": 26,
+    "uses": 91,
+    "maxDepth": 1,
+    "guardErrors": 0,
+    "requestsAfterUninstall": null,
+    "errors": []
+  }
+]

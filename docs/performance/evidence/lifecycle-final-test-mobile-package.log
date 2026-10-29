@@ -1,0 +1,1 @@
+PASS slim whitelist static imports: 1397 references / 389 files; dynamic module registry and resource requests also checked by extracted host run

@@ -1,0 +1,110 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:49911/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:49911/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:49911/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: Execution context was destroyed, most likely because of a navigation.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:49911/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:49911/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:49911/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.4ms
+[browser-console] log [DJSC] update:install t=1.5ms
+[browser-console] log [DJSC] panels:ready t=2.2ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=4.4ms
+[browser-console] log [DJSC] content:native t=5.5ms
+[browser-console] log [DJSC] engine:install-begin t=5.6ms
+[browser-console] log [DJSC] engine:start t=6.3ms
+[browser-console] log [DJSC] engine:storage-guard t=7.1ms
+[browser-console] log [DJSC] hooks:start t=7.5ms
+[browser-console] log [DJSC] hooks:mem t=8.5ms
+[browser-console] log [DJSC] hooks:store t=11.7ms
+[browser-console] log [DJSC] hooks:archive t=11.9ms
+[browser-console] log [DJSC] hooks:feedback t=12ms
+[browser-console] log [DJSC] hooks:matchArchive t=12.8ms
+[browser-console] log [DJSC] engine:hooks t=14.4ms
+[browser-console] log [DJSC] engine:plugins t=15.7ms
+[browser-console] log [DJSC] engine:settle-watch t=15.8ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[browser-console] log [DJSC] v3:loaded t=136.3ms
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+{"resources":{"timers":[],"listeners":[]},"shadow":{"started":false,"polls":0,"withCands":0,"withBest":0,"withMe":0,"noFeat":0,"emptyPred":0,"processed":0,"featPatch":0,"lastCandLen":0,"errors":[]},"updaterPresent":false,"requestsAfterUninstall":[],"errors":[],"scenario":"immediate-unload","status":"passed"}
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=4598.7ms
+[browser-console] log [DJSC] panels:start t=4598.8ms
+[browser-console] log [DJSC] update:install t=4598.9ms
+[browser-console] log [DJSC] panels:ready t=4599.7ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=4600ms
+[browser-console] log [DJSC] content:native t=4600.3ms
+[browser-console] log [DJSC] engine:install-begin t=4600.3ms
+[browser-console] log [DJSC] engine:start t=4600.4ms
+[browser-console] log [DJSC] engine:storage-guard t=4600.4ms
+[browser-console] log [DJSC] hooks:start t=4600.5ms
+[browser-console] log [DJSC] hooks:mem t=4600.5ms
+[browser-console] log [DJSC] hooks:store t=4601.2ms
+[browser-console] log [DJSC] hooks:archive t=4601.3ms
+[browser-console] log [DJSC] hooks:feedback t=4601.3ms
+[browser-console] log [DJSC] hooks:matchArchive t=4601.5ms
+[browser-console] log [DJSC] engine:hooks t=4601.8ms
+[browser-console] log [DJSC] engine:plugins t=4602.2ms
+[browser-console] log [DJSC] engine:settle-watch t=4602.2ms
+[browser-console] log [DJSC] content:models t=4603.7ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+{"resources":{"timers":[],"listeners":[]},"shadow":{"started":false,"polls":0,"withCands":0,"withBest":0,"withMe":0,"noFeat":0,"emptyPred":0,"processed":0,"featPatch":0,"lastCandLen":0,"errors":[]},"updaterPresent":false,"requestsAfterUninstall":[],"errors":[],"scenario":"immediate-unload","status":"passed"}
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=9129.5ms
+[browser-console] log [DJSC] panels:start t=9129.6ms
+[browser-console] log [DJSC] update:install t=9129.8ms
+[browser-console] log [DJSC] panels:ready t=9130.5ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=9130.9ms
+[browser-console] log [DJSC] content:native t=9131.3ms
+[browser-console] log [DJSC] engine:install-begin t=9131.4ms
+[browser-console] log [DJSC] engine:start t=9131.5ms
+[browser-console] log [DJSC] engine:storage-guard t=9131.6ms
+[browser-console] log [DJSC] hooks:start t=9131.7ms
+[browser-console] log [DJSC] hooks:mem t=9131.8ms
+[browser-console] log [DJSC] hooks:store t=9133ms
+[browser-console] log [DJSC] hooks:archive t=9133.1ms
+[browser-console] log [DJSC] hooks:feedback t=9133.3ms
+[browser-console] log [DJSC] hooks:matchArchive t=9133.8ms
+[browser-console] log [DJSC] engine:hooks t=9134.2ms
+[browser-console] log [DJSC] engine:plugins t=9134.6ms
+[browser-console] log [DJSC] engine:settle-watch t=9134.7ms
+[browser-console] log [DJSC] content:models t=9136.6ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+{"resources":{"timers":[],"listeners":[]},"shadow":{"started":false,"polls":0,"withCands":0,"withBest":0,"withMe":0,"noFeat":0,"emptyPred":0,"processed":0,"featPatch":0,"lastCandLen":0,"errors":[]},"updaterPresent":false,"requestsAfterUninstall":[],"errors":[],"scenario":"immediate-unload","status":"passed"}

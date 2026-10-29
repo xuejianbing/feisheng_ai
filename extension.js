@@ -35,7 +35,7 @@ import { bootMark, installPerfReport, uninstallPerfReport } from './score/founda
 window.__DJSC = window.__DJSC || {};
 bootMark('ext:start');   /* ★ 4.4.3：静态 ESM 依赖求值后的入口，不能据此定位特定依赖 */
 installPerfReport();
-let _extensionDisposed = false, _panelReport = null;
+let _extensionDisposed = false, _panelReport = null, _shadowStartTimer = null;
 // Inspectable readiness promise for browser/host release checks.
 bootMark('panels:start');
 window.__DJSC.panelsReady = mountPanels(window.__DJSC, undefined, { lazy: true }).then(function (report) {
@@ -171,10 +171,11 @@ extensionPackage.content = async function (config, pack) {
 const _uninstall = extensionPackage.uninstall;
 extensionPackage.uninstall = function () {
     _extensionDisposed = true;
+    if (_shadowStartTimer !== null) { clearTimeout(_shadowStartTimer); _shadowStartTimer = null; }
     uninstallPerfReport();
     if (_panelReport) _panelReport.dispose();
-	try { uninstallModelUpdate();
-uninstallPolicyModelUpdate();   /* ★ 4.1.5.0：策略模型 v3 热更检查（空闲时一次，失败静默保留内置） */ } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }   /* ★ P1-3：解除更新器监听与定时器 */
+	try { uninstallModelUpdate(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+	try { uninstallPolicyModelUpdate(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	try { uninstallScoreEngine(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 	/* ★P2 修复：卸载前把 shadow 防抖窗口内未落盘的日志同步写掉（模块已加载时同一微任务内完成），并停掉退出兜底监听 */
 	try {
@@ -260,7 +261,9 @@ import('./shadow/shadowCore.js?v=41a').then(function (mShadow) {
     window.__AI_REASON = window.__AI_REASON || {};
     window.__AI_REASON.cmd = window.__AI_REASON.cmd || {};
     window.__AI_REASON.cmd.shadow = mShadow.shadowCmd;
-    setTimeout(function () {
+    _shadowStartTimer = setTimeout(function () {
+        _shadowStartTimer = null;
+        if (_extensionDisposed) return;
         mShadow.startShadow().catch(function (e) { console.error('[Shadow] 启动失败:', e); });
     }, 3000);
 }).catch(function (e) { console.warn('[Shadow] 模块加载失败:', e); });

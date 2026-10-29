@@ -1,0 +1,24 @@
+{
+  "resources": {
+    "timers": [],
+    "listeners": []
+  },
+  "shadow": {
+    "started": false,
+    "polls": 0,
+    "withCands": 0,
+    "withBest": 0,
+    "withMe": 0,
+    "noFeat": 0,
+    "emptyPred": 0,
+    "processed": 0,
+    "featPatch": 0,
+    "lastCandLen": 0,
+    "errors": []
+  },
+  "updaterPresent": false,
+  "requestsAfterUninstall": [],
+  "errors": [],
+  "scenario": "immediate-unload",
+  "status": "passed"
+}

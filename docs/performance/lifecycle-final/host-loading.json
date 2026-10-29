@@ -1,0 +1,32 @@
+{
+  "resources": {
+    "timers": [
+      {
+        "kind": "Interval",
+        "ms": 600,
+        "source": "extension.js"
+      }
+    ],
+    "listeners": []
+  },
+  "shadow": {
+    "started": false,
+    "polls": 0,
+    "withCands": 0,
+    "withBest": 0,
+    "withMe": 0,
+    "noFeat": 0,
+    "emptyPred": 0,
+    "processed": 0,
+    "featPatch": 0,
+    "lastCandLen": 0,
+    "errors": []
+  },
+  "updaterPresent": false,
+  "requestsAfterUninstall": [
+    "http://127.0.0.1:52674/extension/%E6%97%A0%E5%90%8DAI/model/v5_mixup_s456.json"
+  ],
+  "errors": [],
+  "scenario": "unload-during-model-read",
+  "status": "failed"
+}
