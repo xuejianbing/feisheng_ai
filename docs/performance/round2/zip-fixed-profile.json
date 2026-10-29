@@ -1,0 +1,1632 @@
+{
+  "initial": [
+    {
+      "name": "jiakui",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "jiedao",
+        "sha",
+        "qinggang",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "dc_sunchen",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "sha",
+        "shunshou",
+        "bingliang"
+      ]
+    },
+    {
+      "name": "pe_yangyuhuan",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "wuzhong",
+        "zhuge",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "sunlang",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "bagua",
+        "shan",
+        "sha",
+        "dawan"
+      ]
+    }
+  ],
+  "done": true,
+  "startedAt": 1793245858189,
+  "phases": 4,
+  "uses": 24,
+  "result": false,
+  "stack": null,
+  "maxDepth": 1,
+  "probeLongs": [
+    {
+      "ms": 135,
+      "start": 1546.5
+    },
+    {
+      "ms": 174,
+      "start": 1882.199999988079
+    },
+    {
+      "ms": 60,
+      "start": 2112.5999999940395
+    },
+    {
+      "ms": 208,
+      "start": 2308
+    },
+    {
+      "ms": 124,
+      "start": 3130.7999999970198
+    },
+    {
+      "ms": 145,
+      "start": 3866.7999999970198
+    },
+    {
+      "ms": 137,
+      "start": 4531.5
+    },
+    {
+      "ms": 107,
+      "start": 5178.29999999702
+    },
+    {
+      "ms": 118,
+      "start": 5800.29999999702
+    },
+    {
+      "ms": 160,
+      "start": 6397.5999999940395
+    },
+    {
+      "ms": 181,
+      "start": 7124
+    },
+    {
+      "ms": 155,
+      "start": 7813.29999999702
+    },
+    {
+      "ms": 137,
+      "start": 8488.699999988079
+    },
+    {
+      "ms": 123,
+      "start": 9133.89999999106
+    },
+    {
+      "ms": 111,
+      "start": 9765.79999999702
+    },
+    {
+      "ms": 84,
+      "start": 10921.39999999106
+    },
+    {
+      "ms": 90,
+      "start": 13504
+    },
+    {
+      "ms": 72,
+      "start": 14206.29999999702
+    },
+    {
+      "ms": 82,
+      "start": 14789.39999999106
+    },
+    {
+      "ms": 94,
+      "start": 15382.199999988079
+    },
+    {
+      "ms": 61,
+      "start": 15995.29999999702
+    },
+    {
+      "ms": 72,
+      "start": 17076.89999999106
+    },
+    {
+      "ms": 84,
+      "start": 17765.09999999404
+    },
+    {
+      "ms": 60,
+      "start": 18359.59999999404
+    },
+    {
+      "ms": 66,
+      "start": 18640.09999999404
+    },
+    {
+      "ms": 65,
+      "start": 19894.19999998808
+    },
+    {
+      "ms": 105,
+      "start": 20416.29999999702
+    },
+    {
+      "ms": 123,
+      "start": 21025.89999999106
+    },
+    {
+      "ms": 114,
+      "start": 21655.59999999404
+    },
+    {
+      "ms": 97,
+      "start": 22279.09999999404
+    }
+  ],
+  "probePhases": [
+    {
+      "ms": 114.20000000298023,
+      "phases": {
+        "preflight": 2,
+        "context": 26,
+        "targets": 8,
+        "candidates": 46,
+        "planner": 6,
+        "model": 23,
+        "observability": 0,
+        "guard": 1,
+        "telemetry": 1
+      }
+    },
+    {
+      "ms": 39.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 6,
+        "targets": 1,
+        "candidates": 19,
+        "planner": 2,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 53.79999999701977,
+      "phases": {
+        "preflight": 1,
+        "context": 5,
+        "targets": 1,
+        "candidates": 35,
+        "planner": 2,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 39.5,
+      "phases": {
+        "preflight": 1,
+        "context": 5,
+        "targets": 1,
+        "candidates": 22,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 59,
+      "phases": {
+        "preflight": 1,
+        "context": 5,
+        "targets": 1,
+        "candidates": 37,
+        "planner": 3,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 1
+      }
+    },
+    {
+      "ms": 46.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 31,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 64.8999999910593,
+      "phases": {
+        "preflight": 1,
+        "context": 6,
+        "targets": 1,
+        "candidates": 45,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 35.3999999910593,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 23,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 43.599999994039536,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 1,
+        "candidates": 31,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 32.80000001192093,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 1,
+        "candidates": 22,
+        "planner": 0,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 55.70000000298023,
+      "phases": {
+        "preflight": 0,
+        "context": 7,
+        "targets": 1,
+        "candidates": 34,
+        "planner": 1,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 40.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 29,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 76.5,
+      "phases": {
+        "preflight": 1,
+        "context": 7,
+        "targets": 1,
+        "candidates": 54,
+        "planner": 2,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 49.79999999701977,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 39,
+        "planner": 0,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 85.40000000596046,
+      "phases": {
+        "preflight": 0,
+        "context": 6,
+        "targets": 1,
+        "candidates": 64,
+        "planner": 2,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 48.8999999910593,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 35,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 60,
+      "phases": {
+        "preflight": 1,
+        "context": 4,
+        "targets": 1,
+        "candidates": 44,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 42.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 33,
+        "planner": 0,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 53.29999999701977,
+      "phases": {
+        "preflight": 1,
+        "context": 4,
+        "targets": 1,
+        "candidates": 37,
+        "planner": 3,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 38.3999999910593,
+      "phases": {
+        "preflight": 1,
+        "context": 3,
+        "targets": 0,
+        "candidates": 28,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 44,
+      "phases": {
+        "preflight": 1,
+        "context": 5,
+        "targets": 1,
+        "candidates": 30,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 35.5,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 24,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 43.900000005960464,
+      "phases": {
+        "preflight": 1,
+        "context": 5,
+        "targets": 0,
+        "candidates": 28,
+        "planner": 2,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 30.299999997019768,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 21,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 28,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 17,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 23.799999997019768,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 14,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 26.399999991059303,
+      "phases": {
+        "preflight": 1,
+        "context": 3,
+        "targets": 0,
+        "candidates": 8,
+        "planner": 1,
+        "model": 14,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 13.600000008940697,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 4,
+        "planner": 0,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 48.5,
+      "phases": {
+        "preflight": 1,
+        "context": 3,
+        "targets": 1,
+        "candidates": 27,
+        "planner": 2,
+        "model": 15,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 23.400000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 15,
+        "planner": 1,
+        "model": 5,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 28.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 18,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 24.700000002980232,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 14,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 31.80000001192093,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 20,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 27,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 17,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 39,
+      "phases": {
+        "preflight": 1,
+        "context": 4,
+        "targets": 1,
+        "candidates": 24,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 29.100000008940697,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 18,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 26.69999998807907,
+      "phases": {
+        "preflight": 1,
+        "context": 2,
+        "targets": 0,
+        "candidates": 15,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 18.600000008940697,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10,
+        "planner": 0,
+        "model": 5,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 35.5,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 1,
+        "candidates": 18,
+        "planner": 1,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 18,
+      "phases": {
+        "preflight": 0,
+        "context": 1,
+        "targets": 0,
+        "candidates": 11,
+        "planner": 0,
+        "model": 5,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 40,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 26,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 21.200000002980232,
+      "phases": {
+        "preflight": 0,
+        "context": 1,
+        "targets": 0,
+        "candidates": 14,
+        "planner": 0,
+        "model": 5,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 24.899999991059303,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 12,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 21.599999994039536,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 1,
+        "candidates": 11,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 26.200000002980232,
+      "phases": {
+        "preflight": 1,
+        "context": 3,
+        "targets": 1,
+        "candidates": 13,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 23,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 22.30000001192093,
+      "phases": {
+        "preflight": 1,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10,
+        "planner": 2,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 20.200000002980232,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 8,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 31.599999994039536,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 15,
+        "planner": 1,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 18.200000002980232,
+      "phases": {
+        "preflight": 0,
+        "context": 1,
+        "targets": 0,
+        "candidates": 9,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 40.599999994039536,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 1,
+        "candidates": 27,
+        "planner": 2,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 28.299999997019768,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 19,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 34.29999999701977,
+      "phases": {
+        "preflight": 1,
+        "context": 2,
+        "targets": 1,
+        "candidates": 24,
+        "planner": 2,
+        "model": 5,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 27.400000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 18,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 29.900000005960464,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 1,
+        "candidates": 19,
+        "planner": 1,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 27.599999994039536,
+      "phases": {
+        "preflight": 1,
+        "context": 1,
+        "targets": 0,
+        "candidates": 19,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 31.5,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 20,
+        "planner": 2,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 27.400000005960464,
+      "phases": {
+        "preflight": 1,
+        "context": 3,
+        "targets": 0,
+        "candidates": 16,
+        "planner": 2,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    }
+  ],
+  "heap": 95505361,
+  "resources": 250,
+  "hostVersion": "1.11.7",
+  "mode": "versus",
+  "submode": "two",
+  "perf": {
+    "traceVersion": 2,
+    "startedAt": 1793245858169,
+    "now": 1793245878950,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.1
+      },
+      {
+        "name": "update:install",
+        "t": 1.1
+      },
+      {
+        "name": "panels:ready",
+        "t": 1.7,
+        "total": 25,
+        "loaded": 0,
+        "ok": true
+      },
+      {
+        "name": "content:start",
+        "t": 3.1
+      },
+      {
+        "name": "content:native",
+        "t": 4.1
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 4.3
+      },
+      {
+        "name": "engine:start",
+        "t": 4.7
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 5
+      },
+      {
+        "name": "hooks:start",
+        "t": 5.6
+      },
+      {
+        "name": "hooks:mem",
+        "t": 5.9
+      },
+      {
+        "name": "hooks:store",
+        "t": 9.1
+      },
+      {
+        "name": "hooks:archive",
+        "t": 9.2
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 9.3
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 9.8
+      },
+      {
+        "name": "engine:hooks",
+        "t": 11.5
+      },
+      {
+        "name": "engine:plugins",
+        "t": 14.1
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 14.2
+      },
+      {
+        "name": "content:models",
+        "t": 95.6,
+        "backend": "IndexedDB",
+        "error": false
+      },
+      {
+        "name": "decision:first",
+        "t": 297.5,
+        "wrapperMs": 117
+      },
+      {
+        "name": "v3:loaded",
+        "t": 396.5,
+        "source": "builtin"
+      }
+    ],
+    "longTasks": [
+      {
+        "start": 705.9,
+        "ms": 236,
+        "precedingMark": null
+      },
+      {
+        "start": 1546.5,
+        "ms": 135,
+        "precedingMark": null
+      },
+      {
+        "start": 1882.2,
+        "ms": 174,
+        "precedingMark": null
+      },
+      {
+        "start": 2112.6,
+        "ms": 60,
+        "precedingMark": null
+      },
+      {
+        "start": 2308,
+        "ms": 208,
+        "precedingMark": "content:models"
+      },
+      {
+        "start": 3130.8,
+        "ms": 124,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 3866.8,
+        "ms": 145,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 4531.5,
+        "ms": 137,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 5178.3,
+        "ms": 107,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 5800.3,
+        "ms": 118,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 6397.6,
+        "ms": 160,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 7124,
+        "ms": 181,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 7813.3,
+        "ms": 155,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 8488.7,
+        "ms": 137,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 9133.9,
+        "ms": 123,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 9765.8,
+        "ms": 111,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 10921.4,
+        "ms": 84,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 13504,
+        "ms": 90,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 14206.3,
+        "ms": 72,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 14789.4,
+        "ms": 82,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 15382.2,
+        "ms": 94,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 15995.3,
+        "ms": 61,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 17076.9,
+        "ms": 72,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 17765.1,
+        "ms": 84,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 18359.6,
+        "ms": 60,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 18640.1,
+        "ms": 66,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 19894.2,
+        "ms": 65,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 20416.3,
+        "ms": 105,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 21025.9,
+        "ms": 123,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 21655.6,
+        "ms": 114,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 22279.1,
+        "ms": 97,
+        "precedingMark": "v3:loaded"
+      }
+    ],
+    "firstDecisionPerf": {
+      "ms": 116.5,
+      "reusedResult": false,
+      "phases": {
+        "preflight": 2,
+        "context": 26,
+        "targets": 8,
+        "candidates": 46,
+        "planner": 6,
+        "model": 23,
+        "observability": 0,
+        "guard": 1,
+        "telemetry": 1
+      }
+    },
+    "recentDecisions": [
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.5,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.5,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 31.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 20,
+          "planner": 2,
+          "model": 7,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 27.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 1,
+          "context": 3,
+          "targets": 0,
+          "candidates": 16,
+          "planner": 2,
+          "model": 6,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.5,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      }
+    ],
+    "observationBoundary": "ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.",
+    "decisions": 462,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 224.3999999910593
+    },
+    "resources": []
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 29,
+      "stagedChoice": 29,
+      "pass": 29,
+      "selected": 26,
+      "executed": 22,
+      "allyGuard": 84,
+      "veto": 15
+    },
+    "respond": {},
+    "discard": {
+      "check": 17,
+      "selected": 1,
+      "executed": 1
+    },
+    "compare": {},
+    "soft": {
+      "hit": 33
+    }
+  },
+  "alive": 2,
+  "dead": 2,
+  "elapsedMs": 20853,
+  "guardErrors": 0,
+  "missingExtension": [],
+  "errors": [],
+  "browser": "156.0.8078.73",
+  "status": "completed"
+}

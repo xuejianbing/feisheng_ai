@@ -1,0 +1,16 @@
+PASS content completes before eight-second model restore and installs only once
+PASS active identity is unavailable while restore is pending
+PASS late restore preserves new candidate and activation including same ID replacement
+PASS restore errors are settled failures rather than successful reads
+PASS panels load only on first open, coalesce shared paths, retain loaded synchronous return
+PASS unmount during panel load suppresses stale invocation and mounting
+PASS failed lazy panel reports error without breaking other panels or automatic retry
+PASS already mounted synchronous panel keeps synchronous return
+PASS module self registration cannot survive disposed pending load
+PASS late old module registration preserves new hot-reload owner
+PASS durable save waits for restore; promote/rollback guards preserve active model on write failure
+PASS unload while native content awaits cannot reinstall engine
+(node:4280) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[无名AI] 面板加载失败 openScorePanel: bad file
+[无名AI] 面板加载失败 openScorePanel: bad file

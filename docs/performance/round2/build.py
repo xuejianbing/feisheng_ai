@@ -24,6 +24,7 @@ for label,files,ref in [('baseline',base,BASE),('QA-round2',final,head)]:
  (out/(label+'-files.json')).write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
  reports.append(dict(file=filename,commit=ref,files=len(files),bytes=dest.stat().st_size,sha256=sha(dest.read_bytes())))
 (out/'FINAL-COMMIT.txt').write_text(head+'\n',encoding='ascii')
+(out/'round2-runtime.patch').write_bytes(subprocess.check_output(['git','diff','--binary','aa919bb',head,'--','extension.js','score','js','tools']))
 (out/'round2.patch').write_bytes(subprocess.check_output(['git','diff','--binary','aa919bb',head]))
 (out/'review.patch').write_bytes(subprocess.check_output(['git','diff','--binary',BASE,head]))
 subprocess.run(['git','format-patch',BASE+'..'+head,'--output-directory',str(out/'commits')],check=True,capture_output=True)

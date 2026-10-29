@@ -1,0 +1,719 @@
+{
+  "initial": [
+    {
+      "name": "jiakui",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "jiedao",
+        "sha",
+        "qinggang",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "dc_sunchen",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "sha",
+        "shunshou",
+        "bingliang"
+      ]
+    },
+    {
+      "name": "pe_yangyuhuan",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "wuzhong",
+        "zhuge",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "fengfang",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "bagua",
+        "shan",
+        "sha",
+        "dawan"
+      ]
+    }
+  ],
+  "done": false,
+  "startedAt": 1793245341498,
+  "phases": 1,
+  "uses": 3,
+  "stack": "RangeError: Maximum call stack size exceeded\n    at guardCheck (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/model/net/modelGuard.js?v=41a:1:1)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:9381:22)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)\n    at profile (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6836:16)\n    at _getBA (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:53246/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:53246/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8409:9)",
+  "maxDepth": 692,
+  "hostVersion": "1.11.7",
+  "mode": "versus",
+  "submode": "two",
+  "perf": {
+    "traceVersion": 2,
+    "startedAt": 1793245341464,
+    "now": 1793245396302,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.3
+      },
+      {
+        "name": "update:install",
+        "t": 1
+      },
+      {
+        "name": "panels:ready",
+        "t": 1.5,
+        "total": 25,
+        "loaded": 0,
+        "ok": true
+      },
+      {
+        "name": "content:start",
+        "t": 2.8
+      },
+      {
+        "name": "content:native",
+        "t": 3.5
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 3.6
+      },
+      {
+        "name": "engine:start",
+        "t": 4.1
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 4.9
+      },
+      {
+        "name": "hooks:start",
+        "t": 5.4
+      },
+      {
+        "name": "hooks:mem",
+        "t": 6.2
+      },
+      {
+        "name": "hooks:store",
+        "t": 8.6
+      },
+      {
+        "name": "hooks:archive",
+        "t": 8.7
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 8.7
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 9.2
+      },
+      {
+        "name": "engine:hooks",
+        "t": 15.5
+      },
+      {
+        "name": "engine:plugins",
+        "t": 19.7
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 19.8
+      },
+      {
+        "name": "decision:first",
+        "t": 325.3,
+        "wrapperMs": 81
+      },
+      {
+        "name": "v3:loaded",
+        "t": 401.5,
+        "source": "builtin"
+      },
+      {
+        "name": "content:models",
+        "t": 409.1,
+        "backend": "IndexedDB",
+        "error": false
+      }
+    ],
+    "longTasks": [
+      {
+        "start": 677.2,
+        "ms": 195,
+        "precedingMark": null
+      },
+      {
+        "start": 1411.7,
+        "ms": 90,
+        "precedingMark": null
+      },
+      {
+        "start": 1532.1,
+        "ms": 110,
+        "precedingMark": "engine:settle-watch"
+      },
+      {
+        "start": 1664.2,
+        "ms": 159,
+        "precedingMark": "engine:settle-watch"
+      },
+      {
+        "start": 1935.7,
+        "ms": 123,
+        "precedingMark": "content:models"
+      },
+      {
+        "start": 2450.3,
+        "ms": 19604,
+        "precedingMark": "content:models"
+      },
+      {
+        "start": 22668.4,
+        "ms": 33602,
+        "precedingMark": "content:models"
+      }
+    ],
+    "firstDecisionPerf": {
+      "ms": 80.5,
+      "reusedResult": false,
+      "phases": {
+        "preflight": 2,
+        "context": 18,
+        "targets": 4,
+        "candidates": 31,
+        "planner": 4,
+        "model": 20,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 1
+      }
+    },
+    "recentDecisions": [
+      {
+        "ms": 22353.2,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22339,
+          "planner": 0,
+          "model": 12,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22375.9,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22362,
+          "planner": 0,
+          "model": 11,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22395.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22384,
+          "planner": 0,
+          "model": 9,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22415.2,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22405,
+          "planner": 0,
+          "model": 8,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22435.9,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22423,
+          "planner": 0,
+          "model": 10,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22457.6,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22445,
+          "planner": 0,
+          "model": 10,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22481.7,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22467,
+          "planner": 0,
+          "model": 12,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22504.4,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22490,
+          "planner": 1,
+          "model": 11,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22525.3,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22514,
+          "planner": 0,
+          "model": 9,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22548,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22534,
+          "planner": 1,
+          "model": 12,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22569.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22556,
+          "planner": 0,
+          "model": 11,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22591.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22578,
+          "planner": 0,
+          "model": 11,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22613.3,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22600,
+          "planner": 1,
+          "model": 10,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22632.1,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22622,
+          "planner": 1,
+          "model": 7,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22650.5,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22640,
+          "planner": 0,
+          "model": 8,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22667,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 1,
+          "targets": 0,
+          "candidates": 22659,
+          "planner": 0,
+          "model": 6,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 22708.8,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 22696,
+          "planner": 2,
+          "model": 8,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      }
+    ],
+    "observationBoundary": "ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.",
+    "decisions": 3001,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 76.79999999701977
+    },
+    "resources": []
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 1,
+      "stagedChoice": 1,
+      "pass": 1,
+      "selected": 2,
+      "executed": 2,
+      "timeout": 2
+    },
+    "respond": {},
+    "discard": {},
+    "compare": {},
+    "soft": {
+      "hit": 3
+    }
+  },
+  "alive": 4,
+  "dead": 0,
+  "elapsedMs": 54819,
+  "guardErrors": 46,
+  "errors": [
+    "page.waitForFunction: Timeout 25000ms exceeded."
+  ],
+  "browser": "156.0.8078.73",
+  "status": "incomplete"
+}

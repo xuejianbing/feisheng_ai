@@ -1,0 +1,17 @@
+PASS 经典斗地主 normal：意图、拆顺、借刀与模型护栏使用同一范围
+PASS 经典斗地主 kaihei：意图、拆顺、借刀与模型护栏使用同一范围
+PASS 经典斗地主 huanle：意图、拆顺、借刀与模型护栏使用同一范围
+PASS identity/normal/专项=true：新增策略退出，旧救援和原生评分保留
+PASS guozhan/normal/专项=true：新增策略退出，旧救援和原生评分保留
+PASS versus/two/专项=true：新增策略退出，旧救援和原生评分保留
+PASS single/normal/专项=true：新增策略退出，旧救援和原生评分保留
+PASS unknown/normal/专项=true：新增策略退出，旧救援和原生评分保留
+PASS doudizhu/binglin/专项=true：新增策略退出，旧救援和原生评分保留
+PASS doudizhu/online/专项=true：新增策略退出，旧救援和原生评分保留
+PASS doudizhu/future/专项=true：新增策略退出，旧救援和原生评分保留
+PASS doudizhu/unknown/专项=true：新增策略退出，旧救援和原生评分保留
+PASS doudizhu/normal/专项=false：新增策略退出，旧救援和原生评分保留
+PASS 已生成的借刀回调在切换到范围外模式后回退原生
+PASS 总开关关闭同时撤回借刀评分、响应和护栏权限
+PASS 统一模式读取支持离线和联机配置，不从其他模式借用 normal 子模式
+Cooperation scope tests: 16 passed, 0 failed

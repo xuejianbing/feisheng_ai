@@ -1,0 +1,156 @@
+[smoke] browser ready
+[host-error] TypeError: Failed to resolve module specifier '/noname.js'
+    at <anonymous>:2:127
+    at <anonymous>:2:294
+    at <anonymous>:3:7
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:65253/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:65253/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[requestfailed] http://127.0.0.1:65253/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:65253/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:65253/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:65253/theme/style/card net::ERR_ABORTED
+[host-error] 
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: normal
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.2ms
+[browser-console] log [DJSC] update:install t=0.9ms
+[browser-console] log [DJSC] panels:ready t=1.4ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=2.8ms
+[browser-console] log [DJSC] content:native t=4ms
+[browser-console] log [DJSC] engine:install-begin t=4.2ms
+[browser-console] log [DJSC] engine:start t=4.7ms
+[browser-console] log [DJSC] engine:storage-guard t=5.4ms
+[browser-console] log [DJSC] hooks:start t=5.7ms
+[browser-console] log [DJSC] hooks:mem t=6.5ms
+[browser-console] log [DJSC] hooks:store t=8.7ms
+[browser-console] log [DJSC] hooks:archive t=8.8ms
+[browser-console] log [DJSC] hooks:feedback t=8.9ms
+[browser-console] log [DJSC] hooks:matchArchive t=9.4ms
+[browser-console] log [DJSC] engine:hooks t=20.5ms
+[browser-console] log [DJSC] engine:plugins t=24.4ms
+[browser-console] log [DJSC] engine:settle-watch t=24.5ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] log [DJSC] content:models t=290ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=471.3ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] log [DJSC] v3:loaded t=506ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+{"initial":[{"name":"sm_jieying","seat":0,"hand":["wuzhong","tao","shan","jiu"]},{"name":"hm_shen_huangfusong","seat":0,"hand":["huogong","jiedao","shandian","huogong"]},{"name":"zerong","seat":0,"hand":["shan","sha","dilu","tiesuo"]}],"done":true,"startedAt":1793245540142,"phases":12,"uses":53,"result":false,"stack":null,"maxDepth":1,"heap":109603769,"resources":250,"hostVersion":"1.11.7","mode":"doudizhu","submode":"normal","perf":{"traceVersion":2,"startedAt":1793245540103,"now":1793245569597,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.2},{"name":"update:install","t":0.9},{"name":"panels:ready","t":1.4,"total":25,"loaded":0,"ok":true},{"name":"content:start","t":2.8},{"name":"content:native","t":4},{"name":"engine:install-begin","t":4.2},{"name":"engine:start","t":4.7},{"name":"engine:storage-guard","t":5.4},{"name":"hooks:start","t":5.7},{"name":"hooks:mem","t":6.5},{"name":"hooks:store","t":8.7},{"name":"hooks:archive","t":8.8},{"name":"hooks:feedback","t":8.9},{"name":"hooks:matchArchive","t":9.4},{"name":"engine:hooks","t":20.5},{"name":"engine:plugins","t":24.4},{"name":"engine:settle-watch","t":24.5},{"name":"content:models","t":290,"backend":"IndexedDB","error":false},{"name":"decision:first","t":471.3,"wrapperMs":74},{"name":"v3:loaded","t":506,"source":"builtin"}],"longTasks":[{"start":935.2,"ms":205,"precedingMark":null},{"start":1686.1,"ms":112,"precedingMark":null},{"start":1821.9,"ms":125,"precedingMark":"engine:settle-watch"},{"start":2103.7,"ms":109,"precedingMark":"content:models"},{"start":2221.8,"ms":262,"precedingMark":"v3:loaded"},{"start":2844.2,"ms":70,"precedingMark":"v3:loaded"},{"start":3989.1,"ms":54,"precedingMark":"v3:loaded"},{"start":5925.2,"ms":85,"precedingMark":"v3:loaded"},{"start":6550.9,"ms":61,"precedingMark":"v3:loaded"},{"start":7125.4,"ms":70,"precedingMark":"v3:loaded"},{"start":7699.4,"ms":71,"precedingMark":"v3:loaded"},{"start":8739,"ms":62,"precedingMark":"v3:loaded"},{"start":9310.5,"ms":54,"precedingMark":"v3:loaded"},{"start":9881.3,"ms":59,"precedingMark":"v3:loaded"},{"start":11648.1,"ms":80,"precedingMark":"v3:loaded"},{"start":13138.3,"ms":55,"precedingMark":"v3:loaded"},{"start":13711.5,"ms":52,"precedingMark":"v3:loaded"},{"start":16411,"ms":50,"precedingMark":"v3:loaded"},{"start":21113.4,"ms":60,"precedingMark":"v3:loaded"},{"start":22461.5,"ms":95,"precedingMark":"v3:loaded"},{"start":23076.8,"ms":97,"precedingMark":"v3:loaded"},{"start":24127.1,"ms":81,"precedingMark":"v3:loaded"},{"start":24830.9,"ms":100,"precedingMark":"v3:loaded"},{"start":25460.8,"ms":60,"precedingMark":"v3:loaded"},{"start":28768.4,"ms":51,"precedingMark":"v3:loaded"},{"start":29337.5,"ms":59,"precedingMark":"v3:loaded"}],"firstDecisionPerf":{"ms":73.4,"reusedResult":false,"phases":{"preflight":1,"context":17,"targets":6,"candidates":25,"planner":3,"model":16,"observability":0,"guard":1,"telemetry":1}},"recentDecisions":[{"ms":0.5,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.5,"reusedResult":true,"phases":{}},{"ms":0.8,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.4,"reusedResult":true,"phases":{}},{"ms":0.4,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":38.4,"reusedResult":false,"phases":{"preflight":1,"context":5,"targets":3,"candidates":13,"planner":2,"model":15,"observability":0,"guard":0,"telemetry":0}},{"ms":21.9,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":8,"planner":0,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":44.3,"reusedResult":false,"phases":{"preflight":1,"context":6,"targets":2,"candidates":17,"planner":3,"model":14,"observability":0,"guard":0,"telemetry":0}},{"ms":25.9,"reusedResult":false,"phases":{"preflight":1,"context":4,"targets":1,"candidates":9,"planner":2,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":0.5,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":25.9,"reusedResult":false,"phases":{"preflight":1,"context":5,"targets":2,"candidates":8,"planner":1,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":20.6,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":7,"planner":1,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":0.5,"reusedResult":true,"phases":{}},{"ms":23.5,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":10,"planner":0,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":22.2,"reusedResult":false,"phases":{"preflight":0,"context":4,"targets":1,"candidates":8,"planner":1,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":10.4,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":1,"candidates":3,"planner":0,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":23.1,"reusedResult":false,"phases":{"preflight":1,"context":2,"targets":1,"candidates":8,"planner":2,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":14.6,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":1,"candidates":4,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":29.3,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":12,"planner":2,"model":10,"observability":0,"guard":0,"telemetry":0}},{"ms":14.5,"reusedResult":false,"phases":{"preflight":1,"context":2,"targets":1,"candidates":4,"planner":1,"model":4,"observability":0,"guard":0,"telemetry":1}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":17,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":5,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":14.5,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":4,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":13.9,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":4,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":16.3,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":1,"candidates":4,"planner":1,"model":10,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}}],"observationBoundary":"ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.","decisions":328,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":128.29999999701977},"resources":[]},"overrideStats":{"use":{"suggested":28,"stagedChoice":28,"pass":28,"veto":5,"allyGuard":17,"selected":23,"executed":21},"respond":{"allow":1,"selected":2,"executed":2,"block":2},"discard":{"check":116,"selected":5,"executed":5},"compare":{},"soft":{"hit":36}},"alive":2,"dead":1,"elapsedMs":29465,"guardErrors":0,"errors":["Failed to resolve module specifier '/noname.js'","Failed to resolve module specifier \"vue\". Relative references must start with either \"/\", \"./\", or \"../\"."],"browser":"156.0.8078.73","status":"completed"}

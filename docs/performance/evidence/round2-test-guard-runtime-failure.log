@@ -1,0 +1,3 @@
+PASS runtime/recursive guard failures are distinct from legal/invalid actions
+[guard] 护栏检查异常：recursive
+[guard] 护栏检查异常：missing host

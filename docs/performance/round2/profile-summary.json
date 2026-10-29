@@ -1,0 +1,102 @@
+[
+  {
+    "function": "(idle)",
+    "source": "",
+    "selfMs": 12804.2
+  },
+  {
+    "function": "(program)",
+    "source": "",
+    "selfMs": 5079.4
+  },
+  {
+    "function": "",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 326.5
+  },
+  {
+    "function": "position",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 252.8
+  },
+  {
+    "function": "itemtype",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 217.6
+  },
+  {
+    "function": "owner",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 192.6
+  },
+  {
+    "function": "contains",
+    "source": "",
+    "selfMs": 149.2
+  },
+  {
+    "function": "deckSyncFromUI",
+    "source": "%E6%97%A0%E5%90%8DAI/score/perception/memory/deckMemory.js?v=41a",
+    "selfMs": 132.3
+  },
+  {
+    "function": "",
+    "source": "%E6%97%A0%E5%90%8DAI/score/perception/memory/deckMemory.js?v=41a",
+    "selfMs": 119.7
+  },
+  {
+    "function": "(garbage collector)",
+    "source": "",
+    "selfMs": 106.9
+  },
+  {
+    "function": "info",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 105.1
+  },
+  {
+    "function": "get offsetWidth",
+    "source": "",
+    "selfMs": 88.3
+  },
+  {
+    "function": "checkMod",
+    "source": "http://127.0.0.1:49903/noname/game/index.js",
+    "selfMs": 81.3
+  },
+  {
+    "function": "getPropertyValue",
+    "source": "",
+    "selfMs": 72.8
+  },
+  {
+    "function": "optionsMenu",
+    "source": "http://127.0.0.1:49903/noname/ui/create/menu/pages/optionsMenu.js",
+    "selfMs": 70.3
+  },
+  {
+    "function": "source.<computed>",
+    "source": "http://127.0.0.1:49903/noname/library/cache/cacheContext.js",
+    "selfMs": 59.1
+  },
+  {
+    "function": "name",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 58.7
+  },
+  {
+    "function": "cardTypeOf",
+    "source": "%E6%97%A0%E5%90%8DAI/score/model/net/mini-model.js?v=41a",
+    "selfMs": 58.1
+  },
+  {
+    "function": "value",
+    "source": "http://127.0.0.1:49903/noname/init/polyfill.js",
+    "selfMs": 48.3
+  },
+  {
+    "function": "suit",
+    "source": "http://127.0.0.1:49903/noname/get/index.js",
+    "selfMs": 46.0
+  }
+]

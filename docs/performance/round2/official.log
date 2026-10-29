@@ -1,0 +1,239 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50724/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50724/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[requestfailed] http://127.0.0.1:50724/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50724/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50724/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:50724/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character sp:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 打你个措手不及！ 
+character.sp.translate.#xiaoxi_hansui1 两军交战，勇者为胜！
+[browser-console] log duplicated translate in character sp:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 两军交战，勇者为胜！ 
+character.sp.translate.#xiaoxi_hansui2 打你个措手不及！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.1ms
+[browser-console] log [DJSC] update:install t=2.5ms
+[browser-console] log [DJSC] content:start t=4.4ms
+[browser-console] log [DJSC] content:native t=5.3ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [DJSC] content:models t=54.9ms
+[browser-console] log [DJSC] engine:install-begin t=55.1ms
+[browser-console] log [DJSC] engine:start t=55.6ms
+[browser-console] log [DJSC] engine:storage-guard t=56.1ms
+[browser-console] log [DJSC] hooks:start t=56.6ms
+[browser-console] log [DJSC] hooks:mem t=57.3ms
+[browser-console] log [DJSC] hooks:store t=59.6ms
+[browser-console] log [DJSC] hooks:archive t=59.7ms
+[browser-console] log [DJSC] hooks:feedback t=59.7ms
+[browser-console] log [DJSC] hooks:matchArchive t=60.3ms
+[browser-console] log [DJSC] engine:hooks t=61.1ms
+[browser-console] log [DJSC] engine:plugins t=62.2ms
+[browser-console] log [DJSC] engine:settle-watch t=62.3ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=424.7ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] log [DJSC] panels:ready t=494.6ms
+[browser-console] log [无名AI] 所有25个面板挂载完成
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] log [DJSC] v3:loaded t=539.4ms
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] Maximum call stack size exceeded  RangeError: Maximum call stack size exceeded
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] error ROUND2_STACK RangeError: Maximum call stack size exceeded
+    at guardCheck (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/model/net/modelGuard.js?v=41a:1:1)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:9371:22)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)
+    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)
+    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)
+    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)
+    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)
+    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)
+    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+[browser-console] warning [guard] 护栏检查异常：Maximum call stack size exceeded
+{"initial":[{"name":"jiakui","side":false,"seat":0,"hand":["jiedao","sha","qinggang","tiesuo"]},{"name":"dc_sunchen","side":true,"seat":0,"hand":["shan","sha","shunshou","bingliang"]},{"name":"pe_yangyuhuan","side":true,"seat":0,"hand":["shan","wuzhong","zhuge","tiesuo"]},{"name":"xinchang","side":false,"seat":0,"hand":["bagua","shan","sha","dawan"]}],"done":false,"startedAt":1793245294204,"phases":1,"uses":4,"stack":"RangeError: Maximum call stack size exceeded\n    at guardCheck (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/model/net/modelGuard.js?v=41a:1:1)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:9371:22)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:50724/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:50724/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)","maxDepth":751,"hostVersion":"1.11.7","mode":"versus","submode":"two","perf":{"traceVersion":1,"startedAt":1793245294136,"now":1793245338393,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.1},{"name":"update:install","t":2.5},{"name":"content:start","t":4.4},{"name":"content:native","t":5.3},{"name":"content:models","t":54.9},{"name":"engine:install-begin","t":55.1},{"name":"engine:start","t":55.6},{"name":"engine:storage-guard","t":56.1},{"name":"hooks:start","t":56.6},{"name":"hooks:mem","t":57.3},{"name":"hooks:store","t":59.6},{"name":"hooks:archive","t":59.7},{"name":"hooks:feedback","t":59.7},{"name":"hooks:matchArchive","t":60.3},{"name":"engine:hooks","t":61.1},{"name":"engine:plugins","t":62.2},{"name":"engine:settle-watch","t":62.3},{"name":"decision:first","t":424.7,"wrapperMs":91},{"name":"panels:ready","t":494.6,"total":25,"loaded":25,"ok":true},{"name":"v3:loaded","t":539.4,"source":"builtin"}],"decisions":2247,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":11.300000011920929}},"overrideStats":{"use":{"suggested":2,"stagedChoice":2,"pass":2,"selected":3,"executed":3,"allyGuard":2,"timeout":2},"respond":{},"discard":{},"compare":{},"soft":{"hit":4}},"alive":4,"dead":0,"elapsedMs":44192,"guardErrors":31,"errors":["page.waitForFunction: Timeout 25000ms exceeded."],"browser":"156.0.8078.73","status":"incomplete"}

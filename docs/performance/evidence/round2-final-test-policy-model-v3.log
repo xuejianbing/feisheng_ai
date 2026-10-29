@@ -1,0 +1,39 @@
+
+--- client_policy_model_v3 权重 ---
+PASS 权重已加载到全局
+PASS 权重 selfTest 通过
+PASS 类别为 17 类
+PASS schema 为 slot17_student_v3
+PASS meta.featureDim 为 114
+PASS meta.featureKeep 长度 114
+PASS featureKeep 最大索引 129（对应 130 维特征）
+PASS predictProba 归一（和≈1）
+
+--- 维度适配：130 / 134 / 142 维均可产出影子记录 ---
+PASS 130 维可映射（返回 130 维）
+PASS 134 维可映射（截取前 130 维）
+PASS 142 维可映射（截取前 130 维）
+PASS 129 维被拒绝（索引不足）
+PASS 130 维可预测出 17 类降序
+PASS 130 维影子评估可产出记录
+PASS 134 维影子评估可产出记录
+PASS 142 维影子评估可产出记录
+
+--- 影子模式语义 ---
+PASS shadowEvaluate 不修改候选分数
+
+--- 影子队列 drain / confirm ---
+PASS drainShadowV3 可取回待传记录
+PASS 记录带 decisionId
+PASS 记录带 schema 与 top3
+PASS confirmDrainShadowV3 移除已确认记录
+
+--- 自检与统计 ---
+PASS policyModelV3 自检通过
+PASS 统计口径为 shadow 模式
+PASS 统计 schema 正确
+PASS window.__DJSC.policyModelV3 已挂载（引擎接线入口）
+
+========================================
+PASS 25  FAIL 0
+========================================

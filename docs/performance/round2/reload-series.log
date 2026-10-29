@@ -1,0 +1,146 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:53236/index.html net::ERR_ABORTED
+[smoke] retry startup after page.evaluate: Execution context was destroyed, most likely because of a navigation.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.1ms
+[browser-console] log [DJSC] update:install t=0.8ms
+[browser-console] log [DJSC] panels:ready t=1.3ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=3.4ms
+[browser-console] log [DJSC] content:native t=4.4ms
+[browser-console] log [DJSC] engine:install-begin t=4.7ms
+[browser-console] log [DJSC] engine:start t=5.2ms
+[browser-console] log [DJSC] engine:storage-guard t=5.5ms
+[browser-console] log [DJSC] hooks:start t=6ms
+[browser-console] log [DJSC] hooks:mem t=6.3ms
+[browser-console] log [DJSC] hooks:store t=12.2ms
+[browser-console] log [DJSC] hooks:archive t=12.3ms
+[browser-console] log [DJSC] hooks:feedback t=12.4ms
+[browser-console] log [DJSC] hooks:matchArchive t=12.8ms
+[browser-console] log [DJSC] engine:hooks t=13.5ms
+[browser-console] log [DJSC] engine:plugins t=14.9ms
+[browser-console] log [DJSC] engine:settle-watch t=14.9ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] log [DJSC] content:models t=102.3ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] log [DJSC] v3:loaded t=164.8ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=286.5ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+{"initial":[{"name":"jiakui","side":false,"seat":0,"hand":["jiedao","sha","qinggang","tiesuo"]},{"name":"dc_sunchen","side":true,"seat":0,"hand":["shan","sha","shunshou","bingliang"]},{"name":"pe_yangyuhuan","side":true,"seat":0,"hand":["shan","wuzhong","zhuge","tiesuo"]},{"name":"sunlang","side":false,"seat":0,"hand":["bagua","shan","sha","dawan"]}],"done":true,"startedAt":1793245919068,"phases":7,"uses":33,"result":false,"stack":null,"maxDepth":1,"probeLongs":[{"ms":60,"start":31530.5},{"ms":182,"start":31725.59999999404},{"ms":108,"start":32522.5},{"ms":86,"start":33144.79999999702},{"ms":92,"start":33744.39999999106},{"ms":91,"start":34344.59999999404},{"ms":111,"start":34892.69999998808},{"ms":101,"start":35516.09999999404},{"ms":98,"start":36138.59999999404},{"ms":87,"start":36753.39999999106},{"ms":109,"start":38040.09999999404},{"ms":87,"start":38661.79999999702},{"ms":94,"start":39768.79999999702},{"ms":79,"start":40371.69999998808},{"ms":96,"start":40959.79999999702},{"ms":81,"start":41704.39999999106},{"ms":56,"start":42301.39999999106},{"ms":64,"start":43374},{"ms":114,"start":47043.59999999404},{"ms":94,"start":47773.79999999702},{"ms":116,"start":48380},{"ms":69,"start":49011.29999999702},{"ms":68,"start":49690.29999999702},{"ms":80,"start":50265.89999999106},{"ms":61,"start":50459.09999999404},{"ms":63,"start":51191.09999999404},{"ms":106,"start":51706.89999999106},{"ms":94,"start":52834.5},{"ms":116,"start":53983.89999999106},{"ms":72,"start":55236.5},{"ms":178,"start":56506.5},{"ms":80,"start":57721.89999999106}],"probePhases":[{"ms":31.799999997019768,"phases":{"preflight":0,"context":3,"targets":0,"candidates":22,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":34.20000000298023,"phases":{"preflight":1,"context":4,"targets":1,"candidates":22,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":32.5,"phases":{"preflight":0,"context":3,"targets":0,"candidates":21,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":30.400000005960464,"phases":{"preflight":0,"context":4,"targets":0,"candidates":17,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":25.5,"phases":{"preflight":0,"context":3,"targets":1,"candidates":14,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":26,"phases":{"preflight":1,"context":4,"targets":1,"candidates":12,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":59.29999999701977,"phases":{"preflight":0,"context":8,"targets":1,"candidates":32,"planner":3,"model":14,"observability":0,"guard":0,"telemetry":0}},{"ms":28.900000005960464,"phases":{"preflight":0,"context":3,"targets":0,"candidates":18,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":39.79999999701977,"phases":{"preflight":0,"context":4,"targets":1,"candidates":23,"planner":2,"model":10,"observability":0,"guard":0,"telemetry":0}},{"ms":26.899999991059303,"phases":{"preflight":0,"context":3,"targets":1,"candidates":17,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":47,"phases":{"preflight":0,"context":8,"targets":1,"candidates":24,"planner":2,"model":12,"observability":0,"guard":0,"telemetry":0}},{"ms":26.799999997019768,"phases":{"preflight":0,"context":3,"targets":0,"candidates":15,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":35.79999999701977,"phases":{"preflight":0,"context":5,"targets":1,"candidates":21,"planner":1,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":28.5,"phases":{"preflight":0,"context":4,"targets":0,"candidates":16,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":46.5,"phases":{"preflight":0,"context":8,"targets":1,"candidates":22,"planner":2,"model":13,"observability":0,"guard":0,"telemetry":0}},{"ms":30.799999997019768,"phases":{"preflight":0,"context":2,"targets":0,"candidates":19,"planner":1,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":39.29999999701977,"phases":{"preflight":0,"context":4,"targets":2,"candidates":20,"planner":1,"model":13,"observability":0,"guard":0,"telemetry":0}},{"ms":20.599999994039536,"phases":{"preflight":0,"context":3,"targets":0,"candidates":11,"planner":0,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":26,"phases":{"preflight":0,"context":5,"targets":1,"candidates":11,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":17.099999994039536,"phases":{"preflight":0,"context":2,"targets":0,"candidates":8,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":31.599999994039536,"phases":{"preflight":0,"context":7,"targets":1,"candidates":13,"planner":0,"model":10,"observability":0,"guard":0,"telemetry":0}},{"ms":19.900000005960464,"phases":{"preflight":0,"context":3,"targets":0,"candidates":9,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":19.400000005960464,"phases":{"preflight":0,"context":5,"targets":1,"candidates":6,"planner":0,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":23,"phases":{"preflight":0,"context":3,"targets":0,"candidates":10,"planner":2,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":22.900000005960464,"phases":{"preflight":0,"context":4,"targets":0,"candidates":10,"planner":1,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":19.700000002980232,"phases":{"preflight":0,"context":3,"targets":0,"candidates":8,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":19.600000008940697,"phases":{"preflight":0,"context":3,"targets":0,"candidates":6,"planner":0,"model":10,"observability":0,"guard":0,"telemetry":0}},{"ms":58.70000000298023,"phases":{"preflight":1,"context":5,"targets":1,"candidates":38,"planner":2,"model":12,"observability":0,"guard":0,"telemetry":0}},{"ms":33,"phases":{"preflight":0,"context":3,"targets":0,"candidates":20,"planner":3,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":43.29999999701977,"phases":{"preflight":1,"context":4,"targets":0,"candidates":26,"planner":2,"model":11,"observability":0,"guard":0,"telemetry":0}},{"ms":29.200000002980232,"phases":{"preflight":0,"context":3,"targets":1,"candidates":17,"planner":2,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":49,"phases":{"preflight":0,"context":6,"targets":1,"candidates":28,"planner":1,"model":13,"observability":0,"guard":0,"telemetry":0}},{"ms":29.799999997019768,"phases":{"preflight":0,"context":2,"targets":1,"candidates":19,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":23.099999994039536,"phases":{"preflight":1,"context":4,"targets":1,"candidates":10,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":20,"phases":{"preflight":0,"context":2,"targets":0,"candidates":10,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":22.099999994039536,"phases":{"preflight":0,"context":4,"targets":1,"candidates":10,"planner":2,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":28.700000002980232,"phases":{"preflight":0,"context":4,"targets":1,"candidates":14,"planner":2,"model":8,"observability":0,"guard":0,"telemetry":0}},{"ms":27.5,"phases":{"preflight":0,"context":5,"targets":1,"candidates":11,"planner":2,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":17.5,"phases":{"preflight":0,"context":3,"targets":0,"candidates":7,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":17.299999997019768,"phases":{"preflight":0,"context":3,"targets":0,"candidates":8,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":23.599999994039536,"phases":{"preflight":0,"context":3,"targets":0,"candidates":10,"planner":1,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":22.599999994039536,"phases":{"preflight":0,"context":4,"targets":0,"candidates":11,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":22.5,"phases":{"preflight":0,"context":4,"targets":0,"candidates":9,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":16.599999994039536,"phases":{"preflight":0,"context":3,"targets":0,"candidates":7,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":36.29999999701977,"phases":{"preflight":0,"context":4,"targets":1,"candidates":20,"planner":1,"model":11,"observability":0,"guard":0,"telemetry":0}},{"ms":21.30000001192093,"phases":{"preflight":0,"context":2,"targets":0,"candidates":11,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":50.70000000298023,"phases":{"preflight":1,"context":4,"targets":1,"candidates":37,"planner":2,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":37,"phases":{"preflight":0,"context":2,"targets":0,"candidates":27,"planner":2,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":41.70000000298023,"phases":{"preflight":0,"context":3,"targets":1,"candidates":29,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":33,"phases":{"preflight":0,"context":2,"targets":0,"candidates":23,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":40,"phases":{"preflight":0,"context":3,"targets":0,"candidates":29,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":33.29999999701977,"phases":{"preflight":0,"context":3,"targets":0,"candidates":24,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":28.099999994039536,"phases":{"preflight":0,"context":2,"targets":0,"candidates":14,"planner":1,"model":11,"observability":0,"guard":0,"telemetry":0}},{"ms":20.80000001192093,"phases":{"preflight":0,"context":2,"targets":0,"candidates":13,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":15.299999997019768,"phases":{"preflight":0,"context":2,"targets":0,"candidates":5,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":20.5,"phases":{"preflight":0,"context":3,"targets":0,"candidates":8,"planner":0,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":66.09999999403954,"phases":{"preflight":1,"context":2,"targets":0,"candidates":52,"planner":2,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":46.5,"phases":{"preflight":0,"context":1,"targets":0,"candidates":35,"planner":1,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":24.099999994039536,"phases":{"preflight":1,"context":2,"targets":0,"candidates":14,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":21.200000002980232,"phases":{"preflight":0,"context":2,"targets":1,"candidates":12,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}}],"heap":92979368,"resources":250,"hostVersion":"1.11.7","mode":"versus","submode":"two","perf":{"traceVersion":2,"startedAt":1793245919048,"now":1793245945830,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.1},{"name":"update:install","t":0.8},{"name":"panels:ready","t":1.3,"total":25,"loaded":0,"ok":true},{"name":"content:start","t":3.4},{"name":"content:native","t":4.4},{"name":"engine:install-begin","t":4.7},{"name":"engine:start","t":5.2},{"name":"engine:storage-guard","t":5.5},{"name":"hooks:start","t":6},{"name":"hooks:mem","t":6.3},{"name":"hooks:store","t":12.2},{"name":"hooks:archive","t":12.3},{"name":"hooks:feedback","t":12.4},{"name":"hooks:matchArchive","t":12.8},{"name":"engine:hooks","t":13.5},{"name":"engine:plugins","t":14.9},{"name":"engine:settle-watch","t":14.9},{"name":"content:models","t":102.3,"backend":"IndexedDB","error":false},{"name":"v3:loaded","t":164.8,"source":"builtin"},{"name":"decision:first","t":286.5,"wrapperMs":108}],"longTasks":[{"start":748.7,"ms":188,"precedingMark":null},{"start":944.7,"ms":51,"precedingMark":null},{"start":1542,"ms":116,"precedingMark":null},{"start":1869.7,"ms":123,"precedingMark":null},{"start":31530.5,"ms":60,"precedingMark":null},{"start":31725.6,"ms":182,"precedingMark":"v3:loaded"},{"start":32522.5,"ms":108,"precedingMark":"decision:first"},{"start":33144.8,"ms":86,"precedingMark":"decision:first"},{"start":33744.4,"ms":92,"precedingMark":"decision:first"},{"start":34344.6,"ms":91,"precedingMark":"decision:first"},{"start":34892.7,"ms":111,"precedingMark":"decision:first"},{"start":35516.1,"ms":101,"precedingMark":"decision:first"},{"start":36138.6,"ms":98,"precedingMark":"decision:first"},{"start":36753.4,"ms":87,"precedingMark":"decision:first"},{"start":38040.1,"ms":109,"precedingMark":"decision:first"},{"start":38661.8,"ms":87,"precedingMark":"decision:first"},{"start":39768.8,"ms":94,"precedingMark":"decision:first"},{"start":40371.7,"ms":79,"precedingMark":"decision:first"},{"start":40959.8,"ms":96,"precedingMark":"decision:first"},{"start":41704.4,"ms":81,"precedingMark":"decision:first"},{"start":42301.4,"ms":56,"precedingMark":"decision:first"},{"start":43374,"ms":64,"precedingMark":"decision:first"},{"start":47043.6,"ms":114,"precedingMark":"decision:first"},{"start":47773.8,"ms":94,"precedingMark":"decision:first"},{"start":48380,"ms":116,"precedingMark":"decision:first"},{"start":49011.3,"ms":69,"precedingMark":"decision:first"},{"start":49690.3,"ms":68,"precedingMark":"decision:first"},{"start":50265.9,"ms":80,"precedingMark":"decision:first"},{"start":50459.1,"ms":61,"precedingMark":"decision:first"},{"start":51191.1,"ms":63,"precedingMark":"decision:first"},{"start":51706.9,"ms":106,"precedingMark":"decision:first"},{"start":52834.5,"ms":94,"precedingMark":"decision:first"},{"start":53983.9,"ms":116,"precedingMark":"decision:first"},{"start":55236.5,"ms":72,"precedingMark":"decision:first"},{"start":56506.5,"ms":178,"precedingMark":"decision:first"},{"start":57721.9,"ms":80,"precedingMark":"decision:first"}],"firstDecisionPerf":{"ms":107.9,"reusedResult":false,"phases":{"preflight":2,"context":17,"targets":5,"candidates":57,"planner":5,"model":19,"observability":0,"guard":1,"telemetry":1}},"recentDecisions":[{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":24.2,"reusedResult":false,"phases":{"preflight":1,"context":2,"targets":0,"candidates":14,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":21.4,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":12,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.8,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}}],"observationBoundary":"ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.","decisions":503,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":10.800000011920929},"resources":[]},"overrideStats":{"use":{"suggested":35,"stagedChoice":35,"pass":35,"allyGuard":80,"selected":32,"executed":29,"veto":19},"respond":{"allow":3,"selected":1,"executed":1},"discard":{"check":14,"selected":2,"executed":2},"compare":{},"soft":{"hit":34}},"alive":2,"dead":2,"elapsedMs":26848,"guardErrors":0,"missingExtension":[],"errors":[],"browser":"156.0.8078.73","status":"completed"}
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:53236/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+[smoke] retry startup after page.waitForFunction: Timeout 30000ms exceeded.
+[smoke] phase hook ready
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.waitForFunction: Timeout 30000ms exceeded.
+    at C:\Users\32360\.codex\worktrees\mobile-performance-443-3480\无名AI\docs\performance\round2\host.mjs:104:16 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0

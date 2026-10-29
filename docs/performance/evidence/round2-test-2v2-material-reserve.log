@@ -1,0 +1,45 @@
+PASS 14队最后桃转杀材料进入实际AI check，同分时更愿使用普通材料
+PASS 23队队友紧接行动，不因其低血量给最后桃虚构行动前威胁
+PASS 低血时最后闪和无懈作为材料均补保留压力，非关键牌不受影响
+PASS 主动非转化技能如制衡式选弃牌，也使用同一额外保留判断
+PASS 动态选牌过滤和不同数量由宿主管理，不执行或改写filterCard
+PASS 宿主递归换成skill.check后仍接通材料评分
+PASS 一血时桃转杀应保留，桃/其他材料转为当前自疗则不被阻挡
+PASS 一血时青囊式回复技能不因保留最后闪而被软评分挡住
+PASS 响应、濒死、无懈与借刀响应都不新增这笔主动材料保留成本
+PASS 强制技能/伪装成phase的内部用牌不借祖先phaseUse接管
+PASS 明确主动技能的chooseToDiscard付费纳入软排序，强制完成不翻转正分
+PASS 明确标记消耗的chooseCard覆盖，单纯展示/选择不当成付费
+PASS 普通用牌与普通弃牌不进入材料桥，不叠加普通用牌/弃牌已有成本
+PASS 两张同类牌尚有一张可留时不保护；选掉另一张后动态保护最后材料
+PASS 多张同类牌全部已选的最终复核只扣一份，不对每张都当最后一张
+PASS 混合多材料分别保护最后的不同关键资源，不改变选牌集合
+PASS 取消选择、手牌/血量变化后立即重读，不缓存旧的材料压力
+PASS 强收益技能仍可消耗关键牌，软保留不是不可选标记
+PASS 动态viewAs与明确不消耗的展示技能保留宿主回退
+PASS 宿主已确定用途的静态backup继承sourceSkill主动入口，实际材料可保留
+PASS 未知或循环sourceSkill不猜主动用途，也不陷入递归
+PASS 触发技能、火攻弃牌和他人回合强制弃牌不伪装成主动技能付费
+PASS 本机手动、远端玩家保持原check，托管AI可使用软保留
+PASS 其他模式、乱斗和优化关闭完全回退
+PASS 联机标识与false/0队伍使用相同公开队伍规则
+PASS 他人手牌、他人材料与不在本人手中的虚拟对象不能获得材料判断
+PASS 嵌套安装不重复扣同一材料；卸载不覆盖后装包装器
+PASS 换局、结束、事件切换和卸载使旧评分闭包失效
+PASS 非有限原分、非函数check、未知材料和接口异常保留原生回退
+PASS 软桥保留原check的this、其他参数及宿主返回结果形态
+PASS 与现有借刀材料桥叠放时，普通主动材料仍生效、借刀响应仍由原桥处理
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: two
+[DJSC] hooks:start t=0ms
+[DJSC] hooks:mem t=0.1ms
+[DJSC] hooks:store t=0.9ms
+[DJSC] hooks:archive t=0.9ms
+[DJSC] hooks:feedback t=1ms
+[DJSC] hooks:matchArchive t=1.3ms
+PASS 实际引擎安装/卸载连接材料桥，不修改全局skill.check
+32 checks passed (host stubs; real games remain unverified)
+PASS [weique][2026-10-20] 2v2 skill material and payment reserve

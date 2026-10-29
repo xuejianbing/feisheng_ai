@@ -1,0 +1,123 @@
+[smoke] browser ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59419/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59419/preload.js net::ERR_ABORTED
+[requestfailed] http://127.0.0.1:59419/index.html net::ERR_ABORTED
+[smoke] phase hook ready
+[smoke] retry startup after page.evaluate: ReferenceError: realHost is not defined
+    at eval (eval at evaluate (:311:30), <anonymous>:1:6)
+    at 
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59419/vue net::ERR_ABORTED
+[browser-console] info You are running a development build of Vue.
+Make sure to use the production build (*.prod.js) when deploying for production.
+[browser-console] log ts文件导入成功
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59419/preload.js net::ERR_ABORTED
+[smoke] phase hook ready
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] http://127.0.0.1:59419/theme/style/card net::ERR_ABORTED
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui1:
+lib.translate.#xiaoxi_hansui1 两军交战，勇者为胜！ 
+character.mobile.translate.#xiaoxi_hansui1 打你个措手不及！
+[browser-console] log duplicated translate in character mobile:
+#xiaoxi_hansui2:
+lib.translate.#xiaoxi_hansui2 打你个措手不及！ 
+character.mobile.translate.#xiaoxi_hansui2 两军交战，勇者为胜！
+[smoke] game initialized
+[browser-console] log [trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+[browser-console] debug [无名AI·静默] config is not defined  ReferenceError: config is not defined
+[browser-console] log [engine] ✅ data 文件夹已就绪
+[browser-console] log [engine] ✅ skillTags 已手动挂载
+[browser-console] log [无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[browser-console] log [无名AI] 选将评分系统已加载，当前模式: two
+[browser-console] log %c[无名AI] 版本: 4.4.3 | 作者: deS47S9fR1b color: #00d4ff;
+[browser-console] log [DJSC] ext:start t=0ms
+[browser-console] log [DJSC] panels:start t=0.4ms
+[browser-console] log [DJSC] update:install t=1.5ms
+[browser-console] log [DJSC] panels:ready t=2.5ms
+[browser-console] log [无名AI] 所有25个面板入口已注册（按需加载）
+[browser-console] log [DJSC] content:start t=5.1ms
+[browser-console] log [DJSC] content:native t=6.3ms
+[browser-console] log [DJSC] engine:install-begin t=6.5ms
+[browser-console] log [DJSC] engine:start t=6.7ms
+[browser-console] log [DJSC] engine:storage-guard t=7.3ms
+[browser-console] log [DJSC] hooks:start t=7.7ms
+[browser-console] log [DJSC] hooks:mem t=8.6ms
+[browser-console] log [DJSC] hooks:store t=13.5ms
+[browser-console] log [DJSC] hooks:archive t=13.7ms
+[browser-console] log [DJSC] hooks:feedback t=13.7ms
+[browser-console] log [DJSC] hooks:matchArchive t=14.3ms
+[browser-console] log [DJSC] engine:hooks t=15.4ms
+[browser-console] log [DJSC] engine:plugins t=17ms
+[browser-console] log [DJSC] engine:settle-watch t=17.2ms
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[requestfailed] https://data.feiqiaoai.uno/update/model/manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] warning [无名AI·模型权重] 检查 unreachable | 本地权重 builtin-default | 远程 — | Failed to fetch
+[browser-console] debug [无名AI·静默] Cannot assign to property '_real' of [object Module]  TypeError: Cannot assign to property '_real' of [object Module]
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [DJSC] decision:first t=589.3ms
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] log [DJSC] v3:loaded t=724.3ms
+[browser-console] log [DJSC] content:models t=735.6ms
+[browser-console] log [extension] ✅ trainExport/trainImport 已挂载（提前加载）
+[requestfailed] https://data.feiqiaoai.uno/update/model/policy_manifest.json net::ERR_FAILED
+[browser-console] error Failed to load resource: net::ERR_FAILED
+[browser-console] log [无名AI·模型热更] 检查失败（保留内置权重）：Failed to fetch
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] versus/2v2: missing public player.side  VERSUS_STRATEGY
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] debug [无名AI·静默] _status is not defined  ReferenceError: _status is not defined
+[browser-console] debug [无名AI·静默] get is not defined  ReferenceError: get is not defined
+[browser-console] log [Shadow] 已通过 shadow('off') 关闭
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+[browser-console] error Failed to load resource: the server responded with a status of 404 (Not Found)
+{"initial":[{"name":"jiakui","side":false,"seat":0,"hand":["jiedao","sha","qinggang","tiesuo"]},{"name":"dc_sunchen","side":true,"seat":0,"hand":["shan","sha","shunshou","bingliang"]},{"name":"pe_yangyuhuan","side":true,"seat":0,"hand":["shan","wuzhong","zhuge","tiesuo"]},{"name":"fengfang","side":false,"seat":0,"hand":["bagua","shan","sha","dawan"]}],"done":false,"startedAt":1793245400773,"phases":4,"uses":32,"stack":null,"maxDepth":1,"heap":87692112,"resources":250,"hostVersion":"1.11.7","mode":"versus","submode":"two","perf":{"traceVersion":2,"startedAt":1793245400749,"now":1793245425805,"marks":[{"name":"ext:start","t":0},{"name":"panels:start","t":0.4},{"name":"update:install","t":1.5},{"name":"panels:ready","t":2.5,"total":25,"loaded":0,"ok":true},{"name":"content:start","t":5.1},{"name":"content:native","t":6.3},{"name":"engine:install-begin","t":6.5},{"name":"engine:start","t":6.7},{"name":"engine:storage-guard","t":7.3},{"name":"hooks:start","t":7.7},{"name":"hooks:mem","t":8.6},{"name":"hooks:store","t":13.5},{"name":"hooks:archive","t":13.7},{"name":"hooks:feedback","t":13.7},{"name":"hooks:matchArchive","t":14.3},{"name":"engine:hooks","t":15.4},{"name":"engine:plugins","t":17},{"name":"engine:settle-watch","t":17.2},{"name":"decision:first","t":589.3,"wrapperMs":147},{"name":"v3:loaded","t":724.3,"source":"builtin"},{"name":"content:models","t":735.6,"backend":"IndexedDB","error":false}],"longTasks":[{"start":930,"ms":257,"precedingMark":null},{"start":1754,"ms":170,"precedingMark":null},{"start":2043,"ms":91,"precedingMark":null},{"start":2181.7,"ms":281,"precedingMark":"engine:settle-watch"},{"start":2484.3,"ms":288,"precedingMark":"engine:settle-watch"},{"start":3392.3,"ms":167,"precedingMark":"content:models"},{"start":4179.2,"ms":154,"precedingMark":"content:models"},{"start":4848.4,"ms":145,"precedingMark":"content:models"},{"start":5506.7,"ms":158,"precedingMark":"content:models"},{"start":6179.8,"ms":103,"precedingMark":"content:models"},{"start":6754.6,"ms":200,"precedingMark":"content:models"},{"start":7526.3,"ms":142,"precedingMark":"content:models"},{"start":8181.9,"ms":137,"precedingMark":"content:models"},{"start":8849.1,"ms":142,"precedingMark":"content:models"},{"start":9510.7,"ms":127,"precedingMark":"content:models"},{"start":10689.2,"ms":122,"precedingMark":"content:models"},{"start":11964,"ms":97,"precedingMark":"content:models"},{"start":13279.9,"ms":98,"precedingMark":"content:models"},{"start":13898.7,"ms":68,"precedingMark":"content:models"},{"start":14481,"ms":66,"precedingMark":"content:models"},{"start":15061.2,"ms":72,"precedingMark":"content:models"},{"start":15637.4,"ms":71,"precedingMark":"content:models"},{"start":16216.7,"ms":93,"precedingMark":"content:models"},{"start":16839.9,"ms":70,"precedingMark":"content:models"},{"start":18076,"ms":75,"precedingMark":"content:models"},{"start":18767.4,"ms":77,"precedingMark":"content:models"},{"start":19361.2,"ms":69,"precedingMark":"content:models"},{"start":19948.3,"ms":73,"precedingMark":"content:models"},{"start":21047,"ms":92,"precedingMark":"content:models"},{"start":21649.6,"ms":109,"precedingMark":"content:models"},{"start":22380.3,"ms":104,"precedingMark":"content:models"},{"start":22997.7,"ms":58,"precedingMark":"content:models"},{"start":23562.2,"ms":67,"precedingMark":"content:models"},{"start":25461.5,"ms":56,"precedingMark":"content:models"},{"start":26167,"ms":63,"precedingMark":"content:models"},{"start":26699.7,"ms":74,"precedingMark":"content:models"}],"firstDecisionPerf":{"ms":147.2,"reusedResult":false,"phases":{"preflight":3,"context":28,"targets":7,"candidates":62,"planner":5,"model":36,"observability":0,"guard":1,"telemetry":1}},"recentDecisions":[{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.4,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":0.3,"reusedResult":true,"phases":{}},{"ms":22.9,"reusedResult":false,"phases":{"preflight":1,"context":3,"targets":0,"candidates":12,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":20.1,"reusedResult":false,"phases":{"preflight":0,"context":3,"targets":0,"candidates":11,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":26.7,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":16,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":17.5,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":0,"candidates":11,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":15.1,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":6,"planner":1,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":15.6,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":0,"candidates":5,"planner":0,"model":9,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":15.5,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":7,"planner":1,"model":4,"observability":0,"guard":0,"telemetry":0}},{"ms":13.8,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":6,"planner":1,"model":4,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":20.7,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":13,"planner":1,"model":4,"observability":0,"guard":0,"telemetry":0}},{"ms":15.1,"reusedResult":false,"phases":{"preflight":0,"context":1,"targets":0,"candidates":8,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":14.9,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":6,"planner":0,"model":6,"observability":0,"guard":0,"telemetry":0}},{"ms":36.1,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":17,"planner":1,"model":15,"observability":0,"guard":0,"telemetry":0}},{"ms":19.8,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":0,"candidates":11,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0,"reusedResult":true,"phases":{}},{"ms":27.5,"reusedResult":false,"phases":{"preflight":1,"context":2,"targets":0,"candidates":17,"planner":1,"model":7,"observability":0,"guard":0,"telemetry":0}},{"ms":19.7,"reusedResult":false,"phases":{"preflight":0,"context":2,"targets":1,"candidates":11,"planner":1,"model":5,"observability":0,"guard":0,"telemetry":0}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}},{"ms":0.1,"reusedResult":true,"phases":{}},{"ms":0.2,"reusedResult":true,"phases":{}}],"observationBoundary":"ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.","decisions":508,"firstDecision":true,"weights":{"version":7,"trained":1657410,"accuracy":0.6171,"ready":true},"perf":null,"policyV3":{"loaded":false,"loadMs":135.70000000298023},"resources":[]},"overrideStats":{"use":{"suggested":29,"stagedChoice":29,"pass":29,"selected":28,"executed":25,"allyGuard":102,"veto":17},"respond":{},"discard":{"check":2},"compare":{},"soft":{"hit":33}},"alive":3,"dead":1,"elapsedMs":25046,"guardErrors":0,"errors":["page.waitForFunction: Timeout 25000ms exceeded."],"browser":"156.0.8078.73","status":"incomplete"}

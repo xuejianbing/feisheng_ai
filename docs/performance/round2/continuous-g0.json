@@ -1,0 +1,715 @@
+{
+  "initial": [
+    {
+      "name": "jiakui",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "jiedao",
+        "sha",
+        "qinggang",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "dc_sunchen",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "sha",
+        "shunshou",
+        "bingliang"
+      ]
+    },
+    {
+      "name": "pe_yangyuhuan",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "wuzhong",
+        "zhuge",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "matie",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "bagua",
+        "shan",
+        "sha",
+        "dawan"
+      ]
+    }
+  ],
+  "done": true,
+  "startedAt": 1793245398687,
+  "phases": 4,
+  "uses": 24,
+  "result": false,
+  "stack": null,
+  "maxDepth": 1,
+  "heap": 87726802,
+  "resources": 250,
+  "hostVersion": "1.11.7",
+  "mode": "versus",
+  "submode": "two",
+  "perf": {
+    "traceVersion": 2,
+    "startedAt": 1793245398664,
+    "now": 1793245420149,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.2
+      },
+      {
+        "name": "update:install",
+        "t": 0.8
+      },
+      {
+        "name": "panels:ready",
+        "t": 1.3,
+        "total": 25,
+        "loaded": 0,
+        "ok": true
+      },
+      {
+        "name": "content:start",
+        "t": 3.5
+      },
+      {
+        "name": "content:native",
+        "t": 4.6
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 4.7
+      },
+      {
+        "name": "engine:start",
+        "t": 5.2
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 5.9
+      },
+      {
+        "name": "hooks:start",
+        "t": 6.5
+      },
+      {
+        "name": "hooks:mem",
+        "t": 7.6
+      },
+      {
+        "name": "hooks:store",
+        "t": 12.2
+      },
+      {
+        "name": "hooks:archive",
+        "t": 12.3
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 12.3
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 12.8
+      },
+      {
+        "name": "engine:hooks",
+        "t": 13.6
+      },
+      {
+        "name": "engine:plugins",
+        "t": 15.2
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 15.4
+      },
+      {
+        "name": "content:models",
+        "t": 134.2,
+        "backend": "IndexedDB",
+        "error": false
+      },
+      {
+        "name": "decision:first",
+        "t": 750,
+        "wrapperMs": 146
+      },
+      {
+        "name": "v3:loaded",
+        "t": 863,
+        "source": "builtin"
+      }
+    ],
+    "longTasks": [
+      {
+        "start": 804.7,
+        "ms": 280,
+        "precedingMark": null
+      },
+      {
+        "start": 1653.2,
+        "ms": 162,
+        "precedingMark": null
+      },
+      {
+        "start": 1902.1,
+        "ms": 81,
+        "precedingMark": null
+      },
+      {
+        "start": 2141.9,
+        "ms": 377,
+        "precedingMark": "content:models"
+      },
+      {
+        "start": 2527.6,
+        "ms": 247,
+        "precedingMark": "content:models"
+      },
+      {
+        "start": 3407.7,
+        "ms": 227,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 4254,
+        "ms": 196,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 4968.6,
+        "ms": 143,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 5621,
+        "ms": 131,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 6267.2,
+        "ms": 126,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 6866.1,
+        "ms": 183,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 7631.1,
+        "ms": 172,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 8317.9,
+        "ms": 159,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 8995.7,
+        "ms": 127,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 9633.7,
+        "ms": 106,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 10254.4,
+        "ms": 113,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 11414,
+        "ms": 81,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 12654.3,
+        "ms": 57,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 14029.4,
+        "ms": 90,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 14734,
+        "ms": 86,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 15331,
+        "ms": 80,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 15923.6,
+        "ms": 93,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 16538.2,
+        "ms": 59,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 17618.8,
+        "ms": 71,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 18309.4,
+        "ms": 80,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 18898.1,
+        "ms": 73,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 19757,
+        "ms": 52,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 20975.8,
+        "ms": 63,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 21502.1,
+        "ms": 92,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 22100,
+        "ms": 150,
+        "precedingMark": "v3:loaded"
+      },
+      {
+        "start": 22760.8,
+        "ms": 104,
+        "precedingMark": "v3:loaded"
+      }
+    ],
+    "firstDecisionPerf": {
+      "ms": 145.9,
+      "reusedResult": false,
+      "phases": {
+        "preflight": 2,
+        "context": 33,
+        "targets": 7,
+        "candidates": 57,
+        "planner": 8,
+        "model": 33,
+        "observability": 0,
+        "guard": 1,
+        "telemetry": 2
+      }
+    },
+    "recentDecisions": [
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 37.8,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 1,
+          "context": 2,
+          "targets": 1,
+          "candidates": 23,
+          "planner": 3,
+          "model": 8,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 37.4,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 1,
+          "candidates": 23,
+          "planner": 1,
+          "model": 10,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.6,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.6,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.5,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.7,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.6,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 32.6,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 1,
+          "context": 2,
+          "targets": 1,
+          "candidates": 18,
+          "planner": 2,
+          "model": 10,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 22.2,
+        "reusedResult": false,
+        "phases": {
+          "preflight": 0,
+          "context": 2,
+          "targets": 0,
+          "candidates": 11,
+          "planner": 1,
+          "model": 7,
+          "observability": 0,
+          "guard": 0,
+          "telemetry": 0
+        }
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.1,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.2,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.4,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      },
+      {
+        "ms": 0.3,
+        "reusedResult": true,
+        "phases": {}
+      }
+    ],
+    "observationBoundary": "ext:start follows static ESM dependency evaluation. Resource timings measure fetching only; parsing/evaluation before this mark is not separately observable. Longtask association is temporal, not proof of cause.",
+    "decisions": 399,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 113.90000000596046
+    },
+    "resources": []
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 29,
+      "stagedChoice": 29,
+      "pass": 29,
+      "selected": 26,
+      "executed": 22,
+      "allyGuard": 84,
+      "veto": 14
+    },
+    "respond": {},
+    "discard": {
+      "check": 10,
+      "selected": 1,
+      "executed": 1
+    },
+    "compare": {},
+    "soft": {
+      "hit": 32
+    }
+  },
+  "alive": 2,
+  "dead": 2,
+  "elapsedMs": 21474,
+  "guardErrors": 0,
+  "errors": [],
+  "browser": "156.0.8078.73",
+  "status": "completed"
+}

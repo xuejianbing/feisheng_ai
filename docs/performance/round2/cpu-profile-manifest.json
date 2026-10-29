@@ -1,0 +1,32 @@
+[
+  {
+    "file": "fixed-controlled-cpu.json.gz",
+    "rawSHA256": "6430e447124fea7b929bc3d49637c95258dc08873402682a7e288d3d42606b0e",
+    "gzipSHA256": "73de042b497bc685be1ac5685e6847f0831bf3dfa976dd2e7a3cfd6cf591313d"
+  },
+  {
+    "file": "fixed-controlled-full-cpu.json.gz",
+    "rawSHA256": "6f237588efd8299cd37611e0a10dd9f1d4bb3124fb89ec04504944ad83f3b8da",
+    "gzipSHA256": "2067beca75f5be0e7418ba32888b235b96e843b2bb0c868e04a8c08b3e07ec21"
+  },
+  {
+    "file": "official-controlled-cpu.json.gz",
+    "rawSHA256": "ec3f4cb99bf0a255ff1fa55382946e18a8d0ec6d3f5d7e6a774998324a46f7c7",
+    "gzipSHA256": "32cb9c7a49fc73616d8e8960be0fb7f45c81a81de1bd09113262c68b6bf8c24a"
+  },
+  {
+    "file": "qa-controlled-cpu.json.gz",
+    "rawSHA256": "b5c5f26c4f115db0fecb408f89f54f8af78bf0e3a52023b5ea602fae88a319e3",
+    "gzipSHA256": "45912e8ae52b20816a4e4b822deaa9ab4fd6046886e31e376faecd5b4d694a14"
+  },
+  {
+    "file": "reload-series-cpu.json.gz",
+    "rawSHA256": "7145782355eb644ddf60b15fee4e7e71894692edf42049ab591a0b7e3fcf0705",
+    "gzipSHA256": "f8c696f8f8f19e2fd1c028ca4a0f8b790e622bd974fa84b73d4e2380ee8c08da"
+  },
+  {
+    "file": "zip-fixed-profile-cpu.json.gz",
+    "rawSHA256": "66241ef58a328dbe91ad193c83337aa768b60d8c2155f579c8bbf6592b435136",
+    "gzipSHA256": "603d7613f4b9c66a4659e2de29c2a3a1df58a8ea86f7bad6096304ea5dd6fb69"
+  }
+]

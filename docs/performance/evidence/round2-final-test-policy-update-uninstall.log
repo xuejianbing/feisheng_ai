@@ -1,0 +1,1 @@
+PASS scheduled/stale updater work cannot survive uninstall; reinstall works

@@ -1,0 +1,8 @@
+file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-policy-update-uninstall.mjs:3
+const m=await import('../js/update/policyModelUpdate.js');m.installPolicyModelUpdate();const old=idle;m.uninstallPolicyModelUpdate();old();await Promise.resolve();assert.equal(requests,0);assert.equal(window.__DJSC.policyModelUpdate,undefined);m.installPolicyModelUpdate();idle();assert.equal(requests,1);m.uninstallPolicyModelUpdate();resolve({ok:true,json:async()=>({})});await new Promise(r=>setTimeout(r,10));assert.equal(m.policyModelUpdateStatus().at,0,'stale request must not mutate status');m.installPolicyModelUpdate();assert(window.__DJSC.policyModelUpdate);m.uninstallPolicyModelUpdate();console.log('PASS scheduled/stale updater work cannot survive uninstall; reinstall works');
+                                                                                                        ^
+
+TypeError: m.uninstallPolicyModelUpdate is not a function
+    at file:///C:/Users/32360/.codex/worktrees/mobile-performance-443-3480/%E6%97%A0%E5%90%8DAI/tools/test-policy-update-uninstall.mjs:3:105
+
+Node.js v24.14.0

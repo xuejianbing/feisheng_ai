@@ -1,0 +1,20 @@
+PASS 本地欢乐和联机严格识别
+PASS false true 0 1 均有效；缺失 null 空串无效
+PASS 严格队伍比较及异常输入三态
+PASS two 己方=false：阵营、队友保护、治疗、攻击奖励
+PASS two 己方=true：阵营、队友保护、治疗、攻击奖励
+PASS two 己方=0：阵营、队友保护、治疗、攻击奖励
+PASS two 己方=1：阵营、队友保护、治疗、攻击奖励
+PASS two 异常 side 不调用态度或读取身份猜测队伍
+PASS 2v2 己方=false：阵营、队友保护、治疗、攻击奖励
+PASS 2v2 己方=true：阵营、队友保护、治疗、攻击奖励
+PASS 2v2 己方=0：阵营、队友保护、治疗、攻击奖励
+PASS 2v2 己方=1：阵营、队友保护、治疗、攻击奖励
+PASS 2v2 异常 side 不调用态度或读取身份猜测队伍
+PASS 3v3保持v4.4.0既有友伤和敌方集合计算（不借2v2布尔side修复）
+PASS 普通2v2退出旧友伤公式，不随身份标记或敌方人数返回奖励
+PASS 2v2 异常边界支持本地和联机配置兜底，运行时模式优先
+PASS 其他 versus 子模式保留缺失 side 的态度兼容路径
+PASS 未启用专项模型或改动其他模式路由
+18 checks passed (host stubs; real games remain unverified)
+PASS [weique][2026-10-20] 2v2 team and mode detection

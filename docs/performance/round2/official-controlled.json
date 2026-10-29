@@ -1,0 +1,1051 @@
+{
+  "initial": [
+    {
+      "name": "jiakui",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "jiedao",
+        "sha",
+        "qinggang",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "dc_sunchen",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "sha",
+        "shunshou",
+        "bingliang"
+      ]
+    },
+    {
+      "name": "pe_yangyuhuan",
+      "side": true,
+      "seat": 0,
+      "hand": [
+        "shan",
+        "wuzhong",
+        "zhuge",
+        "tiesuo"
+      ]
+    },
+    {
+      "name": "sunlang",
+      "side": false,
+      "seat": 0,
+      "hand": [
+        "bagua",
+        "shan",
+        "sha",
+        "dawan"
+      ]
+    }
+  ],
+  "done": false,
+  "startedAt": 1793245993710,
+  "phases": 1,
+  "uses": 3,
+  "stack": "RangeError: Maximum call stack size exceeded\n    at guardCheck (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/model/net/modelGuard.js?v=41a:164:23)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:9371:22)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)\n    at profile (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/foundation/diag/profiler.js?v=41a:29:18)\n    at bestAction (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:6832:10)\n    at _getBA (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:106:14)\n    at Object.player (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/safety/aiOverride.js?v=41a:1027:19)\n    at Get.effect (http://127.0.0.1:62693/noname/get/index.js:6875:30)\n    at applyVersusSeatPreferences (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/modes/versus/seatTacticsRuntime.js?v=41a:87:60)\n    at bestActionCore (http://127.0.0.1:62693/extension/%E6%97%A0%E5%90%8DAI/score/decision/engine/engine.js?v=41a:8399:9)",
+  "maxDepth": 397,
+  "probeLongs": [
+    {
+      "ms": 275,
+      "start": 31877.20000000298
+    },
+    {
+      "ms": 20991,
+      "start": 32768
+    },
+    {
+      "ms": 22065,
+      "start": 54268.29999999702
+    }
+  ],
+  "probePhases": [
+    {
+      "ms": 9171.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9157,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9200.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9187,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9230.29999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9216,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9260.40000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9246,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9290.59999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9276,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9320.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9306,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9349.5,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9336,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9379.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 9364,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9407.60000000894,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9395,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9442.5,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9424,
+        "planner": 0,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9473.39999999106,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 1,
+        "candidates": 9460,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9505.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 9488,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9532.90000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9520,
+        "planner": 0,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9565.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9546,
+        "planner": 1,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9598.5,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9581,
+        "planner": 0,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9629,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9611,
+        "planner": 0,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9657.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9642,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9687.29999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9671,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9716.800000011921,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9702,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9748.89999999106,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9735,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9781.199999988079,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9766,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9810.89999999106,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9796,
+        "planner": 0,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9843.10000000894,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9826,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9872.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9858,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9902.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 9886,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9932.29999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 9915,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 1
+      }
+    },
+    {
+      "ms": 9966.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 9950,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 9995,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 9983,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10027.89999999106,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10011,
+        "planner": 1,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10057.90000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10042,
+        "planner": 1,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10088.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10074,
+        "planner": 0,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10119.699999988079,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10104,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10150.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10135,
+        "planner": 0,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10186.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10170,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10218.90000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10203,
+        "planner": 0,
+        "model": 11,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10255.39999999106,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10241,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10291.40000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 6,
+        "targets": 1,
+        "candidates": 10275,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10324.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10311,
+        "planner": 0,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10359,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10343,
+        "planner": 1,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10394.10000000894,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 0,
+        "candidates": 10379,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10427.70000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 5,
+        "targets": 1,
+        "candidates": 10412,
+        "planner": 0,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10463.5,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 1,
+        "candidates": 10446,
+        "planner": 1,
+        "model": 13,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10497.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10481,
+        "planner": 1,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10530.699999988079,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10514,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10560.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10548,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10593.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10577,
+        "planner": 0,
+        "model": 12,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10618.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10605,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10642.70000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 1,
+        "candidates": 10630,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10670.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10657,
+        "planner": 0,
+        "model": 9,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10695.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10685,
+        "planner": 0,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10716.59999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10707,
+        "planner": 0,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10742,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 0,
+        "candidates": 10730,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10765.20000000298,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10755,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10786.59999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10776,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10808.09999999404,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10797,
+        "planner": 1,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10831.90000000596,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10821,
+        "planner": 1,
+        "model": 6,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10857.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 2,
+        "targets": 0,
+        "candidates": 10847,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10881.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10872,
+        "planner": 0,
+        "model": 7,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10906.29999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 3,
+        "targets": 0,
+        "candidates": 10895,
+        "planner": 0,
+        "model": 8,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    },
+    {
+      "ms": 10948.79999999702,
+      "phases": {
+        "preflight": 0,
+        "context": 4,
+        "targets": 1,
+        "candidates": 10932,
+        "planner": 1,
+        "model": 10,
+        "observability": 0,
+        "guard": 0,
+        "telemetry": 0
+      }
+    }
+  ],
+  "heap": 146336165,
+  "resources": 250,
+  "hostVersion": "1.11.7",
+  "mode": "versus",
+  "submode": "two",
+  "perf": {
+    "traceVersion": 1,
+    "startedAt": 1793245993631,
+    "now": 1793246038326,
+    "marks": [
+      {
+        "name": "ext:start",
+        "t": 0
+      },
+      {
+        "name": "panels:start",
+        "t": 0.1
+      },
+      {
+        "name": "update:install",
+        "t": 2.1
+      },
+      {
+        "name": "content:start",
+        "t": 3.8
+      },
+      {
+        "name": "content:native",
+        "t": 4.9
+      },
+      {
+        "name": "content:models",
+        "t": 58.9
+      },
+      {
+        "name": "engine:install-begin",
+        "t": 59.1
+      },
+      {
+        "name": "engine:start",
+        "t": 59.5
+      },
+      {
+        "name": "engine:storage-guard",
+        "t": 59.8
+      },
+      {
+        "name": "hooks:start",
+        "t": 60.5
+      },
+      {
+        "name": "hooks:mem",
+        "t": 60.7
+      },
+      {
+        "name": "hooks:store",
+        "t": 64.4
+      },
+      {
+        "name": "hooks:archive",
+        "t": 64.6
+      },
+      {
+        "name": "hooks:feedback",
+        "t": 64.7
+      },
+      {
+        "name": "hooks:matchArchive",
+        "t": 65.6
+      },
+      {
+        "name": "engine:hooks",
+        "t": 66.9
+      },
+      {
+        "name": "engine:plugins",
+        "t": 69.4
+      },
+      {
+        "name": "engine:settle-watch",
+        "t": 69.5
+      },
+      {
+        "name": "panels:ready",
+        "t": 217.7,
+        "total": 25,
+        "loaded": 25,
+        "ok": true
+      },
+      {
+        "name": "decision:first",
+        "t": 359.6,
+        "wrapperMs": 82
+      },
+      {
+        "name": "v3:loaded",
+        "t": 528.4,
+        "source": "builtin"
+      }
+    ],
+    "decisions": 1888,
+    "firstDecision": true,
+    "weights": {
+      "version": 7,
+      "trained": 1657410,
+      "accuracy": 0.6171,
+      "ready": true
+    },
+    "perf": null,
+    "policyV3": {
+      "loaded": false,
+      "loadMs": 9.299999997019768
+    }
+  },
+  "overrideStats": {
+    "use": {
+      "suggested": 1,
+      "stagedChoice": 1,
+      "pass": 1,
+      "allyGuard": 1,
+      "selected": 2,
+      "executed": 2,
+      "timeout": 2
+    },
+    "respond": {},
+    "discard": {},
+    "compare": {},
+    "soft": {
+      "hit": 3
+    }
+  },
+  "alive": 4,
+  "dead": 0,
+  "elapsedMs": 45022,
+  "guardErrors": 28,
+  "missingExtension": [],
+  "errors": [
+    "page.waitForFunction: Timeout 25000ms exceeded."
+  ],
+  "browser": "156.0.8078.73",
+  "status": "incomplete"
+}
