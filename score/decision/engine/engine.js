@@ -4749,8 +4749,8 @@ function bestActionCore() {
 			}
 		} catch (eGuard) {
             guardEvidence={domain:'legality',status:'error',reason:String(eGuard)};
-            return null;
 			try { console.error('[模型护栏] 集成异常：', eGuard); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+            return null;
 		}
 
         decisionStages.record('guard',guardBefore,best,guardEvidence);

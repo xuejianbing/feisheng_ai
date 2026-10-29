@@ -136,15 +136,16 @@ function savePolicyRecord(meta, latest) {
 
 /* ---------------- 网络（超时 + 静默失败） ---------------- */
 let _generation=0, _disposed=false, _installed=false, _scheduled=null, _idle=false, _owned=null;
-const _controllers=new Set();
+const _controllers=new Set(), _fetchTimers=new Set();
 function timedFetch(url, ms, owned) {
     if (typeof fetch !== 'function') return Promise.reject(new Error('fetch 不可用'));
     const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
     if(ctl){_controllers.add(ctl);owned.add(ctl);}
     const timer = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, ms || 12000) : null;
+    if(timer)_fetchTimers.add(timer);
     return fetch(url, ctl ? { cache: 'no-store', signal: ctl.signal } : { cache: 'no-store' })
-        .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('HTTP ' + r.status); return r; },
-              function (e) { if (timer) clearTimeout(timer); throw e; });
+        .then(function (r) { if (timer) {clearTimeout(timer);_fetchTimers.delete(timer);} if (!r.ok) throw new Error('HTTP ' + r.status); return r; },
+              function (e) { if (timer) {clearTimeout(timer);_fetchTimers.delete(timer);} throw e; });
 }
 
 let _last = { at: 0, ok: false, detail: '', state: '', seq: 0 };
@@ -236,5 +237,6 @@ export function uninstallPolicyModelUpdate(){
  if(_scheduled!==null){if(_idle&&typeof window?.cancelIdleCallback==='function')window.cancelIdleCallback(_scheduled);else clearTimeout(_scheduled);}_scheduled=null;
  for(const ctl of _controllers)try{ctl.abort();}catch(_){} _controllers.clear();
  if(typeof window!=='undefined'&&window.__DJSC?.policyModelUpdate===_owned)delete window.__DJSC.policyModelUpdate;
+ for(const timer of _fetchTimers)clearTimeout(timer);_fetchTimers.clear();
  _owned=null;
 }
