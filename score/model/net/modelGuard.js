@@ -130,7 +130,8 @@ function _recordBlock(me, action, rule, reason) {
 export function guardCheck(me, action, context) {
     STATS.checks++;
     try {
-        if (!me || !action) {
+        if (!me) return {ok:false,status:'unavailable',code:'E_GUARD_HOST',rule:null,reason:'护栏玩家对象不可用',fallback:null};
+        if (!action) {
             return { ok: false, rule: RED_LINES.EMPTY_ACTION, reason: '动作或玩家为空', fallback: null };
         }
 
@@ -217,7 +218,7 @@ export function guardCheck(me, action, context) {
     } catch (e) {
         /* 护栏本身异常 → 保守放行（不能让护栏成为新 bug 源） */
         try { console.warn('[guard] 护栏检查异常：' + e.message); } catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
-        return { ok: true, rule: null, reason: '护栏异常（放行）', fallback: null };
+        return { ok: false, status:'error', code:'E_GUARD_RUNTIME', errorKind:e instanceof RangeError?'recursion':String(e?.name||'Error'), rule:null, reason:'护栏计算失败：'+String(e.message||e).slice(0,160), fallback:null };
     }
 }
 

@@ -1,0 +1,7 @@
+import fs from 'node:fs/promises';import vm from 'node:vm';import assert from 'node:assert/strict';
+let source=(await fs.readFile('score/decision/engine/engine.js','utf8')).replace(/\r/g,'');source=source.slice(source.indexOf('let _lastPerfRecordedResult'),source.indexOf('function bestActionCore'));
+let bridge=await fs.readFile('score/decision/safety/aiOverride.js','utf8');bridge=bridge.slice(bridge.indexOf('function _getBA(player)'),bridge.indexOf('function _getFreshSkillBA'));
+let scope;try{scope=await import('../score/decision/state/decisionEvaluation.js');}catch{scope={isDecisionEvaluating:()=>false,withDecisionEvaluation:fn=>fn()};}
+let entries=0;const player={};const ctx={...scope,performance,Date,Math,window:{__DJSC:{}},game:{me:{}},_status:{auto:true,currentPhase:player,event:{}},playChoiceWindow:()=>true,cfg:()=>true,profile:(_n,fn)=>fn(),recordDecisionPerf(){},bootMark(){},stageExecutionDecision(){},bestActionCore(){entries++;if(entries<8)ctx._getBA(player);return {id:'sha'};}};
+vm.createContext(ctx);vm.runInContext(source+bridge,ctx);ctx.bestAction();assert.equal(entries,1,'host get.effect must not recursively request an unfinished decision');ctx.bestAction();assert.equal(entries,2,'next independent decision remains available');assert.equal(scope.isDecisionEvaluating(),false);
+assert.throws(()=>scope.withDecisionEvaluation(()=>{throw Error('core');}),/core/);assert.equal(scope.isDecisionEvaluating(),false);console.log('PASS exact soft-bridge reentry path, independent calls and exceptional cleanup');

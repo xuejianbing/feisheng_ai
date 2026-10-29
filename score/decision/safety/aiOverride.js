@@ -1,3 +1,4 @@
+import {isDecisionEvaluating} from '../state/decisionEvaluation.js?v=41a';
 import { playChoiceWindow } from '../execution/decisionWindow.js?v=41a';
 import { installTiesuoRecastBridge } from '../cards/tiesuoRecast.js?v=41a';
 import { installWuxieOptimization } from '../response/wuxieOptimization.js?v=41a';
@@ -97,6 +98,8 @@ function _softStat(player) {
  * 不再使用“同一玩家同一回合”粗粒度缓存：它会跨局面复用旧决策。
  * #31 已由 engine 负责 state fingerprint + TTL 缓存；这里只调用 engine 并登记事务。 */
 function _getBA(player) {
+	// Internal host effect/value/order queries must not feed an unfinished decision back into itself.
+	if (isDecisionEvaluating()) return null;
 	try {
 		if (!player || (player === game.me && !_status.auto)) return null;
 		if (_status.currentPhase && _status.currentPhase !== player || !playChoiceWindow(_status.event, player)) return null;

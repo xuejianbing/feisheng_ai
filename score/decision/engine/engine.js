@@ -1,3 +1,4 @@
+import {withDecisionEvaluation} from '../state/decisionEvaluation.js?v=41a';
 import {decisionCacheMatches} from '../state/decisionCache.js?v=41a';
 import {bootMark,recordDecisionPerf} from '../../foundation/diag/bootTrace.js?v=41a';   /* ★ 4.4.3：启动轨迹（只读） */
 import {createEvaluationAudit} from '../analysis/decisionAudit.js?v=41a';
@@ -3429,7 +3430,7 @@ function bestAction() {
 	const _bt0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
 	let perfResult;
 	try {
-		perfResult = profile('bestAction', bestActionCore);
+		perfResult = withDecisionEvaluation(() => profile('bestAction', bestActionCore));
 		return perfResult;
 	} finally {
 		try {
@@ -4704,6 +4705,8 @@ function bestActionCore() {
 			})();
 			const _guardCtx = { bestT: bestT, allCandidates: acts, killAvailable: _killCand };
 			const _guardRes = guardCheck(me, best, _guardCtx);
+            // An unverified result is not a rule veto: release this recommendation to native choice legality.
+            if (_guardRes.status === 'error' || _guardRes.status === 'unavailable') return null;
             guardEvidence={domain:'legality',ok:_guardRes.ok,rule:_guardRes.rule||null,reason:_guardRes.reason||null};
 			if (!_guardRes.ok) {
 			/* ★ fix6: 接通 violation 埋线——把被拦的原始意图写入 _status.djsc_lastViolation，
@@ -4746,6 +4749,7 @@ function bestActionCore() {
 			}
 		} catch (eGuard) {
             guardEvidence={domain:'legality',status:'error',reason:String(eGuard)};
+            return null;
 			try { console.error('[模型护栏] 集成异常：', eGuard); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		}
 
