@@ -135,9 +135,12 @@ function savePolicyRecord(meta, latest) {
 }
 
 /* ---------------- 网络（超时 + 静默失败） ---------------- */
-function timedFetch(url, ms) {
+let _generation=0, _disposed=false, _installed=false, _scheduled=null, _idle=false, _owned=null;
+const _controllers=new Set();
+function timedFetch(url, ms, owned) {
     if (typeof fetch !== 'function') return Promise.reject(new Error('fetch 不可用'));
     const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    if(ctl){_controllers.add(ctl);owned.add(ctl);}
     const timer = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, ms || 12000) : null;
     return fetch(url, ctl ? { cache: 'no-store', signal: ctl.signal } : { cache: 'no-store' })
         .then(function (r) { if (timer) clearTimeout(timer); if (!r.ok) throw new Error('HTTP ' + r.status); return r; },
@@ -161,13 +164,18 @@ export function policyModelUpdateStatus() {
 
 /* 检查并（如有新版本）下载缓存；force=true 忽略节流 */
 export function checkPolicyModelUpdate(force) {
+    const generation=_generation, owned=new Set();
+    const valid=()=>!_disposed&&generation===_generation;
+    const verify=()=>{if(!valid())throw Error('更新任务已卸载');};
+    if(!valid())return Promise.resolve({...policyModelUpdateStatus(),cancelled:true});
     const enabled = !!cfg('policyModelHotUpdate', true);
     if (!enabled) { _last = { at: Date.now(), ok: false, detail: '热更开关关闭', state: 'disabled', seq: 0 }; return Promise.resolve(policyModelUpdateStatus()); }
     const rec = loadCachedPolicyRecord();
     const localSeq = rec ? rec.seq : 0;
-    return timedFetch(POLICY_MANIFEST_URL, 12000)
+    return timedFetch(POLICY_MANIFEST_URL, 12000, owned)
         .then(function (r) { return r.json(); })
         .then(function (manifest) {
+            verify();
             const cls = classifyPolicyManifest(manifest, localSeq, EXT_VERSION);
             if (cls.state !== 'available') {
                 _last = { at: Date.now(), ok: true, detail: cls.message, state: cls.state, seq: localSeq };
@@ -175,7 +183,8 @@ export function checkPolicyModelUpdate(force) {
             }
             const latest = cls.latest;
             const absUrl = new URL(latest.url, POLICY_MANIFEST_URL).toString();
-            return timedFetch(absUrl, 20000).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+            return timedFetch(absUrl, 20000, owned).then(function (r) { return r.arrayBuffer(); }).then(function (buf) {
+                verify();
                 const bytes = new Uint8Array(buf);
                 /* size 校验（放宽：允许 manifest 未填 size 时跳过） */
                 if (Number.isFinite(Number(latest.size)) && Number(latest.size) > 0 && bytes.length !== Number(latest.size)) {
@@ -190,29 +199,42 @@ export function checkPolicyModelUpdate(force) {
                 const meta = payload && payload.meta;
                 const v = validatePolicyMeta(meta);
                 if (!v.ok) throw new Error('模型字段非法：' + v.errors.slice(0, 3).join(';'));
+                verify();
                 savePolicyRecord(meta, latest);
                 _last = { at: Date.now(), ok: true, detail: '已缓存 ' + latest.modelVersion + ' (seq ' + latest.releaseSeq + ')，下次加载生效', state: 'downloaded', seq: normalizeSeq(latest.releaseSeq) };
                 return policyModelUpdateStatus();
             });
         })
         .catch(function (e) {
+            if(!valid())return {...policyModelUpdateStatus(),cancelled:true};
             _last = { at: Date.now(), ok: false, detail: String(e && e.message || e), state: 'error', seq: localSeq };
             try { console.log('[无名AI·模型热更] 检查失败（保留内置权重）：' + _last.detail); } catch (eL) {}
             return policyModelUpdateStatus();
-        });
+        }).finally(()=>{for(const ctl of owned)_controllers.delete(ctl);});
 }
 
 /* 启动入口：空闲时检查一次（失败静默） */
 export function installPolicyModelUpdate() {
     try {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || _installed) return;
+        _installed=true;_disposed=false;const generation=++_generation;
         window.__DJSC = window.__DJSC || {};
         window.__DJSC.policyModelUpdate = {
             check: function () { return checkPolicyModelUpdate(true); },
             status: policyModelUpdateStatus,
             cached: loadCachedPolicyMeta,
         };
+        _owned=window.__DJSC.policyModelUpdate;
+        _idle=typeof window.requestIdleCallback==='function';
         const ric = window.requestIdleCallback || function (fn) { return setTimeout(fn, 4000); };
-        ric(function () { checkPolicyModelUpdate(false); }, { timeout: 12000 });
+        _scheduled=ric(function () { _scheduled=null;if(!_disposed&&generation===_generation)checkPolicyModelUpdate(false); }, { timeout: 12000 });
     } catch (e) { /* 忽略 */ }
+}
+
+export function uninstallPolicyModelUpdate(){
+ _disposed=true;_installed=false;_generation++;
+ if(_scheduled!==null){if(_idle&&typeof window?.cancelIdleCallback==='function')window.cancelIdleCallback(_scheduled);else clearTimeout(_scheduled);}_scheduled=null;
+ for(const ctl of _controllers)try{ctl.abort();}catch(_){} _controllers.clear();
+ if(typeof window!=='undefined'&&window.__DJSC?.policyModelUpdate===_owned)delete window.__DJSC.policyModelUpdate;
+ _owned=null;
 }
