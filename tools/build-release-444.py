@@ -5,12 +5,17 @@ assert subprocess.check_output(['git','status','--porcelain']).strip()==b'', 'wo
 head=subprocess.check_output(['git','rev-parse','HEAD']).decode().strip()
 for ref in ['4d3aae7','020fd03','aa919bb','636b636']:
  subprocess.run(['git','merge-base','--is-ancestor',ref,head],check=True)
-archive=zipfile.ZipFile(io.BytesIO(subprocess.check_output(['git','archive','--format=zip',head])))
+archive=zipfile.ZipFile(io.BytesIO(subprocess.check_output(['git','-c','core.autocrlf=false','archive','--format=zip',head])))
 version=json.loads(archive.read('info.json'))['version'];assert version=='4.4.4'
 source=archive.read('js/config/version.js').decode('utf-8');assert re.search(r"VERSION = '4.4.4'",source)and re.search(r"VERSION_SEMVER = '4.4.4'",source)
 include=('assets/','css/','js/','logs/','model/','score/','shadow/')
 files={n:archive.read(n)for n in archive.namelist()if not n.endswith('/')and(n in ['extension.js','info.json','LICENSE','README.md','CHANGELOG.md']or n.startswith(include))and n!='score/model/net/client_policy_model_v2.js'}
 sha=lambda b:hashlib.sha256(b).hexdigest()
+blobs={}
+for row in subprocess.check_output(['git','ls-tree','-rz',head]).split(b'\0'):
+ if row:
+  meta,name=row.split(b'\t',1);blobs[name.decode('utf-8')]=meta.split()[2].decode('ascii')
+for n,b in files.items():assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()==blobs[n], 'archive is not byte-identical to source blob: '+n
 weights=[]
 for n,b in files.items():
  if n.startswith('model/')or n.endswith(('defaultWeights.js','client_policy_model_v3.js')):
