@@ -18,9 +18,9 @@
  *  - VERSION_SEMVER 使用标准 SemVer；测试版使用 prerelease 标识，供迁移与兼容判断。
  */
 
-export const VERSION = '4.4.3';
-export const VERSION_SEMVER = '4.4.3';
+export const VERSION = '4.4.4';
+export const VERSION_SEMVER = '4.4.4';
 export const MIN_GAME_VERSION = '1.11.1';   /* 支持的无名杀本体最低版本 */
-export const BUILD_DATE = '2026-10-27';
+export const BUILD_DATE = '2026-10-29';
 
 export const VERSION_FULL = '无名AI v' + VERSION;

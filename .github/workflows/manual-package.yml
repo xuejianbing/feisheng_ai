@@ -46,6 +46,8 @@ jobs:
                   raise SystemExit(f"必需目录缺失或为符号链接：{name}")
               files.extend(p.relative_to(root) for p in directory.rglob("*") if p.is_file() or p.is_symlink())
 
+          # 4.4.3起排除未接线的旧v2归档推理资产，保留公共权重及v3/v5模型。
+          files = [p for p in files if p.as_posix() != "score/model/net/client_policy_model_v2.js"]
           files = sorted(set(files), key=lambda p: p.as_posix())
           for path in files:
               item = root / path
