@@ -10,11 +10,13 @@
 """
 import json
 import os
+import sys
 import time
 import threading
 import hashlib
 import sqlite3
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, HTTPServer, BaseHTTPRequestHandler
 from collections import defaultdict
 import re
@@ -38,7 +40,151 @@ BLACKLIST_LIMIT_PER_DAY = 999999  # 黑名单IP：每天不限流
 BLACKLIST_FILE = os.path.join(BASE_DIR, "ip_blacklist.json")
 _reqlog_path = os.path.join(BASE_DIR, "post_requests.log")   # 1015uploadfix 请求日志（成功失败全记录）
 _legacy_pool_total = 0   # 1015：超大池降级启动时保留的历史条数（GET / 展示用）
+# ============ 更新通道授权闸门（2026-11-01，收费版边界） ============
+# 设计目标：默认关闭、改配置即生效、不需要重启进程。
+#   update/gate.json  {"enforce": false, "enforceFromVersion": "5.0.0", "gateStaticZip": true, "gateModel": false}
+#   update/keys.json  {"keys": [{"id": "k1", "sha256": "<key 的 sha256>", "expires": "2028-01-01", "revoked": false}]}
+# 判定口径：只有「闸门开启 + 目标版本 >= 下限」才要求 key；低于下限（现有 4.4.x 用户）永远放行。
+_GATE_CACHE = {"mtime": None, "cfg": None}
+_KEYS_CACHE = {"mtime": None, "keys": []}
 
+
+def _load_update_gate():
+    path = os.path.join(BASE_DIR, "update", "gate.json")
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    if _GATE_CACHE["mtime"] == st.st_mtime_ns:
+        return _GATE_CACHE["cfg"]
+    cfg = None
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            cfg = json.load(f)
+        if not isinstance(cfg, dict):
+            cfg = None
+    except Exception as eG:
+        sys.stderr.write("[update-gate] gate.json invalid: %r\n" % eG)
+    _GATE_CACHE["mtime"] = st.st_mtime_ns
+    _GATE_CACHE["cfg"] = cfg
+    return cfg
+
+
+def _load_update_keys():
+    path = os.path.join(BASE_DIR, "update", "keys.json")
+    try:
+        st = os.stat(path)
+    except OSError:
+        return []
+    if _KEYS_CACHE["mtime"] == st.st_mtime_ns:
+        return _KEYS_CACHE["keys"]
+    keys = []
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            raw = json.load(f)
+        keys = raw.get("keys") if isinstance(raw, dict) else raw
+        if not isinstance(keys, list):
+            keys = []
+    except Exception as eK:
+        sys.stderr.write("[update-gate] keys.json invalid: %r\n" % eK)
+        keys = []
+    _KEYS_CACHE["mtime"] = st.st_mtime_ns
+    _KEYS_CACHE["keys"] = keys
+    return keys
+
+
+def _parse_version_tuple(text):
+    """'4.4.4-fix10' → (4, 4, 4)；容错、只取数字段。"""
+    nums = []
+    for part in str(text or "").strip().split("."):
+        digits = ""
+        for ch in part:
+            if ch.isdigit():
+                digits += ch
+            elif digits:
+                break
+        nums.append(int(digits) if digits else 0)
+    while len(nums) < 3:
+        nums.append(0)
+    return tuple(nums[:4])
+
+
+def _latest_update_version():
+    try:
+        with open(os.path.join(BASE_DIR, "update", "latest.json"), "r", encoding="utf-8-sig") as f:
+            return str(json.load(f).get("version") or "0.0.0")
+    except Exception:
+        return "0.0.0"
+
+
+def _extract_request_key(handler):
+    try:
+        qs = parse_qs(urlparse(handler.path).query)
+    except Exception:
+        qs = {}
+    for name in ("key", "license", "token"):
+        vals = qs.get(name)
+        if vals and str(vals[0]).strip():
+            return str(vals[0]).strip()
+    for name in ("X-Update-Key", "X-License-Key", "Authorization"):
+        val = handler.headers.get(name)
+        if not val:
+            continue
+        val = val.strip()
+        if val.lower().startswith("bearer "):
+            val = val[7:].strip()
+        if val:
+            return val
+    return ""
+
+
+def _license_key_valid(handler):
+    key = _extract_request_key(handler)
+    if not key:
+        return False
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    today = datetime.now().strftime("%Y-%m-%d")
+    for item in _load_update_keys():
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("sha256") or "").strip().lower() != digest:
+            continue
+        if item.get("revoked"):
+            return False
+        exp = str(item.get("expires") or "").strip()
+        if exp and exp < today:
+            return False
+        return True
+    return False
+
+
+def _update_gate_blocks(handler, version, kind="zip"):
+    """返回 True 表示本次请求应被 403 拦下。"""
+    cfg = _load_update_gate()
+    if not cfg or not cfg.get("enforce"):
+        return False
+    if kind == "model" and not cfg.get("gateModel"):
+        return False
+    if kind == "zip" and not cfg.get("gateStaticZip", True):
+        return False
+    floor = str(cfg.get("enforceFromVersion") or "0.0.0")
+    if _parse_version_tuple(version) < _parse_version_tuple(floor):
+        return False
+    return not _license_key_valid(handler)
+
+
+def _send_update_gate_403(handler):
+    body = json.dumps({
+        "error": "update_license_required",
+        "detail": "该版本的更新包需要授权密钥；请携带 key 参数或 X-Update-Key 头。",
+        "hint": "GET /update/check 仍对外开放，可查看版本信息。",
+    }, ensure_ascii=False).encode("utf-8")
+    handler.send_response(403)
+    handler._set_cors()
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
 # 加载黑名单
 try:
     with open(BLACKLIST_FILE, "r", encoding="utf-8") as f:
@@ -661,8 +807,17 @@ class IngestHandler(BaseHTTPRequestHandler):
             ext = os.path.splitext(cand)[1].lower()
             if ext == ".zip":
                 ctype = "application/zip"
+                # 直链下载同样过闸门，避免绕开 /update/download
+                if _update_gate_blocks(self, _latest_update_version(), "zip"):
+                    _send_update_gate_403(self)
+                    return True
             elif ext == ".json":
                 ctype = "application/json; charset=utf-8"
+                # 清单/版本文件始终可读（否则客户端连版本都判断不了），只拦权重数据包
+                if os.path.basename(cand).lower() not in ("manifest.json", "policy_manifest.json", "latest.json"):
+                    if _update_gate_blocks(self, _latest_update_version(), "model"):
+                        _send_update_gate_403(self)
+                        return True
             else:
                 return False
             with open(cand, "rb") as f:
@@ -731,6 +886,10 @@ class IngestHandler(BaseHTTPRequestHandler):
                 pass
         latest_zip = target_zip
         if os.path.exists(latest_zip):
+            # 授权闸门：enforce 开启且目标版本 >= 下限时，必须带有效 key
+            if _update_gate_blocks(self, _latest_update_version(), "zip"):
+                _send_update_gate_403(self)
+                return
             with open(latest_zip, "rb") as f:
                 content = f.read()
             self.send_response(200)
