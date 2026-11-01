@@ -5,3 +5,7 @@
 __pycache__/
 *.py[cod]
 *.bak
+
+# 私有权重与构建注入（2026-11-01 起：新增权重要走 private/，不再直接提交）
+/private/
+/score/model/weights/*.generated.js
