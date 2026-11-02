@@ -20,6 +20,7 @@ import {hostJiedaoTargetDecision,supportedJiedaoShape} from '../cards/jiedaoEval
 import {hostTiesuoAllowsTarget} from '../cards/tiesuoEvaluator.js?v=41a';
 import {isPlayerLinked} from '../state/playerState.js?v=41a';
 import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
+import { targetKey as _gateTargetKey, candidateTargetValue } from '../state/actionCandidate.js?v=41a';
 import { tacticalEnabled } from '../strategy/tacticalOptimization.js?v=41a';
 import {
 	executionEligibility,
@@ -58,6 +59,9 @@ function _shouldOverride(player, event) {
 	const gate = executionEligibility('use', player, event, {
 		sentinel: SENTINEL,
 		requireCurrentPhase: true,
+		/* ★ 托管时也接管本机玩家：否则推荐只作展示、实际由宿主 AI 自选，
+		 *   「日志推荐 X 实际打出 Y」在托管局永远治不好。非托管不受影响。 */
+		allowLocalAuto: true,
 		extraGuard: function (_player, ev) {
 			try {
 				const parent = ev.getParent && ev.getParent();
@@ -153,6 +157,80 @@ function _shouldVeto(player, card) {
 		}
 		return false;
 	} catch (e) { return false; }
+}
+
+/* ★ 推荐一致性门（recommend gate）
+ *
+ *   历史实现只做「否决低价值牌」：候比分差 > VETO_THRESHOLD 才拦，其余牌全部放行。
+ *   宿主原生 AI 于是在剩余牌里自选牌、自选目标 —— 日志/面板显示「推荐 X」，实际却打出 Y，
+ *   这正是「推荐步骤与实际对局决策不符」的机械来源：引擎只否决，从不指定。
+ *
+ *   本门把本回合的合法选择收窄到引擎推荐动作本身，使「推荐 = 执行」。
+ *   ★ 严格 fail-open：只要推荐牌在本回合一张都不合法（或开关关闭 / 动作不是出牌），
+ *     整道门不启用，完全退回原行为 —— 绝不制造「无牌可出」或换手卡死。
+ *   开关：cfg('strictRecommend', true)，置 false 即回到纯否决模式。 */
+function _buildRecommendGate(ba, player, ev, origFilterCard, origFilterTarget) {
+	const off = { card: null, targets: null, enabled: false };
+	try {
+		if (!ba || !ba.rule) return off;
+		if (cfg('strictRecommend', true) === false) return off;
+		/* 只有「出牌」类动作能靠 filterCard/filterTarget 收敛；技能/结束回合不在此层 */
+		if (ba.type !== 'card' && ba.type !== 'equip') return off;
+		const want = String(ba.rule || '');
+		if (!want) return off;
+
+		/* ① card 门：必须确认本回合至少有一张同名牌合法，否则整道门不启用 */
+		let legalCard = null;
+		try {
+			const hand = (player && typeof player.getCards === 'function') ? player.getCards('h') : [];
+			for (let i = 0; i < hand.length; i++) {
+				const c = hand[i];
+				if (!c) continue;
+				if (String(get.name(c, player) || '') !== want) continue;
+				let ok = true;
+				try { ok = (typeof origFilterCard === 'function') ? !!origFilterCard(c, player, ev) : true; }
+				catch (_) { ok = false; }
+				if (ok) { legalCard = c; break; }
+			}
+		} catch (_) { legalCard = null; }
+		if (!legalCard) return off;
+
+		/* ② target 门：推荐绑定了具体目标才收窄；且必须在宿主侧逐验证过合法，
+		 *    否则退回「只锁牌、不锁目标」，避免目标被别的护栏判死导致无法出牌。 */
+		let targets = null;
+		try {
+			const tv = candidateTargetValue(ba);
+			const list = Array.isArray(tv)
+				? tv.map(function (x) { return String(x); }).filter(Boolean)
+				: (tv ? [String(tv)] : []);
+			if (list.length && typeof origFilterTarget === 'function') {
+				const pool = [].concat(
+					Array.isArray(game.players) ? game.players : [],
+					Array.isArray(game.dead) ? game.dead : []
+				);
+				const verified = [];
+				for (let i = 0; i < list.length; i++) {
+					const key = list[i];
+					for (let j = 0; j < pool.length; j++) {
+						const obj = pool[j];
+						if (!obj) continue;
+						if (String(_gateTargetKey(obj) || '') !== key) continue;
+						let okT = false;
+						try { okT = !!origFilterTarget(legalCard, player, obj); } catch (_) { okT = false; }
+						if (okT) verified.push(key);
+						break;
+					}
+				}
+				if (verified.length) targets = verified;
+				/* ★ 多目标动作（借刀杀人两个目标）必须「全部目标都验证通过」才收窄目标，
+				 *   否则只验证通过一个会导致宿主凑不齐目标、这张牌反而打不出去；
+				 *   一个都不通过或只通过一部分，退回「只锁牌、不锁目标」。 */
+				if (targets && targets.length !== list.length) targets = null;
+			}
+		} catch (_) { targets = null; }
+
+		return { card: want, targets: targets, enabled: true };
+	} catch (_) { return off; }
 }
 
 /* ================= ★ Wuxie Host Bridge V2 =================
@@ -545,6 +623,11 @@ export function installUseOverride() {
 			} catch (eFT2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eFT2); }
 
 			const origFilterVeto = ev.filterCard;
+			const origFilterTargetVeto = ev.filterTarget;
+			/* ★ 推荐一致性门：把宿主自选收窄到引擎推荐动作，治「日志推荐 X、实际打出 Y」。
+			 *   门未启用时 _recGate.enabled=false，下面两处判断直接跳过，行为与旧版完全一致。 */
+			const _recGate = _buildRecommendGate(ba, player, ev, origFilterVeto, origFilterTargetVeto);
+			try { _status.djsc_lastRecommendGate = _recGate; } catch (_) {}
 			const host = invokeHost({
 				kind: 'use',
 				player: player,
@@ -552,9 +635,17 @@ export function installUseOverride() {
 				thisArg: this,
 				args: args,
 				prepare: function () {
+					let _targetWrapped = false;
 					ev.filterCard = function (card, p, e) {
 						try {
 							if (typeof origFilterVeto === 'function' && !origFilterVeto(card, p, e)) return false;
+							if (_recGate.card) {
+								const _who = p || player;
+								if (String(get.name(card, _who) || '') !== _recGate.card) {
+									_stat('recommendGate');
+									return false;
+								}
+							}
 							if (_shouldVeto(player, card)) {
 								_stat('veto');
 								return false;
@@ -565,7 +656,31 @@ export function installUseOverride() {
 							catch (_) { return true; }
 						}
 					};
-					return function () { try { ev.filterCard = origFilterVeto; } catch (_) {} };
+					if (_recGate.targets && typeof origFilterTargetVeto === 'function') {
+						ev.filterTarget = function (card, p, target) {
+							try {
+								if (!origFilterTargetVeto(card, p, target)) return false;
+								if (!target || target === p) return true;
+								let isP = true;
+								try { isP = get.itemtype(target) === 'player'; } catch (_) { isP = true; }
+								if (!isP) return true;
+								const k = _gateTargetKey(target);
+								if (k && _recGate.targets.indexOf(String(k)) < 0) {
+									_stat('recommendGateTarget');
+									return false;
+								}
+								return true;
+							} catch (_) {
+								try { return origFilterTargetVeto(card, p, target); } catch (e2) { return true; }
+							}
+						};
+						_targetWrapped = true;
+					}
+					return function () {
+						try { ev.filterCard = origFilterVeto; } catch (_) {}
+						if (_targetWrapped) { try { ev.filterTarget = origFilterTargetVeto; } catch (_) {} }
+						try { delete _status.djsc_lastRecommendGate; } catch (_) {}
+					};
 				},
 				cleanupOnSuccess: true,
 				onSuccess: function () { _stat('pass'); },
@@ -578,7 +693,7 @@ export function installUseOverride() {
 		try { installWuguBridge(); } catch (eWg0) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWg0); }
 		try { installLoseHpBridge(); } catch (eWgI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eWgI); }
 		try { installJiedaoTargetBridge(); } catch (eJtI) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eJtI); }
-		log.info('override', 'chooseToUse 硬接管层已安装（结束回合 + 低价值牌否决）');
+		log.info('override', 'chooseToUse 硬接管层已安装（结束回合 + 推荐一致性门 + 低价值牌否决）');
 	} catch (e) {
 		try { console.error('[决策积分] installUseOverride 失败：', e); } catch (e2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e2); }
 	}

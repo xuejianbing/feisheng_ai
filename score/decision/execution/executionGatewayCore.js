@@ -31,6 +31,9 @@ export function createExecutionGatewayCore(deps) {
 	const circuitTripped = typeof deps.isTripped === 'function' ? deps.isTripped : function () { return false; };
 	const circuitTrip = typeof deps.trip === 'function' ? deps.trip : function () {};
 	const getGameMe = typeof deps.getGameMe === 'function' ? deps.getGameMe : function () { return null; };
+	/* ★ 托管判定：托管（_status.auto）时本机玩家实际上由扩展决策，
+	 *   调用方可用 options.allowLocalAuto 申请接管本机玩家。 */
+	const isAutoPlay = typeof deps.isAutoPlay === 'function' ? deps.isAutoPlay : function () { return false; };
 	const getDecisionWindow = typeof deps.getDecisionWindow === 'function' ? deps.getDecisionWindow : () => null;
 	const getCurrentPhase = typeof deps.getCurrentPhase === 'function' ? deps.getCurrentPhase : function () { return null; };
 	const stageTransaction = typeof deps.stageTransaction === 'function' ? deps.stageTransaction : function () { return null; };
@@ -77,9 +80,16 @@ export function createExecutionGatewayCore(deps) {
 		} catch (_) {}
 	}
 
-	function playerBlocked(player) {
+	function playerBlocked(player, options) {
 		if (!player) return 'missing-player';
-		if (player === getGameMe()) return 'local-human';
+		if (player === getGameMe()) {
+			/* 托管时允许接管本机玩家：否则「推荐」只作展示，实际由宿主 AI 自选，
+			 * 免不了「日志推荐 X、实际打出 Y」。非托管仍然只建议、不接管。 */
+			try {
+				if (options && options.allowLocalAuto === true && isAutoPlay() === true) return null;
+			} catch (_) {}
+			return 'local-human';
+		}
 		try {
 			if (player.isOnline2 && player.isOnline2()) return 'online-player';
 		} catch (_) {}
@@ -130,7 +140,7 @@ export function createExecutionGatewayCore(deps) {
 			return { ok: false, reason };
 		};
 
-		const playerReason = playerBlocked(player);
+		const playerReason = playerBlocked(player, options);
 		if (playerReason) return deny(playerReason);
 		if (!event && options.allowMissingEvent !== true) return deny('missing-event');
 

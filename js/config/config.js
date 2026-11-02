@@ -566,6 +566,10 @@ export let config = {
 	override_respond: { name: '⚠️ 硬接管 · 响应决策（保留闪/桃/无懈）'},
 	override_discard: { name: '⚠️ 硬接管 · 弃牌决策（弃低价值牌）'},
 	override_compare: { name: '⚠️ 硬接管 · 拼点决策（按赢率选牌）'},
+	strictRecommend: {
+		name: '🎯 推荐一致性门（推荐即执行）',
+		intro: '开启后：引擎选出的最优牌与目标成为本回合宿主可选的唯一范围，消除「日志推荐 X、实际打出 Y」。<br>严格 fail-open：推荐牌在本回合不可用时整道门自动失效，绝不卡住出牌。',
+	},
 
 	/* ===== 分值倍率 ===== */
 	rateBd: { clear: true, name: '<div style="color: #9ad8ff; text-align:center; padding: 4px;">▸ 分值倍率</div>' },

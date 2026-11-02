@@ -47,7 +47,7 @@ export const CONFIG_SECTIONS = [
 		entries: ['exportAllData', 'importTrainingData', 'showTrainStats', 'clearTrainingBuffer', 'clearSamples', 'classicDoudizhuCollect', 'playerDemonstrations', 'modeTrainingCenter'],
 	},
 	{scope:'developer',id:'dev_strategy',title:'D5 · 策略与接管',accent:'blue',
-	 entries:[{kind:'subsection',title:'通用策略优化',fold:'generalStrategy',defaultOpen:false},'hardOverride','broadcastAI','responseAI','comboChain','compareAI','deckAwareness','deckConsumeAllPlayers','enablePlanner','psychologyLayer','openPsychologyMonitor',{kind:'endSubsection'},{kind:'subsection',title:'卡牌打法优化',fold:'tactical',defaultOpen:false},'tacticalOptimization','tacticalFire','tacticalTiesuo','tacticalWuxie','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics',{kind:'endSubsection'},{kind:'subsection',title:'接管细项',fold:'override',defaultOpen:false},'override_use','override_respond','override_discard','override_compare','openOverridePanel']},
+	 entries:[{kind:'subsection',title:'通用策略优化',fold:'generalStrategy',defaultOpen:false},'hardOverride','broadcastAI','responseAI','comboChain','compareAI','deckAwareness','deckConsumeAllPlayers','enablePlanner','psychologyLayer','openPsychologyMonitor',{kind:'endSubsection'},{kind:'subsection',title:'卡牌打法优化',fold:'tactical',defaultOpen:false},'tacticalOptimization','tacticalFire','tacticalTiesuo','tacticalWuxie','tacticalGuding','tacticalWine','tacticalStrip','tacticalJudgeRescue','tacticalDelay','tacticalCrossbow','tacticalDiagnostics',{kind:'endSubsection'},{kind:'subsection',title:'接管细项',fold:'override',defaultOpen:false},'override_use','override_respond','override_discard','override_compare','strictRecommend','openOverridePanel']},
 ];
 
 export const CONFIG_ITEMS = {
@@ -136,6 +136,10 @@ export const CONFIG_ITEMS = {
 	override_respond: { type: 'bool', default: true, label: '响应接管', description: '接管响应阶段相关决策。' },
 	override_discard: { type: 'bool', default: true, label: '弃牌接管', description: '接管弃牌阶段相关决策。' },
 	override_compare: { type: 'bool', default: true, label: '拼点接管', description: '接管拼点阶段相关决策。' },
+	strictRecommend: {
+		type: 'bool', default: true, label: '推荐即执行',
+		description: '把宿主可选出牌收窄到引擎推荐动作与目标，消除「推荐与实际出牌不符」；推荐牌不可用时自动失效。',
+	},
 	openOverridePanel: { type: 'action', label: '接管层状态', description: '查看接管层、熔断与降级状态。', actionLabel: '查看' },
 
 	useTrainedModel: {

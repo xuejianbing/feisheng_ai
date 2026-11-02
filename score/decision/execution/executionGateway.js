@@ -22,6 +22,8 @@ const gateway = createExecutionGatewayCore({
 	isTripped: isTripped,
 	trip: trip,
 	getGameMe: function () { return game.me; },
+	/* ★ 托管判定（_status.auto）：供 allowLocalAuto 申请接管本机玩家 */
+	isAutoPlay: function () { try { return !!(_status && _status.auto); } catch (_) { return false; } },
 	getCurrentPhase: function () { return _status.currentPhase; },
 	getDecisionWindow: (player, execution) => playChoiceWindow(_status.event, player, execution),
 	stageTransaction: stageDecisionTransaction,

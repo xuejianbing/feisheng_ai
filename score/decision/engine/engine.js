@@ -1506,7 +1506,17 @@ const playerDemonstrations=createPlayerDemonstrationCollector({
  archive:(kind,payload,tx)=>matchArchive.record(kind,payload,{playerId:tx.trainingActorId,round:_getRoundNumber(),transactionId:tx.id}),
 });
 function recordExecutionMismatch(result,actor){
- try{if(result?.tx?.state==='mismatched')matchArchive.record('executionMismatch',{transactionId:result.tx.id,actorId:targetKey(actor),expected:result.tx.expected,actual:result.tx.actual,reason:result.reason,trainingEligible:false},{playerId:targetKey(actor),round:_getRoundNumber()});}catch(_){}
+ try{if(result?.tx?.state==='mismatched'){
+  matchArchive.record('executionMismatch',{transactionId:result.tx.id,actorId:targetKey(actor),expected:result.tx.expected,actual:result.tx.actual,reason:result.reason,trainingEligible:false},{playerId:targetKey(actor),round:_getRoundNumber()});
+  /* ★ 对账可见化：此前 mismatch 只进 matchArchive，对局日志里完全看不到，
+   *   于是「推荐 X 实际 Y」成了静默事件（而不符时 deferred trace 根本不会执行）。
+   *   这里补一行日志，让不一致当场暴露，便于定位是推荐门未覆盖还是宿主自选。 */
+  try{
+   const _ex=result.tx.expected||{},_ac=result.tx.actual||{};
+   const _ft=v=>{try{return (lib.translate&&lib.translate[v])||String(v||'?');}catch(_){return String(v||'?');}};
+   game.log('[无名AI·执行对账] 推荐 '+_ft(_ex.type)+':'+_ft(_ex.id)+' → 实际 '+_ft(_ac.type)+':'+_ft(_ac.id)+'｜'+String(result.reason||'mismatch'));
+  }catch(_){}
+ }}catch(_){}
 }
 function preparePlayerDemonstration(actor,args,recast=false){
  try{
@@ -4893,6 +4903,9 @@ function bestActionCore() {
 		return _finalResult;
 	} catch (e) {
 		try { perfMark('bestAction', performance.now() - _perfT0); } catch (eP) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eP); }
+		try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.scoringError) window.__DJSC.scoringError(e); } catch (_dbg) {}
+		/* 诊断开关：setScoringErrorHook(fn) 或 window.__DJSC.scoringError=fn 可拿到被兜成
+		 * 「评分异常」的原始异常栈；默认无钩子时零开销。工具 tools/perf-identity-bench.mjs 用它排查。 */
 
 		return { action: "C", reason: "评分异常：" + String(e).slice(0, 60), strat: "switchToAuto" };
 	}
