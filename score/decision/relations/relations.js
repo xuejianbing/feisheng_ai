@@ -38,7 +38,7 @@
  *
  * 本模块为纯计算，只 import 宿主与 observer 的“读取类”API，不触碰本体的记分。
  */
-import { game, get } from '../../foundation/adapt/host.js?v=41a';
+import { game, get, _status } from '../../foundation/adapt/host.js?v=41a';
 import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
@@ -47,6 +47,50 @@ import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=4
 import { spyDispositionOf } from '../strategy/identityStance.js?v=41a';
 import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
+import { getObservationRevision } from '../../perception/observer/observer.js?v=41a';
+
+/* ================= 身份局关系推断缓存 =================
+ * 动机：身份局每次决策会多次调用 relationStateKey（engine 2 处 + threat.js 3 处，
+ *   其中 threat 侧位于逐候选路径），而它内部要对每个目标跑 exposureOf / identityView，
+ *   单次约 200~300µs；非身份局同一函数仅几个 µs。实测身份局单次决策 ~13ms、非身份局 ~5ms，
+ *   差额主要来自这条链路。
+ *
+ * 失效键 = 回合号 + 观测证据修订号 + 各玩家公开身份事实/存活/血量 + 阵亡名单。
+ *   - 证据修订号由 observer.js 在每条行为证据变化时递增，涵盖“杀/桃/锦囊/身份事件”；
+ *   - 公开身份、存活、血量任何变化都会改变键；
+ *   故同一证据状态下复用结果与逐次重算等价。
+ * 仅身份局启用（其它模式的 dispositionOf 依赖宿主 get.attitude，不做跨调用缓存）。
+ */
+let _relGen = '';
+const _expoCache = new Map();
+const _dispCache = new Map();
+const _rskCache = new Map();
+
+function _relationGen() {
+	try {
+		let s = ((_status && _status.roundNumber) || 0) + ':' + getObservationRevision() + ':';
+		const ps = game.players || [];
+		for (let i = 0; i < ps.length; i++) {
+			const p = ps[i];
+			if (!p) continue;
+			s += playerKey(p) + (p.alive === false ? '0' : '1') + (p.identityShown ? '1' : '0') + (p.__djsc_revealedRole || '') + ((p.hp | 0)) + ';';
+		}
+		const dd = game.dead || [];
+		for (let i = 0; i < dd.length; i++) s += 'd' + playerKey(dd[i]) + ';';
+		return s;
+	} catch (_) { return 'gen_err'; }
+}
+function _syncRelCache() {
+	const gen = _relationGen();
+	if (gen !== _relGen) {
+		_relGen = gen;
+		_expoCache.clear(); _dispCache.clear(); _rskCache.clear();
+	}
+	return gen;
+}
+function _ck(a, b) {
+	try { return (a && playerKey(a) || '-') + '>' + (b && playerKey(b) || '-'); } catch (_) { return '-'; }
+}
 
 function _isIdentityMode() {
 	try {
@@ -66,6 +110,22 @@ function _isIdentityMode() {
  *   inferConfidence 行为推断置信度（identity 局非零）
  */
 function exposureOf(me, t) {
+	if (!t) return { shown: false, known: 0, source: 'none', inferConfidence: 0 };
+	try {
+		if (_isIdentityMode()) {
+			_syncRelCache();
+			const key = _ck(me, t);
+			const hit = _expoCache.get(key);
+			if (hit) return hit;
+			const val = _exposureOfRaw(me, t);
+			_expoCache.set(key, val);
+			return val;
+		}
+	} catch (_ec) { /* 缓存失败一律回退原路径 */ }
+	return _exposureOfRaw(me, t);
+}
+
+function _exposureOfRaw(me, t) {
 	try {
 		if (!t) return { shown: false, known: 0, source: 'none', inferConfidence: 0 };
 		const identityMode = _isIdentityMode();
@@ -195,6 +255,21 @@ function _identityDisposition(me, t) {
 function dispositionOf(me, t) {
 	if (!me || !t || t === me) return 0;
 	try {
+		if (_isIdentityMode()) {
+			_syncRelCache();
+			const key = _ck(me, t);
+			const hit = _dispCache.get(key);
+			if (hit !== undefined) return hit;
+			const val = _dispositionOfRaw(me, t);
+			_dispCache.set(key, val);
+			return val;
+		}
+	} catch (_dc) { /* 回退 */ }
+	return _dispositionOfRaw(me, t);
+}
+
+function _dispositionOfRaw(me, t) {
+	try {
 		if (_isIdentityMode()) return _identityDisposition(me, t);
 	} catch (eMode) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eMode); }
 
@@ -224,6 +299,22 @@ const isEnemyOf = isEnemyOfR;
  * 用途：同一回合内关系翻转时，让 bestAction / enemiesOf / situationFactor 等缓存即时失效。
  */
 function relationStateKey(me) {
+	try {
+		if (!me) return 'no_me';
+		if (_isIdentityMode()) {
+			_syncRelCache();
+			const mk = _ck(me, null);
+			const hit = _rskCache.get(mk);
+			if (hit !== undefined) return hit;
+			const val = _relationStateKeyRaw(me);
+			_rskCache.set(mk, val);
+			return val;
+		}
+	} catch (_rk) { /* 回退 */ }
+	return _relationStateKeyRaw(me);
+}
+
+function _relationStateKeyRaw(me) {
 	try {
 		if (!me) return 'no_me';
 		const out = [];
