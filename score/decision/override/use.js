@@ -459,7 +459,7 @@ export function installUseOverride() {
             if (!host.ok) return host.result;
             const next = host.result;
             let decision = null, staged = null, endRequested = false;
-            bindChoiceLifecycle(next, 'use', function (ev, trace, registerCleanup) {
+            const lifecycleBound = bindChoiceLifecycle(next, 'use', function (ev, trace, registerCleanup) {
                 if (!token.active || choicePlayerBlocked(player)) return;
                 const restores = [];
                 const rescueRestore = _installTaoRescueGuard(player, ev);
@@ -474,6 +474,24 @@ export function installUseOverride() {
                 token.cleanups.add(restore);
                 registerCleanup(restore);
                 if (!_shouldOverride(player, ev)) return restore;
+                /* ★ 护栏与决策解耦（4.4 回归修复）：阵营护栏 / 借刀第二目标护栏只依赖公开信息，
+                 *   必须在 bestAction 与暂存之前装好。原实现排在 stageExecutionDecision 之后，
+                 *   一旦超时、暂存失败或 decision 为空就提前 return，宿主原生 AI 重新自由选目标，
+                 *   于是「拆顺打队友」「不救判定区」在两个版本中表现不一致。 */
+                const originalTarget = ev.filterTarget, originalTarget2 = ev.filterTarget2;
+                installAIUseTargetGuard(ev);
+                const guardedTarget = ev.filterTarget;
+                restores.push(() => { if (ev.filterTarget === guardedTarget) ev.filterTarget = originalTarget; });
+                if (typeof originalTarget2 === 'function') restores.push(patchChoiceField(ev, 'filterTarget2', function (card, p, target) {
+                    if (!originalTarget2.apply(this, arguments)) return false;
+                    try {
+                        if (get.name(card, p) === 'jiedao' && tacticalEnabled('enabled')) {
+                            const pair = hostJiedaoTargetDecision(p, target, card); if (pair) return pair.allowed;
+                        }
+                        if (target && target !== p && isAllyOf(p, target)) { _stat('allyGuard'); return false; }
+                    } catch (_) {}
+                    return true;
+                }));
                 const t0 = performance.now();
                 try { decision = bestAction(); }
                 catch (error) {
@@ -508,20 +526,6 @@ export function installUseOverride() {
                     restores.push(patchChoiceField(ev, 'ai1', () => 0));
                     return restore;
                 }
-                const originalTarget = ev.filterTarget, originalTarget2 = ev.filterTarget2;
-                installAIUseTargetGuard(ev);
-                const guardedTarget = ev.filterTarget;
-                restores.push(() => { if (ev.filterTarget === guardedTarget) ev.filterTarget = originalTarget; });
-                if (typeof originalTarget2 === 'function') restores.push(patchChoiceField(ev, 'filterTarget2', function (card, p, target) {
-                    if (!originalTarget2.apply(this, arguments)) return false;
-                    try {
-                        if (get.name(card, p) === 'jiedao' && tacticalEnabled('enabled')) {
-                            const pair = hostJiedaoTargetDecision(p, target, card); if (pair) return pair.allowed;
-                        }
-                        if (target && target !== p && isAllyOf(p, target)) { _stat('allyGuard'); return false; }
-                    } catch (_) {}
-                    return true;
-                }));
                 const originalFilter = ev.filterCard;
                 restores.push(patchChoiceField(ev, 'filterCard', function (card, p, e) {
                     // Host legality always wins, including filters installed through .set().
@@ -546,6 +550,15 @@ export function installUseOverride() {
                 if (trace.candidateAccepted) _stat('candidateAccepted');
                 if (staged && pendingExecution(player) === staged) cancelExecution(player, 'choice-completed-without-matching-action', 'use');
             }, error => markExecutionFailure('use', player, '选择事件桥接异常：' + error.message, 'fatal'));
+            if (!lifecycleBound) {
+                /* ★ bindChoiceLifecycle 需要 event.pushHandler + after 数组 + lib.element.GameEvent；
+                 *   任一缺失时返回 false 且 setup 完全不执行——整层护栏会静默消失。
+                 *   这里补装只依赖公开信息的基础护栏（无状态、不跨事件泄漏）。 */
+                _stat('lifecycleUnbound');
+                try { installAIUseTargetGuard(next); } catch (eLB) {
+                    if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eLB);
+                }
+            }
             return next;
         };
 
