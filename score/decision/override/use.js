@@ -173,7 +173,8 @@ function _buildRecommendGate(ba, player, ev, origFilterCard, origFilterTarget) {
 	const off = { card: null, targets: null, enabled: false };
 	try {
 		if (!ba || !ba.rule) return off;
-		if (cfg('strictRecommend', true) === false) return off;
+		/* ★ 只要不是明确开启就关：旧配置可能存 0 / 'false' / null，用 === false 会漏判成「开启」 */
+		if (!cfg('strictRecommend', true)) return off;
 		/* 只有「出牌」类动作能靠 filterCard/filterTarget 收敛；技能/结束回合不在此层 */
 		if (ba.type !== 'card' && ba.type !== 'equip') return off;
 		const want = String(ba.rule || '');
@@ -636,6 +637,14 @@ export function installUseOverride() {
 				args: args,
 				prepare: function () {
 					let _targetWrapped = false;
+					/* ★ 安装中途抛错（ev 被冻结 / 赋值异常）必须就地还原：
+					 *   否则已写进 ev 的 filterCard 闭包会永久驻留，且 cleanup 永远拿不到。 */
+					const _restore = function () {
+						try { ev.filterCard = origFilterVeto; } catch (_) {}
+						if (_targetWrapped) { try { ev.filterTarget = origFilterTargetVeto; } catch (_) {} }
+						try { delete _status.djsc_lastRecommendGate; } catch (_) {}
+					};
+					try {
 					ev.filterCard = function (card, p, e) {
 						try {
 							if (typeof origFilterVeto === 'function' && !origFilterVeto(card, p, e)) return false;
@@ -645,6 +654,12 @@ export function installUseOverride() {
 									_stat('recommendGate');
 									return false;
 								}
+								/* ★ 门内的牌就是推荐牌本身，此处不得再跑 _shouldVeto：
+								 *   _status.djsc_lastCandidates 是全局单槽且无归属校验，
+								 *   若快照来自别的玩家/上一事件且分差 > VETO_THRESHOLD，
+								 *   会把唯一合法的推荐牌也否掉 → 本回合无牌可出、只能结束，
+								 *   比旧版（至少还放行其它牌）更糟。 */
+								return true;
 							}
 							if (_shouldVeto(player, card)) {
 								_stat('veto');
@@ -676,11 +691,11 @@ export function installUseOverride() {
 						};
 						_targetWrapped = true;
 					}
-					return function () {
-						try { ev.filterCard = origFilterVeto; } catch (_) {}
-						if (_targetWrapped) { try { ev.filterTarget = origFilterTargetVeto; } catch (_) {} }
-						try { delete _status.djsc_lastRecommendGate; } catch (_) {}
-					};
+					} catch (ePrep) {
+						_restore();
+						return _restore;
+					}
+					return _restore;
 				},
 				cleanupOnSuccess: true,
 				onSuccess: function () { _stat('pass'); },

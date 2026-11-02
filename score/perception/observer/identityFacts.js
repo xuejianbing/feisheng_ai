@@ -10,6 +10,9 @@ let sessionId = 'identity-session-0';
 let _invCacheKey = '', _invCache = null;
 let _ruleVerKey = '', _ruleVerVal = '';
 let _privVerKey = '', _privVerVal = '';
+/* capabilities 缓存：publicIdentityRole 会在「每个玩家 × 每次判定」里调用它，
+ * 未缓存时每次都新建对象并做 inlcudes 判定，是身份局 relationGen 的主要固定开销。 */
+let _capKey = '', _capVal = null;
 
 export function normalizeIdentityRole(role) {
     return role === 'mingzhong' ? 'zhong' : IDENTITY_ROLES.includes(role) ? role : null;
@@ -26,12 +29,17 @@ export function identityPlayers() {
     });
 }
 export function identityRuleCapabilities() {
-    const mode = identityMode();
+    let mode = 'unknown';
+    try { mode = get.mode?.() || 'unknown'; } catch (_) { mode = 'unknown'; }
     const submode = typeof _status.mode === 'string' ? _status.mode : '';
+    const k = mode + '\u0001' + submode;
+    if (_capVal && _capKey === k) return _capVal;
     const standard = mode === 'identity' && ['', 'normal', 'identity'].includes(submode);
-    return {version:IDENTITY_RULE_VERSION, mode, submode, standard,
-        supports:{normal:standard,doubleNei:false,mingzhong:false,changingIdentity:false},
-        reasonCodes:standard ? [] : ['identity-rule-unsupported']};
+    _capKey = k;
+    _capVal = Object.freeze({version:IDENTITY_RULE_VERSION, mode, submode, standard,
+        supports:Object.freeze({normal:standard,doubleNei:false,mingzhong:false,changingIdentity:false}),
+        reasonCodes:Object.freeze(standard ? [] : ['identity-rule-unsupported'])});
+    return _capVal;
 }
 export function publicIdentityRole(player) {
     if (!player) return null;
@@ -58,11 +66,11 @@ export function identityRoleInventory() {
     try {
         if (typeof get.identityList === 'function') {
             const hostList = get.identityList(total);
-            if (Array.isArray(hostList)) { list = hostList; fromHost = true; listSig = hostList.join(','); }
+            if (Array.isArray(hostList)) { list = hostList; fromHost = true; listSig = hostList.join('\u0001'); }
         }
         if (!list) {
             const cfgList = lib.config?.mode_config?.identity?.identity?.[total - 2];
-            if (Array.isArray(cfgList)) { list = cfgList; listSig = 'cfg:' + cfgList.join(','); }
+            if (Array.isArray(cfgList)) { list = cfgList; listSig = 'cfg:' + cfgList.join('\u0001'); }
         }
     } catch (_l) { list = null; listSig = 'err'; }
     const cacheKey = identityMode() + '|' + (typeof _status.mode === 'string' ? _status.mode : '') + '|' + total + '|' + listSig;
@@ -88,7 +96,10 @@ export function identityRoleInventory() {
             if (!out.constrainable) out.reasonCodes.push('identity-rule-unsupported');
         }
     }
-    _invCache = out;
+    /* ★ 缓存对象对外共享：冻结后外部（面板/诊断）误改不会污染缓存，
+     *   一旦污染，同一局内后续所有身份推断都会读到被改过的 counts。 */
+    Object.freeze(out.counts); Object.freeze(out.reasonCodes);
+    _invCache = Object.freeze(out);
     return out;
 }
 export function remainingIdentitySlots(observer) {
@@ -129,8 +140,9 @@ export function identityFactsState(observer, context = {}) {
     const pvKey = selfRole + '|' + privRev;
     if (_privVerKey !== pvKey) { _privVerKey = pvKey; _privVerVal = JSON.stringify([selfRole, privRev]); }
 
-    /* ruleVersion：只依赖角色清单（inv 已被缓存，同一对象复用时不重算） */
-    const rvKey = inv.source + '|' + inv.counts.zhu + ',' + inv.counts.zhong + ',' + inv.counts.fan + ',' + inv.counts.nei + '|' + inv.constrainable;
+    /* ruleVersion：依赖角色清单 + 规则能力（mode/submode 决定 standard，必须进键，
+     * 否则 _status.mode 在 'normal'/'identity' 之间切换时 standard 翻转但版本号不变） */
+    const rvKey = inv.capabilities.mode + '|' + inv.capabilities.submode + '|' + inv.source + '|' + inv.counts.zhu + ',' + inv.counts.zhong + ',' + inv.counts.fan + ',' + inv.counts.nei + '|' + inv.constrainable;
     if (_ruleVerKey !== rvKey) { _ruleVerKey = rvKey; _ruleVerVal = IDENTITY_RULE_VERSION + ':' + JSON.stringify([inv.counts, inv.source, inv.constrainable, inv.capabilities]); }
 
     return {sessionId:context.sessionId || sessionId,observerId:playerKey(observer),publicRevision,

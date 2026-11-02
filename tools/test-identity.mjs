@@ -42,6 +42,11 @@ check('特征提取不访问隐藏身份 getter 或目标手牌内容',()=>{cons
 check('合法自身与公开目标特征保留',()=>{const [z,l]=setup();const f=extractFeatures(l,{type:'card',id:'tao'},{bestT:z});assert.equal(f[13],127);assert.deepEqual(Array.from(f.slice(130)),[127,0,0,0]);});
 check('面板统一使用观察者视图、不使用宿主态度',()=>{const [z,l,f]=setup();let calls=0;stub.get.attitude=()=>{calls++;return -10;};const a=panel.inferIdentity(f,l);f.identity='zhong';const b=panel.inferIdentity(f,l);assert.deepEqual(a,b);assert.equal(calls,0);assert.equal(a.calibrated,false);assert.equal(a.weightLabel,'推断权重');});
 check('关系缓存键跟踪精确版本，非仅舍入最大值',()=>{const [z,l,f]=setup();obs.observeAttack(f,z,1);const before=relations.relationStateKey(l);obs.observeAttack(f,z,0.00001);assert.notEqual(relations.relationStateKey(l),before);});
+/* ★ 以下三条锁定关系缓存的失效完备性：缓存键漏掉任何一项「被缓存函数实际读取的输入」，
+ *   都会让身份局在同一回合内返回过期敌我（打真队友/不救队友），且不会有任何报错。 */
+check('仅存在于 game.dead 的玩家阵亡后揭示身份，关系缓存立即刷新',()=>{const [z,l,f]=setup();f.hp=0;stub.game.players=stub.game.players.filter(p=>p!==f);stub.game.dead=[f];const before=relations.exposureOf(l,f);assert.equal(before.shown,false);f.__djsc_revealedRole='fan';const after=relations.exposureOf(l,f);assert.equal(after.shown,true);assert.equal(after.known,1);assert.equal(after.source,'dead_id');});
+check('观察者自身身份变化使关系状态键即时改变',()=>{const [z,l,f]=setup();const before=relations.relationStateKey(l);l.identity='fan';assert.notEqual(relations.relationStateKey(l),before);});
+check('宿主角色清单变化使关系状态键即时改变',()=>{const [z,l,f]=setup();const before=relations.relationStateKey(l);stub.get.identityList=()=>['zhu','fan','fan','nei'];assert.notEqual(relations.relationStateKey(l),before);});
 check('身份旧模型暂停，其他模式兼容声明明确',()=>{setup();const status=id.identityModelCompatibility();assert.equal(status.allowed,false);assert.equal(status.sampleAllowed,false);assert.equal(status.reason,'identity-feature-schema-migration');stub.get.mode=()=> 'doudizhu';assert.equal(id.identityModelCompatibility().allowed,true);assert.equal(id.identityModelCompatibility().compatibility,'legacy-public-role');});
 const training=await import('../score/model/train/trainExport.js?v=41a');
 const champion=await import('../score/decision/strategy/championStrategy.js?v=41a');

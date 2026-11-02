@@ -1507,14 +1507,18 @@ const playerDemonstrations=createPlayerDemonstrationCollector({
 });
 function recordExecutionMismatch(result,actor){
  try{if(result?.tx?.state==='mismatched'){
-  matchArchive.record('executionMismatch',{transactionId:result.tx.id,actorId:targetKey(actor),expected:result.tx.expected,actual:result.tx.actual,reason:result.reason,trainingEligible:false},{playerId:targetKey(actor),round:_getRoundNumber()});
   /* ★ 对账可见化：此前 mismatch 只进 matchArchive，对局日志里完全看不到，
    *   于是「推荐 X 实际 Y」成了静默事件（而不符时 deferred trace 根本不会执行）。
-   *   这里补一行日志，让不一致当场暴露，便于定位是推荐门未覆盖还是宿主自选。 */
+   *   这里补一行日志，让不一致当场暴露，便于定位是推荐门未覆盖还是宿主自选。
+   *   ★ 日志必须独立于 record 的成败：早前两件事写在同一个 try 里，
+   *     record 抛错会顺手吞掉这条日志，恰好让「可见化」失效。 */
   try{
    const _ex=result.tx.expected||{},_ac=result.tx.actual||{};
    const _ft=v=>{try{return (lib.translate&&lib.translate[v])||String(v||'?');}catch(_){return String(v||'?');}};
    game.log('[无名AI·执行对账] 推荐 '+_ft(_ex.type)+':'+_ft(_ex.id)+' → 实际 '+_ft(_ac.type)+':'+_ft(_ac.id)+'｜'+String(result.reason||'mismatch'));
+  }catch(_){}
+  try{
+   matchArchive.record('executionMismatch',{transactionId:result.tx.id,actorId:targetKey(actor),expected:result.tx.expected,actual:result.tx.actual,reason:result.reason,trainingEligible:false},{playerId:targetKey(actor),round:_getRoundNumber()});
   }catch(_){}
  }}catch(_){}
 }

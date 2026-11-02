@@ -43,7 +43,7 @@ import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
 import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
 import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
-import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
+import {publicIdentityRole, identityRoleInventory, selfIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import { spyDispositionOf } from '../strategy/identityStance.js?v=41a';
 import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIdentity.js?v=41a';
 import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
@@ -55,13 +55,17 @@ import { getObservationRevision } from '../../perception/observer/observer.js?v=
  *   单次约 200~300µs；非身份局同一函数仅几个 µs。实测身份局单次决策 ~13ms、非身份局 ~5ms，
  *   差额主要来自这条链路。
  *
- * 失效键 = 回合号 + 观测证据修订号 + 各玩家公开身份事实/存活/血量 + 阵亡名单。
- *   - 证据修订号由 observer.js 在每条行为证据变化时递增，涵盖“杀/桃/锦囊/身份事件”；
- *   - 公开身份、存活、血量任何变化都会改变键；
+ * 失效键 = 回合号 + 观测证据修订号 + 角色清单/规则能力签名 + 各玩家「公开身份/存活/血量」。
+ *   - 玩家集合取 players + dead（identityPlayers 同口径）：阵亡后才揭示身份的玩家
+ *     也必须参与指纹，否则「仅存在于 game.dead 的揭示」不会让缓存失效；
+ *   - publicIdentityRole 对 game.zhu 恒返 'zhu'，故主公变更体现在对应玩家的角色分量上；
+ *   - 角色清单/规则能力由 identityRoleInventory() 的缓存签名覆盖（清单变化 → 签名变）；
+ *   - 观察者自身身份由 _ck() 的 selfRole 分量覆盖（自身 identity 未必公开）。
  *   故同一证据状态下复用结果与逐次重算等价。
  * 仅身份局启用（其它模式的 dispositionOf 依赖宿主 get.attitude，不做跨调用缓存）。
  */
 let _relGen = '';
+let _genErrSeq = 0;
 const _expoCache = new Map();
 const _dispCache = new Map();
 const _rskCache = new Map();
@@ -69,16 +73,39 @@ const _rskCache = new Map();
 function _relationGen() {
 	try {
 		let s = ((_status && _status.roundNumber) || 0) + ':' + getObservationRevision() + ':';
-		const ps = game.players || [];
+		/* 清单/规则能力签名（inventory 自带按清单内容寻址的缓存，命中极廉价）。
+		 * capabilities.mode/submode 决定 standard，故一并入键。 */
+		try {
+			const inv = identityRoleInventory();
+			const c = inv.capabilities || {};
+			s += (inv.source || '') + (inv.constrainable ? '1' : '0')
+				+ inv.counts.zhu + inv.counts.zhong + inv.counts.fan + inv.counts.nei
+				+ (c.mode || '') + (c.submode || '') + ':';
+		} catch (_i) { s += 'inv?:'; }
+		try { s += 'zhu=' + (playerKey(game.zhu) || '-') + ':'; } catch (_z) { s += 'zhu=?:'; }
+		const ps = (game.players || []).concat(game.dead || []);
+		const seen = new Set();
 		for (let i = 0; i < ps.length; i++) {
 			const p = ps[i];
 			if (!p) continue;
-			s += playerKey(p) + (p.alive === false ? '0' : '1') + (p.identityShown ? '1' : '0') + (p.__djsc_revealedRole || '') + ((p.hp | 0)) + ';';
+			const k = playerKey(p);
+			if (!k || seen.has(k)) continue;
+			seen.add(k);
+			/* 与 publicIdentityRole 同口径的最小充分集：
+			 *   alive/公开身份标记/显式揭示/已公开的身份值，外加血量。
+			 *   玩家集合取 players+dead —— 阵亡后才揭示身份的玩家也必须参与指纹。
+			 * 血量按 Number 归一：部分 mod 有半格体力，hp|0 会把 1 与 1.5 视作同一个键。 */
+			s += k + (p.alive === false ? '0' : '1')
+				+ (p.identityShown ? (p.identity || '') : '')
+				+ (p.__djsc_revealedRole || '')
+				+ (Number(p.hp) || 0) + ';';
 		}
-		const dd = game.dead || [];
-		for (let i = 0; i < dd.length; i++) s += 'd' + playerKey(dd[i]) + ';';
 		return s;
-	} catch (_) { return 'gen_err'; }
+	} catch (_) {
+		/* ★ 取键失败时必须让缓存整体失效，而不是返回一个稳定的错误串：
+		 *   否则异常期间会一直命中首轮缓存，等于关系永久冻结。 */
+		return 'gen_err:' + (++_genErrSeq);
+	}
 }
 function _syncRelCache() {
 	const gen = _relationGen();
@@ -89,7 +116,12 @@ function _syncRelCache() {
 	return gen;
 }
 function _ck(a, b) {
-	try { return (a && playerKey(a) || '-') + '>' + (b && playerKey(b) || '-'); } catch (_) { return '-'; }
+	try {
+		/* ★ 观察者自身身份必须进键：dispositionOf/exposureOf 的结论依赖 me 的 role，
+		 *   而 me 的 identity 未必公开（不进 publicRevision）。 */
+		return (a && playerKey(a) || '-') + '|' + (selfIdentityRole(a) || '-')
+			+ '>' + (b && playerKey(b) || '-');
+	} catch (_) { return '-'; }
 }
 
 function _isIdentityMode() {
