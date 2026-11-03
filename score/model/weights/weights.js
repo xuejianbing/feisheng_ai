@@ -967,13 +967,15 @@ export function getTrained() { return META.trained; }
 export function getMeta()    { return Object.assign({}, META); }
 export function predict(features) {
     /* ★ 兜底返回值：防止 undefined 导致冲突检测疯狂报警。
-     *   ★ 10.4：均匀分布必须真的归一（6×0.2=1.2 会让概率和检查/融合加权失真），confidence 取 1/6。 */
+     *   ★ 10.4：均匀分布必须真的归一（6×0.2=1.2 会让概率和检查/融合加权失真），ready=false 明确标记为不可用。 */
     const _u = 1 / 6;
     const fallback = {
-        action: 'B',
-        label: 'B',
+        action: 'skip',
+        label: null,
+        ready: false,
+        maxProb: 0,
         probs: [_u, _u, _u, _u, _u, _u],
-        confidence: _u,
+        confidence: 0,
         value: 0.0  /* ★ 兜底价值评估 */
     };
 

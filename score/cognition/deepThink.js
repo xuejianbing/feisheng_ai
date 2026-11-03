@@ -20,6 +20,7 @@ import { decisionActionSnapshot } from '../decision/analysis/decisionStages.js?v
  */
 
 /* ★ 特征维度单一来源：直接引用 features.js 导出的 FEATURE_DIM，杜绝散落硬编码导致漂移 */
+import { identityModelCompatibility } from '../model/features/identityCompatibility.js?v=41a';
 import { FEATURE_DIM } from '../model/features/features.js?v=41a';
 import { isReady as weightsReady } from '../model/weights/weights.js?v=41a';
 import { cfg } from '../foundation/config/util.js?v=41a';
@@ -29,7 +30,6 @@ import { probHasShan, probHasWuxie, probHasSha } from '../model/predict/handInfe
 import { evaluateSituation } from './situationEval.js?v=41a';
 
 const TOP_N = 3;           /* 深度辨析的候选数量上限（防放大算力开销） */
-const MODEL_SPREAD_SHARE = 0.35;  /* 模型证据最多只占当前候选 spread 的一部分 */
 const RISK_SPREAD_SHARE = 0.15;   /* 风险项同样按候选 spread 缩放，避免固定分值污染 */
 const COUNTER_SPREAD_SHARE = 0.20;  /* 反制推演：对手能否化解该动作（手牌推断），按 spread 缩放 */
 const SITUATION_SPREAD_SHARE = 0.10; /* 局面适配复核：优势保守/劣势激进，按 spread 缩放 */
@@ -50,6 +50,7 @@ function _modelConfidenceOf(feat) {
 		if (!src) return 0;
 		for (let i = 0; i < FEATURE_DIM && i < src.length; i++) buf[i] = src[i];
 		const r = conf(buf);
+		if (!r || r.ready === false || r.action === 'skip') return 0;
 		if (r && Number.isFinite(r.maxProb)) return Math.max(0,Math.min(1,r.maxProb));
 		if (r && Array.isArray(r.probs)) return Math.max(0,...r.probs.filter(Number.isFinite).map(p=>Math.min(1,p)));
 		return 0;
@@ -99,7 +100,6 @@ function _situationFit(a, situation) {
  * @param me     决策者
  * @param acts   候选动作数组
  * @param best   当前最优（已被规则/冠军子代理选出）
- * @param ctx    { modelP } 可选：已算好的 best 模型置信，省一次前向
  * @return { best, replaced, thinking:[], reason }
  */
 /* eslint no-unused-vars: off */
@@ -151,7 +151,7 @@ export function criticBest(me, acts, best, ctx) {
 		_stats.deepChecks++;
 		out.thinking.push('进入深度思考：best 与次优相对边际=' + margin.toFixed(3) + '，需多源复盘');
 		const cands = [best].concat(sorted.slice(0, TOP_N - 1));
-		return _deepEvaluate(me, cands, best, out, ctx);
+		return _deepEvaluate(me, cands, best, out);
 	} catch (e) {
 		out.evidence.status='error';out.evidence.reason=String(e);
         out.thinking.push('深度思考异常: ' + String(e).slice(0, 40));
@@ -160,21 +160,21 @@ export function criticBest(me, acts, best, ctx) {
 }
 
 /* 多源聚合打分（规则 + 模型置信 − 风险 − 反制 + 局面适配），批判性重新排序 */
-function _deepEvaluate(me, cands, best, out, ctx) {
+function _deepEvaluate(me, cands, best, out) {
 	try {
 		const spread = candidateSpread(cands);
-		const modelBudget = spread.absolute * MODEL_SPREAD_SHARE;
+		const modelBudget = 0; // Classification confidence is diagnostic only.
 		const riskBudget = spread.absolute * RISK_SPREAD_SHARE;
 		const counterBudget = spread.absolute * COUNTER_SPREAD_SHARE;
 		const situationBudget = spread.absolute * SITUATION_SPREAD_SHARE;
 		/* 局面只算一次，避免对每个候选重复遍历 */
 		const situation = evaluateSituation(me);
+		const modelAllowed = identityModelCompatibility().allowed;
 
 		const scored = cands.map(function (a) {
 			const rule = _num(a.score);
-			const modelP = _modelConfidenceOf(a._feat) || (a === best ? _num(ctx && ctx.modelP) : 0);
-			const modelEvidence = modelP > 0 ? Math.max(-1, Math.min(1, (modelP - 0.5) * 2)) : 0;
-			const modelAdj = modelEvidence * modelBudget;
+			const modelP = modelAllowed ? _modelConfidenceOf(a._feat) : 0;
+			const modelAdj = 0;
 			const riskSeverity = incrementalRiskSeverity(a);
 			const riskAdj = riskSeverity * riskBudget;
 			/* ★ 深化：反制推演负向打折 + 局面适配复核 */
@@ -190,7 +190,7 @@ function _deepEvaluate(me, cands, best, out, ctx) {
 				riskAdj: riskAdj,
 				counterAdj: counterAdj,
 				situationAdj: situationAdj,
-				deep: rule + modelAdj - riskAdj - counterAdj + situationAdj,
+				deep: rule - riskAdj - counterAdj + situationAdj,
 			};
 		}).sort(function (x, y) { return y.deep - x.deep; });
 

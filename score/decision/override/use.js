@@ -40,6 +40,7 @@ import { evaluateWuxie } from '../response/wuxieEvaluator.js?v=41a';
 import { trip, isTripped } from './circuit.js?v=41a';
 import { isAllyOf, cardValueOf } from '../threat/threat.js?v=41a';   /* ★ 阵营护栏/五谷拿牌桥 */
 
+import { beginShaTrace } from '../analysis/shaTrace.js?v=41a';
 import { bindChoiceLifecycle, patchChoiceField, completeChoiceTrace, choicePlayerBlocked } from './choiceLifecycle.js?v=41a';
 
 const ORIG_KEY = '__djsc_orig_chooseToUse';
@@ -344,35 +345,36 @@ function _installTaoRescueGuard(player, ev) {
 		if (typeof ev.filterCard !== 'function') return null;
 		if (ev[TAO_GUARD_KEY] !== undefined) return null;   /* 已安装 → 不叠加 */
 		const inner = ev.filterCard;
-		ev.filterCard = function (card, p, e) {
+		let active = true;
+		const guarded = function (card, p, e) {
+			const allowed = inner.apply(this, arguments);
+			if (!allowed || !active) return allowed;
 			try {
-				if (typeof inner === 'function' && !inner(card, p, e)) return false;
 				if (_shouldBlockTaoRescue(player, card, ev, null)) return false;
-				return true;
-			} catch (err) {
-				/* 护栏异常 → 保守放行：交回原生 filter 结果 */
-				try { return typeof inner === 'function' ? inner(card, p, e) : true; }
-				catch (e2) { return true; }
-			}
+			} catch (_) {}
+			return allowed;
 		};
-		ev[TAO_GUARD_KEY] = inner;
+		const undo = patchChoiceField(ev, 'filterCard', guarded);
+		ev[TAO_GUARD_KEY] = guarded;
 		return function restore() {
+			if (!active) return;
+			active = false;
 			try {
-				if (ev[TAO_GUARD_KEY] !== undefined) {
-					ev.filterCard = ev[TAO_GUARD_KEY];
-					delete ev[TAO_GUARD_KEY];
-				}
+				undo();
+				if (ev[TAO_GUARD_KEY] === guarded) delete ev[TAO_GUARD_KEY];
 			} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		};
 	} catch (e) { return null; }
 }
 
-export function installAIUseTargetGuard(ev){
+export function installAIUseTargetGuard(ev, observe){
 			try {
 				const origFTGuard = ev.filterTarget;
+				if (typeof origFTGuard !== 'function') return;
 				ev.filterTarget = function (card, player, target) {
+					const allowed = origFTGuard.apply(this, arguments);
+					if (!allowed) { observe?.(card, target, false); return allowed; }
 					try {
-						if (typeof origFTGuard === 'function' && !origFTGuard(card, player, target)) return false;
 						if (!target) return true;
 						const gid = get.name(card, player);
 						if(gid==='tiesuo'){
@@ -420,8 +422,7 @@ export function installAIUseTargetGuard(ev){
 						}
 						return true;
 					} catch (errG) {
-						try { return typeof origFTGuard === 'function' ? origFTGuard(card, player, target) : true; }
-						catch (e2G) { return true; }
+						return allowed;
 					}
 				};
 			} catch (eGuard) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eGuard); }
@@ -458,7 +459,7 @@ export function installUseOverride() {
                 failureReason: e => '原生 chooseToUse 异常：' + e.message });
             if (!host.ok) return host.result;
             const next = host.result;
-            let decision = null, staged = null, endRequested = false;
+            let decision = null, staged = null, endRequested = false, shaTrace = null;
             bindChoiceLifecycle(next, 'use', function (ev, trace, registerCleanup) {
                 if (!token.active || choicePlayerBlocked(player)) return;
                 const restores = [];
@@ -475,7 +476,12 @@ export function installUseOverride() {
                 registerCleanup(restore);
                 if (!_shouldOverride(player, ev)) return restore;
                 const t0 = performance.now();
-                try { decision = bestAction(); }
+                try {
+                    if (typeof window !== 'undefined' && window.__DJSC?.shaTraceEnabled === true) {
+                        try { shaTrace = beginShaTrace(player.playerid, get.mode(), ev.type); } catch (_) {}
+                    }
+                    decision = bestAction(shaTrace);
+                }
                 catch (error) {
                     markExecutionFailure('use', player, 'bestAction 异常：' + error.message, 'fatal');
                     trace.error = String(error.message); _stat('error'); return restore;
@@ -509,7 +515,20 @@ export function installUseOverride() {
                     return restore;
                 }
                 const originalTarget = ev.filterTarget, originalTarget2 = ev.filterTarget2;
-                installAIUseTargetGuard(ev);
+                if (shaTrace) {
+                    let nativeRejected = false;
+                    installAIUseTargetGuard(ev, () => { nativeRejected = true; });
+                    const targetFilter = ev.filterTarget;
+                    if (targetFilter !== originalTarget) ev.filterTarget = function (card, p, target) {
+                        nativeRejected = false;
+                        const allowed = targetFilter.apply(this, arguments);
+                        if (!allowed && card?.name === 'sha') shaTrace.record('filterTarget', {
+                            id: 'sha', target: target?.playerid,
+                            reason: nativeRejected ? 'native-reject' : 'strategy-reject',
+                        });
+                        return allowed;
+                    };
+                } else installAIUseTargetGuard(ev);
                 const guardedTarget = ev.filterTarget;
                 restores.push(() => { if (ev.filterTarget === guardedTarget) ev.filterTarget = originalTarget; });
                 if (typeof originalTarget2 === 'function') restores.push(patchChoiceField(ev, 'filterTarget2', function (card, p, target) {
@@ -525,8 +544,14 @@ export function installUseOverride() {
                 const originalFilter = ev.filterCard;
                 restores.push(patchChoiceField(ev, 'filterCard', function (card, p, e) {
                     // Host legality always wins, including filters installed through .set().
-                    if (typeof originalFilter === 'function' && !originalFilter.apply(this, arguments)) return false;
-                    try { if (_shouldVeto(player, card)) { _stat('veto'); return false; } }
+                    if (typeof originalFilter === 'function' && !originalFilter.apply(this, arguments)) {
+                        if (shaTrace && card?.name === 'sha') shaTrace.record('filterCard', { id: 'sha', entity: card.cardid ?? null, reason: 'native-reject' });
+                        return false;
+                    }
+                    try { if (_shouldVeto(player, card)) {
+                        if (shaTrace && card?.name === 'sha') shaTrace.record('filterCard', { id: 'sha', entity: card.cardid ?? null, reason: 'strategy-reject' });
+                        _stat('veto'); return false;
+                    } }
                     catch (_) {}
                     return true;
                 }));
@@ -535,6 +560,15 @@ export function installUseOverride() {
             }, function (ev, trace) {
                 if (!token.active) return;
                 completeChoiceTrace(ev, trace);
+                if (shaTrace) {
+                    const card = ev.result?.card;
+                    shaTrace.record('outcome', {
+                        id: card?.name === 'sha' ? 'sha' : null,
+                        entity: card?.name === 'sha' ? card.cardid ?? null : null,
+                        selected: trace.selected, executed: trace.executed,
+                        reason: trace.executed ? 'native-event-completed' : 'unconfirmed',
+                    });
+                }
                 if (trace.selected) _stat('selected');
                 if (trace.executed) _stat('executed');
                 if (endRequested && ev.finished && ev.result?.bool === false && staged && pendingExecution(player) === staged) {

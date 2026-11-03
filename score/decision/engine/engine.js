@@ -540,7 +540,7 @@ export function safeModelPredict(features) {
 				ready: false,
 			};
 		}
-		return Object.assign({}, r, { ready: true });
+		return Object.assign({}, r, { ready: r.ready !== false && r.action !== 'skip' });
 	} catch (e) {
 		try { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); } catch (_) {}
 		return {
@@ -3426,11 +3426,11 @@ function pickKillTarget(me, tsMap, cur) {
 }
 
 let _lastPerfRecordedResult = null;
-function bestAction() {
+function bestAction(shaTrace = null) {
 	const _bt0 = (typeof performance !== 'undefined' && performance && performance.now) ? performance.now() : Date.now();
 	let perfResult;
 	try {
-		perfResult = withDecisionEvaluation(() => profile('bestAction', bestActionCore));
+		perfResult = withDecisionEvaluation(() => profile('bestAction', () => bestActionCore(shaTrace)));
 		return perfResult;
 	} finally {
 		try {
@@ -3447,7 +3447,7 @@ function bestAction() {
 		} catch (eDiag) { /* 诊断不阻断 */ }
 	}
 }
-function bestActionCore() {
+function bestActionCore(shaTrace) {
 	const _perfT0 = performance.now();
 	const _perfPhases = {};
 	/* ★ Decision Transaction：Evaluate 阶段只计算，不落学习/广播/回放副作用。
@@ -3524,6 +3524,7 @@ function bestActionCore() {
         {...decisionCacheContext,ttl:BEST_ACTION_CACHE_TTL})) {
 		try { perfMark('bestAction.cache', performance.now() - _perfT0); } catch (eP) {}
 
+		shaTrace?.record('cache');
 		return _lastBestAction;
 	}
 	_markPhase('preflight');
@@ -3944,9 +3945,11 @@ function bestActionCore() {
 					} catch (eEq) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eEq); }
 				}
 
+				const shaStyleBefore = shaTrace && id === 'sha' ? s : null;
 				/* ★ 记忆驱动：根据 cardTarget 的风格调整卡牌价值 */
 				try {
-					if (cardTarget && cardTargetStyle) {
+					// Identity Slash already consumes this same style ratio in opponentContext.
+					if (cardTarget && cardTargetStyle && !(id === 'sha' && auditMode.mode === 'identity')) {
 						const sStyle = cardTargetStyle;
 						if (sStyle.tag === "aggressive") {
 							/* 面对激进敌人：防御牌价值提高 */
@@ -3967,7 +3970,10 @@ function bestActionCore() {
 					}
 				} catch (eStyle) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eStyle); }
 
-				/* ★ 资敌防护（「拆/顺了又贴回」拉锯的根因之一）：目标判定区有牌时不用拆/顺指向它——
+				if (shaStyleBefore !== null && s !== shaStyleBefore) shaTrace.record('score', {
+                    id, source: 'legacyStyle', reason: cardTargetStyle.tag, before: shaStyleBefore, after: s, tier: 'normal',
+                });
+                /* ★ 资敌防护（「拆/顺了又贴回」拉锯的根因之一）：目标判定区有牌时不用拆/顺指向它——
 				 *   乐/兵必是敌方阵营贴给它的控制（我方拆=解我方阵营控制）、闪电在敌方回合劈它
 				 *   → 拆/顺该目标大概率解掉这些牌=资敌，并形成「贴→拆→再贴」双向拉锯 → 强负分直接否决 */
 				if (['guohe', 'shunshou'].indexOf(id) >= 0 && cardTarget) {
@@ -4140,7 +4146,10 @@ function bestActionCore() {
 					play: getDecisionFeedbackSignal('play', id), momentum: turnMomentum(me),
 				});
 				applyCardConsumptionUtility(me, cardAct, { econ, stage: stageLabel, weight: cfg('wOpportunityMul', 0.5), forecastRetention });
-				acts.push(cardAct);
+				if (shaTrace && id === 'sha') shaTrace.record('candidate', {
+                    id, target: cardAct.target, entity: null, after: cardAct.score, tier: cardAct.policy?.priorityTier,
+                });
+                acts.push(cardAct);
                 }
 			} catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		});
@@ -4245,6 +4254,17 @@ function bestActionCore() {
 		ensureCandidatePolicy(endAction);
 		let eligibleActs = acts.filter(isCandidateEligible);
 		const topEligible = eligibleActs[0] || endAction;
+        if (shaTrace) {
+            const sha = acts.find(a => a.type === 'card' && a.id === 'sha');
+            for (const term of sha?.utilityVector?.contributions || []) {
+                shaTrace.record('utility', {
+                    id: 'sha', source: term.source, before: term.before, after: term.after,
+                    reason: term.source === 'opponentContext' && term.note === 'style' ? 'style' : term.dimension,
+                    tier: sha.policy?.priorityTier,
+                });
+            }
+            shaTrace.record('rank', { id: topEligible.id, after: topEligible.score, tier: topEligible.policy?.priorityTier });
+        }
 		best = (candidatePriorityRank(topEligible) > 0 || topEligible.score > 0) ? topEligible : endAction;
         const decisionStages=createDecisionStages(classicModelBefore);
         decisionStages.record('classicModel',classicModelBefore,best,classicModelEvidence);
@@ -4423,7 +4443,12 @@ function bestActionCore() {
 							const sub = (a === best && modelConf && modelConf.action) ? modelConf : window.__DJSC.confidence(_fa);
 							if (!sub) continue;
 							const modelStrength = (sub.probs ? Math.max.apply(null, sub.probs) : 0) * 32;
-							a.score = Math.round(a.score * (1 - wModel) + modelStrength * wModel);
+							const shaModelBefore = shaTrace && a.id === 'sha' ? a.score : null;
+                            a.score = Math.round(a.score * (1 - wModel) + modelStrength * wModel);
+                            if (shaModelBefore !== null) shaTrace.record('model', {
+                                id: 'sha', source: 'modelConfidence', before: shaModelBefore, after: a.score,
+                                tier: a.policy?.priorityTier,
+                            });
 							var mLog = '[M:' + sub.label + '·' + intervention + '·F' + Math.round(metaMod.familiarity * 100) + '%]';
 							a.reason = (a.reason || '') + mLog;
 							_takeoverCount++;
@@ -4478,7 +4503,6 @@ function bestActionCore() {
 		try {
 			if (best && typeof deepThinkCritic === 'function') {
 				const _dRes = deepThinkCritic(me, eligibleActs, best, {
-					modelP: (modelConf && modelConf.maxProb) || 0,
 					heroId: (me && (me.name || me.name1)) || '',
 				});
                 deepEvidence=_dRes?.evidence||{domain:'deep-comparison',status:'no-result'};
@@ -4754,6 +4778,7 @@ function bestActionCore() {
 		}
 
         decisionStages.record('guard',guardBefore,best,guardEvidence);
+        shaTrace?.record('recommendation', { id: best.id, after: best.score, tier: best.policy?.priorityTier });
         decisionStages.record('classicCandidate',best,best,classicCandidateShadow(best,eligibleActs,modeContext()));
         decisionStages.setEvaluationAudit(evaluationAudit.snapshot(acts,best));
 		_markPhase('guard');
