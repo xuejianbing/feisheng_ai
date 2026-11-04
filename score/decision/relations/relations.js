@@ -41,8 +41,8 @@
 import { game, get } from '../../foundation/adapt/host.js?v=41a';
 import {friendlyStripPlan} from '../strategy/friendlyStripPlan.js?v=41a';
 import { effectiveJudgeName } from '../strategy/judgeName.js?v=41a';
-import { getModeStrategy } from '../strategy/modeStrategy.js?v=41a';
-import { currentMode, isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
+import { getModeStrategy, usesIdentityRules } from '../strategy/modeStrategy.js?v=41a';
+import { isLikelyEnemy, isLikelyAlly, confidenceOfFor as idConfidenceOfFor, identityOfFor, hardIdentityOf, isRolePossibleFor, identityView } from '../../perception/observer/identity.js?v=41a';
 import {publicIdentityRole} from '../../perception/observer/identityFacts.js?v=41a';
 import {readVersusMode, readVersusState} from '../../foundation/runtime/versusContext.js?v=41a';
 import {hasKnownSide, sameTeamBySide} from '../modes/versus/team.js?v=41a';
@@ -51,11 +51,7 @@ import { playerKey, resolvePlayerByKey } from '../../foundation/adapt/playerIden
 import { guozhanDispositionOf } from '../strategy/identityPolicy.js?v=41a';   /* ★ 国战公开势力处置（fail-open，暗置保守中性） */
 
 function _isIdentityMode() {
-	try {
-		if (currentMode() === 'identity') return true;
-		const strategy = getModeStrategy();
-		return !!(strategy && (strategy.name === 'identity' || strategy.name === 'connect'));
-	} catch (e) { return false; }
+	return usesIdentityRules();
 }
 
 /* ================= 暴露系统（exposureOf） =================
@@ -156,7 +152,7 @@ function getCampOf(p, observer) {
 		if (s && typeof s.getCamp === 'function') base = String(s.getCamp(p) || 'unknown');
 		if (base !== 'unknown') return base;
 
-		if (s && (s.name === 'identity' || s.name === 'connect')) {
+		if (usesIdentityRules()) {
 			const role = (observer && p === observer)
 				? (p === game.zhu ? 'zhu' : p.identity)
 				: identityOfFor(observer || null, p);
