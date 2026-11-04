@@ -919,11 +919,12 @@ export const MODE_STRATEGIES = {
 };
 
 /* 获取当前模式策略 */
-export function getModeStrategy() {
-    try {
-        const mode = (typeof get === 'object' && get.mode) ? get.mode() : '';
-        return MODE_STRATEGIES[mode] || DEFAULT_STRATEGY;
-    } catch (e) { return DEFAULT_STRATEGY; }
+export function getModeStrategy(mode = readVersusMode().mode) {
+    return Object.prototype.hasOwnProperty.call(MODE_STRATEGIES, mode) ? MODE_STRATEGIES[mode] : DEFAULT_STRATEGY;
+}
+
+export function usesIdentityRules(mode = readVersusMode().mode) {
+    return mode === 'identity' || mode === 'connect' || mode === 'realtime';
 }
 
 /* 快捷：判断同阵营 */
@@ -937,11 +938,11 @@ export function isSameCamp(a, b) {
 export function isEnemy(a, b) {
     try {
         if (!a || !b || a === b) return false;
-        if (readVersusMode().is2v2) return sameTeamBySide(a, b) === false;
-        const strategy = getModeStrategy();
+        const scope = readVersusMode();
+        if (scope.is2v2) return sameTeamBySide(a, b) === false;
         /* 身份模式禁止经宿主 attitude 读取 hidden identity；这里只做保守身份推断。
          * 内奸由 relations 的 dynamic stance 处理，因此此快捷函数对内奸保持 false。 */
-        if (strategy && (strategy.name === 'identity' || strategy.name === 'connect')) {
+        if (usesIdentityRules(scope.mode)) {
             return isLikelyEnemy(a, b);
         }
         const att = get.attitude(a, b);

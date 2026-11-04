@@ -8,3 +8,14 @@ export function hostGameResult(result, onlineResult, online = false) {
 }
 export function binaryGameResult(verdict) { return verdict === 'win' ? true : verdict === 'lose' ? false : null; }
 export function gameResultLabel(verdict) { return {win:'胜利',lose:'失败',draw:'平局',unknown:'未知'}[verdict] || '未知'; }
+
+export function resolveSettlementResult(verdict, mode, winner, identity) {
+ const binary = binaryGameResult(verdict);
+ if (verdict !== 'unknown' || mode !== 'identity') return binary;
+
+ // 旧身份宿主的明确阵营结果仅在身份局解释。
+ const loyal = ['zhu', 'zhong', 'mingzhong'];
+ const roles = [...loyal, 'fan', 'nei', 'ye'];
+ if (!roles.includes(winner) || !roles.includes(identity)) return null;
+ return winner === 'zhu' ? loyal.includes(identity) : winner === identity;
+}
