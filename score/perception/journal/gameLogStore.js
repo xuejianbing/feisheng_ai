@@ -92,7 +92,16 @@ function _save() {
             if (JSON.stringify(g).length > MAX_ENTRY_CHARS) {
                 g.truncated = true;
                 for (const key of ['logs', 'playerLogs', 'decisions', 'topCards']) {
-                    while (g[key].length && JSON.stringify(g).length > MAX_ENTRY_CHARS) g[key].shift();
+                    const items = g[key];
+                    if (!items.length) continue;
+                    let size = JSON.stringify(g).length;
+                    let removeCount = 0;
+                    while (removeCount < items.length && size > MAX_ENTRY_CHARS) {
+                        size -= JSON.stringify([items[removeCount]]).length - 2;
+                        if (removeCount < items.length - 1) size--;
+                        removeCount++;
+                    }
+                    if (removeCount) items.splice(0, removeCount);
                 }
             }
         }
