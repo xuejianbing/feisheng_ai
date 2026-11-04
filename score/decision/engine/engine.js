@@ -196,7 +196,7 @@ import { makeActionCandidate, runtimeScore, applyRelativeUtilityDelta, targetKey
 import { buildDecisionTraceLines } from './decisionTrace.js?v=41a';
 import { formatLogLines } from '../../foundation/diag/logFormat.js?v=41a';
 import { createGameTelemetry } from './gameTelemetry.js?v=41a';
-import { binaryGameResult } from './gameResult.js?v=41a';
+import { resolveSettlementResult } from './gameResult.js?v=41a';
 import { preparePlayerFeedback } from '../../perception/journal/playerFeedback.js?v=41a';
 import { buildTurnSummaryLines } from './turnSummary.js?v=41a';
 import { createMatchArchive } from '../../perception/journal/matchArchive.js?v=41a';
@@ -5101,20 +5101,12 @@ function settle() {
 		try { metaSettleGame(); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 		/* 只有宿主明确胜负才进入二元学习接口；平局/未知保留事实，不作为失败。 */
 		const _verdict = gameTelemetry.snapshot().verdict;
-		let _won = binaryGameResult(_verdict);
-		if (_won === null) {
-			/* ★ 身份局兼容回退：身份局宿主 game.over('zhu'/'fan'/...) 不映射 win/lose（对方专项以斗地主为主），
-			 *   telemetry 未知时按 game.winner 判定（兼容数组/玩家对象/阵营字符串，'zhu' 时主忠明忠共赢），
-			 *   保证零和结算分、训练标签、冠军固化在身份局继续工作。 */
-			try {
-				if (game.winner) {
-					const _wsWin = _winningSet();
-					_won = _wsWin.some(function (p) { return p === game.me; });
-				}
-			} catch (eW) { }
-		}
+		const _settledContext = modeContext();
+		const _legacyIdentity = _verdict === 'unknown' && _settledContext.mode === 'identity';
+		const _won = resolveSettlementResult(_verdict, _settledContext.mode,
+			_legacyIdentity ? game.winner : null, _legacyIdentity ? game.me?.identity : null);
 		const _hasResult = _won !== null;
-		try { recordClassicMatch(modeContext(),roleOf(game.me?._trueMe||game.me),_hasResult?_won:null); closeModeContext(); trainSettleGame(game.me, _won); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
+		try { recordClassicMatch(_settledContext,roleOf(game.me?._trueMe||game.me),_won); closeModeContext(); trainSettleGame(game.me, _won); } catch (e) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(e); }
 			try { onGameEndHook(); } catch (eCI2) { if (typeof window !== 'undefined' && window.__DJSC && window.__DJSC.swallow) window.__DJSC.swallow(eCI2); }   /* ★ 上报通道：局末检查（每小时节奏） */
 
 		/* ★ 胜负结算分（严格零和）：胜方每人 +败方人数×权重，败方每人 −胜方人数×同权（Σ=0 恒成立）。
