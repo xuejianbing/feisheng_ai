@@ -1,0 +1,13 @@
+{
+  "core": "1.11.7",
+  "oldIds": [
+    "dtx_mw2sp4se_7",
+    "dtx_mw2sp54t_8",
+    "dtx_mw2sp54x_9",
+    "dtx_mw2sp5iu_a"
+  ],
+  "writes": 0,
+  "checkedAtMs": 1793837801800,
+  "terminalCompleted": false,
+  "boundary": "终局 UI 已出现，原事件等待未返回；本文件用于验证重载边界，不冒充终局回调验收"
+}

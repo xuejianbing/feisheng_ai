@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "version": "4.0.10-test",
+  "policy": {
+    "verifiedBehaviorMustNotRegress": true,
+    "knownHiddenInfoDebtMayNotIncrease": true,
+    "verifiedRateIsNotOverallStrengthScore": true
+  },
+  "knownHiddenInfoDebt": [
+    {
+      "id": "modelGuard-exact-opponent-sha-count",
+      "path": "score/decision/safety/modelGuard.js",
+      "receiver": "p",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "sha",
+      "reason": "决斗红线直接读取目标精确杀数量。"
+    },
+    {
+      "id": "engine-enemy-nature-hand-enumeration",
+      "path": "score/decision/scoring/cardCandidateScore.js",
+      "receiver": "p",
+      "operation": "getCards",
+      "zone": "h",
+      "card": "*",
+      "reason": "铁索属性威胁判断直接枚举敌方隐藏手牌。"
+    },
+    {
+      "id": "planner-aoe-exact-sha",
+      "path": "score/decision/strategy/planner.js",
+      "receiver": "p",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "sha",
+      "reason": "南蛮规划精确读取敌方杀。"
+    },
+    {
+      "id": "planner-aoe-exact-shan",
+      "path": "score/decision/strategy/planner.js",
+      "receiver": "p",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "shan",
+      "reason": "万箭规划精确读取敌方闪。"
+    },
+    {
+      "id": "planner-rescue-exact-tao",
+      "path": "score/decision/strategy/planner.js",
+      "receiver": "p",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "tao",
+      "reason": "救援规划精确读取其他角色桃。"
+    },
+    {
+      "id": "strategyBus-exact-shan",
+      "path": "score/decision/strategy/strategyBus.js",
+      "receiver": "tgt",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "shan",
+      "reason": "旧策略总线反制逻辑精确读取目标闪；当前仲裁虽停用，仍登记防止未来直接复活。"
+    },
+    {
+      "id": "strategyBus-exact-tao",
+      "path": "score/decision/strategy/strategyBus.js",
+      "receiver": "tgt",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "tao",
+      "reason": "旧策略总线反制逻辑精确读取目标桃；当前仲裁虽停用，仍登记防止未来直接复活。"
+    },
+    {
+      "id": "threat-exact-sha",
+      "path": "score/decision/threat/threat.js",
+      "receiver": "p",
+      "operation": "countCards",
+      "zone": "hs",
+      "card": "sha",
+      "reason": "爆发威胁评估精确读取目标杀数量。"
+    }
+  ],
+  "knownBehaviorDebt": [
+    {
+      "id": "global-tricks-nanman-empty-hand-hit-expectation",
+      "suite": "global_tricks",
+      "case": "三空手敌人南蛮 → 高期望命中",
+      "reason": "现有行为回归在4.0.9主分支已失败；#36只登记基线，不改AOE策略语义。"
+    }
+  ]
+}

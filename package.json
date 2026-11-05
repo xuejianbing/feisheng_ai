@@ -1,0 +1,13 @@
+{
+  "name": "noname-ai",
+  "version": "4.0.13-test",
+  "private": true,
+  "type": "module",
+  "description": "Community-maintained Noname AI extension and decision engine.",
+  "scripts": {
+    "test": "node tests/run_tests.mjs && node tests/run_phase_aoe_tests.mjs && node tests/run_decision_trace_tests.mjs && node tests/run_decision_transaction_tests.mjs && node tests/run_config_schema_tests.mjs && node tests/run_execution_gateway_tests.mjs && node tests/run_decision_quality_tests.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

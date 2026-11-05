@@ -1,0 +1,104 @@
+
+> noname-ai@4.0.13-test test
+> node tests/run_tests.mjs && node tests/run_phase_aoe_tests.mjs && node tests/run_decision_trace_tests.mjs && node tests/run_decision_transaction_tests.mjs && node tests/run_config_schema_tests.mjs && node tests/run_execution_gateway_tests.mjs && node tests/run_decision_quality_tests.mjs
+
+[trainExport] ✅ 已接入 14 个扩展训练模块 + 导入/导出功能
+........................................................................................................................................................................................................................................................[engine] ✅ data 文件夹已就绪
+[engine] ✅ skillTags 已手动挂载
+[无名AI] ✅ 已给模块加别名，统一函数名（安全模式）
+[无名AI] 选将评分系统已加载，当前模式: 
+....................................................................[无名AI·静默] boom  Error: boom
+....................................................................................................................................................[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.....[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+..[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+..........[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+..[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.............[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+.....[无名AI·静默] get.name is not a function  TypeError: get.name is not a function
+...........................................................................................................................................................................................................................................................................................[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+.[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+..[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+.[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+.[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+.[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+..............[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+.................[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+[无名AI·静默] zhu.distanceTo is not a function  TypeError: zhu.distanceTo is not a function
+........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................[extension] ✅ trainExport/trainImport 已挂载（提前加载）
+......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+
+✅ 发布门禁全部通过：1899 项断言
+...............................
+✅ #23 phase/AOE contract passed: 31 assertions
+(node:69080) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+........................
+
+✅ #30 decision trace contract passed: 24 assertions
+.................................
+
+✅ #33 decision transaction contract passed: 33 assertions
+..................................................................................................................................
+
+✅ #34 config schema contract passed: 130 assertions
+........................................................................................
+
+✅ #35 execution gateway contract passed: 88 assertions
+.........................................................
+
+AI Decision Quality Baseline
+verified cases: 250/251 (99.60%)
+- allySafety: 87/87 (100.00%)
+- cardStrategy: 121/122 (99.18%)
+- character: 20/20 (100.00%)
+- consistency: 101/101 (100.00%)
+- control: 24/24 (100.00%)
+- identity: 55/55 (100.00%)
+- resource: 113/114 (99.12%)
+- response: 27/27 (100.00%)
+- strategy: 79/79 (100.00%)
+- tactics: 54/54 (100.00%)
+- team: 94/95 (98.95%)
+- utility: 27/27 (100.00%)
+hidden-info debt: known=8, new=0, resolved=0
+NOTE: verifiedRate is regression coverage, not an overall AI strength score.
+known behavior debt: 1, new regressions=0, resolved=0
+
+Known behavior debt:
+- global_tricks :: 三空手敌人南蛮 → 高期望命中
+
+Known hidden-info debt:
+- score/decision/safety/modelGuard.js:216 p.countCards('hs', 'sha')
+- score/decision/scoring/cardCandidateScore.js:818 p.getCards('h')
+- score/decision/strategy/planner.js:395 p.countCards('hs', 'sha')
+- score/decision/strategy/planner.js:396 p.countCards('hs', 'shan')
+- score/decision/strategy/planner.js:504 p.countCards('hs', 'tao')
+- score/decision/strategy/strategyBus.js:135 tgt.countCards('hs', 'shan')
+- score/decision/strategy/strategyBus.js:136 tgt.countCards('hs', 'tao')
+- score/decision/threat/threat.js:695 p.countCards('hs', 'sha')
+
+
+✅ #36 decision quality baseline passed: 57 contract assertions
